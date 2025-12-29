@@ -2,7 +2,7 @@
 // FIXED: PublicRoute.jsx
 // Path: src/routes/PublicRoute.jsx
 // ============================================
-import { Navigate } from 'react-router-dom'
+import { Navigate, Outlet } from 'react-router-dom'  // ⭐ ADD Outlet
 import { useAuth } from '@hooks/useAuth'
 
 const PublicRoute = ({ children }) => {
@@ -40,7 +40,7 @@ const PublicRoute = ({ children }) => {
   }
 
   // If not authenticated, show the public page (login/register)
-  return children
+  return <Outlet />  // ⭐ CHANGED from 'children'
 }
 
 export default PublicRoute

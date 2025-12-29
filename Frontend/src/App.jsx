@@ -1,5 +1,5 @@
 // ============================================
-// Frontend/src/App.jsx - FIXED VERSION
+// Frontend/src/App.jsx - WITH NOTIFICATIONS
 // Complete Application with Proper Route Separation
 // ============================================
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
@@ -28,10 +28,11 @@ import ProductDetails from "@/pages/ProductDetails";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
-import OrderDetails from "@/pages/OrderDetails";
+import OrderDetailsPage from "@/pages/OrderDetailsPage";
 import Profile from "@/pages/Profile";
 import ProfileSettings from "@/pages/ProfileSettings";
 import Wishlist from "@/pages/Wishlist";
+import Notifications from "@/pages/Notifications"; // ✅ ADD THIS
 import NotFound from "@/pages/NotFound";
 
 // ============ ADMIN PAGES ============
@@ -161,7 +162,28 @@ function App() {
         />
         <Route
           path="/register"
-          element={!user ? <Register /> : <Navigate to="/" replace />}
+          element={
+            !user ? (
+              <Register />
+            ) : (
+              <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    You are already logged in
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Please log out before creating a new account.
+                  </p>
+                  <a
+                    href="/"
+                    className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold shadow hover:bg-primary-700 transition"
+                  >
+                    Go to Home
+                  </a>
+                </div>
+              </div>
+            )
+          }
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
@@ -170,10 +192,12 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<Orders />} />
-          <Route path="/orders/:id" element={<OrderDetails />} />
+          <Route path="/orders/:id" element={<OrderDetailsPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/settings" element={<ProfileSettings />} />
           <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/notifications" element={<Notifications />} />{" "}
+          {/* ✅ ADD THIS */}
         </Route>
 
         {/* 404 */}

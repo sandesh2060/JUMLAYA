@@ -1,10 +1,29 @@
-// CartSummary.jsx
+// ============================================
+// CartSummary.jsx - FIXED FOR FLAT SCHEMA
+// Path: Frontend/src/components/cart/CartSummary.jsx
+// ============================================
 import { Link } from "react-router-dom";
 import { Button } from "@components/common/Button";
+import { useStore } from "@/context/StoreContext";
 
 export const CartSummary = ({ cart, onCheckout, isLoading }) => {
+  const { settings: storeSettings, loading: settingsLoading } = useStore();
+
   if (!cart) {
     return null;
+  }
+
+  if (settingsLoading) {
+    return (
+      <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        </div>
+      </div>
+    );
   }
 
   const {
@@ -14,6 +33,13 @@ export const CartSummary = ({ cart, onCheckout, isLoading }) => {
     discount = 0,
     total = 0,
   } = cart;
+
+  // ✅ FIXED: Use flat structure (matches your database schema)
+  const currency = storeSettings?.currency || "NPR";
+  const taxRate = storeSettings?.taxRate || 13;
+  const freeShippingThreshold = storeSettings?.freeShippingThreshold || 100;
+
+  console.log('🔍 CartSummary Tax Rate:', taxRate); // Debug line
 
   return (
     <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -25,16 +51,17 @@ export const CartSummary = ({ cart, onCheckout, isLoading }) => {
         <div className="flex justify-between items-center">
           <span className="text-gray-700 dark:text-gray-300">Subtotal</span>
           <span className="font-semibold text-gray-900 dark:text-gray-100">
-            NPR {subtotal.toFixed(2)}
+            {currency} {subtotal.toFixed(2)}
           </span>
         </div>
 
         {tax > 0 && (
           <div className="flex justify-between items-center">
-            <span className="text-gray-700 dark:text-gray-300">Tax (13%)</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              Tax ({taxRate}%)
+            </span>
             <span className="font-semibold text-gray-900 dark:text-gray-100">
-              {" "}
-              NPR {tax.toFixed(2)}
+              {currency} {tax.toFixed(2)}
             </span>
           </div>
         )}
@@ -45,7 +72,7 @@ export const CartSummary = ({ cart, onCheckout, isLoading }) => {
               Shipping Fee
             </span>
             <span className="font-semibold text-gray-900 dark:text-gray-100">
-              NPR {shippingFee.toFixed(2)}
+              {currency} {shippingFee.toFixed(2)}
             </span>
           </div>
         )}
@@ -53,7 +80,9 @@ export const CartSummary = ({ cart, onCheckout, isLoading }) => {
         {discount > 0 && (
           <div className="flex justify-between items-center text-green-600 dark:text-green-400">
             <span className="text-gray-700 dark:text-gray-300">Discount</span>
-            <span className="font-semibold">-NPR {discount.toFixed(2)}</span>
+            <span className="font-semibold">
+              -{currency} {discount.toFixed(2)}
+            </span>
           </div>
         )}
 
@@ -61,7 +90,7 @@ export const CartSummary = ({ cart, onCheckout, isLoading }) => {
           <div className="flex justify-between items-center text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
             <span className="text-sm">Coupon: {cart.appliedCoupon.code}</span>
             <span className="font-semibold">
-              -NPR {cart.appliedCoupon.discount?.toFixed(2) || "0.00"}
+              -{currency} {cart.appliedCoupon.discount?.toFixed(2) || "0.00"}
             </span>
           </div>
         )}
@@ -73,7 +102,7 @@ export const CartSummary = ({ cart, onCheckout, isLoading }) => {
             Total
           </span>
           <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-            NPR {total.toFixed(2)}
+            {currency} {total.toFixed(2)}
           </span>
         </div>
       </div>
@@ -94,7 +123,7 @@ export const CartSummary = ({ cart, onCheckout, isLoading }) => {
 
       {shippingFee === 0 && subtotal > 0 && (
         <p className="text-xs text-green-600 dark:text-green-400 mt-3 text-center">
-          ✓ Free shipping on orders over NPR 2000
+          ✓ Free shipping on orders over {currency} {freeShippingThreshold}
         </p>
       )}
     </div>

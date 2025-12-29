@@ -1,4 +1,4 @@
-// Backend/models/user.model.js - WITH RIDER ROLE SUPPORT
+// Backend/models/user.model.js - WITH RIDER ROLE SUPPORT + PASSWORD RESET OTP
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -49,14 +49,14 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 8, select: false },
     role: {
       type: String,
-      enum: ["customer", "admin", "vendor", "rider"], // ✅ ADDED: rider
+      enum: ["customer", "admin", "vendor", "rider"],
       default: "customer",
     },
     avatar: { type: String, default: "" },
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
 
-    // ✅ NEW: Rider-specific fields
+    // ✅ Rider-specific fields
     riderProfile: {
       vehicleType: {
         type: String,
@@ -95,7 +95,7 @@ const userSchema = new mongoose.Schema(
           enum: ["Point"],
           default: "Point",
         },
-        coordinates: [Number], // [longitude, latitude]
+        coordinates: [Number],
         lastUpdated: Date,
       },
       isApproved: {
@@ -107,13 +107,18 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
       approvedAt: Date,
-      riderCode: String, // Unique rider code like "RDR001"
+      riderCode: String,
     },
 
     verificationCode: String,
     verificationCodeExpires: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    
+    // ✅ NEW: Password Reset OTP Fields
+    resetPasswordOTP: String,
+    resetPasswordOTPExpires: Date,
+    
     refreshToken: String,
     lastLogin: Date,
 
@@ -164,7 +169,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-// ✅ NEW: Index for rider location queries
+// Index for rider location queries
 userSchema.index({ 'riderProfile.currentLocation.coordinates': '2dsphere' });
 userSchema.index({ 'riderProfile.status': 1 });
 
@@ -180,7 +185,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// ✅ NEW: Generate unique rider code
+// Generate unique rider code
 userSchema.pre("save", async function (next) {
   if (this.role === "rider" && !this.riderProfile.riderCode) {
     const count = await this.constructor.countDocuments({ role: "rider" });
@@ -216,7 +221,7 @@ userSchema.methods.removeCartItemSafe = async function (productId) {
   await this.save({ validateBeforeSave: false });
 };
 
-// ✅ NEW: Rider methods
+// Rider methods
 userSchema.methods.updateRiderLocation = function (lat, lng) {
   if (this.role !== "rider") return;
   this.riderProfile.currentLocation = {
@@ -269,7 +274,7 @@ userSchema.methods.createVerificationCode = function () {
   return otp;
 };
 
-// Password reset token
+// Password reset token (old method - kept for backward compatibility)
 userSchema.methods.createPasswordResetToken = function () {
   const token = crypto.randomBytes(32).toString("hex");
   this.passwordResetToken = crypto

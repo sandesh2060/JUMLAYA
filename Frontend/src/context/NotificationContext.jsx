@@ -1,6 +1,6 @@
-import { createContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useState, useEffect, useCallback, useContext } from 'react'; // ✅ Added useContext
 import { useLocation } from 'react-router-dom';
-import notificationAPI from '../api/notification.api';
+import { notificationApi } from '../api/notification.api';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 
@@ -26,9 +26,14 @@ const NotificationProvider = ({ children }) => {
     try {
       setLoading(true);
       console.log('🔔 Fetching notifications...');
-      const response = await notificationAPI.getAll(params);
       
-      const notificationList = response?.data?.notifications || response?.data || [];
+      const response = await notificationApi.getNotifications(
+        params.page || 1,
+        params.limit || 20,
+        params.filter || 'all'
+      );
+      
+      const notificationList = response?.data?.notifications || response?.notifications || [];
       setNotifications(notificationList);
       setError(null);
       console.log('✅ Notifications fetched:', notificationList.length);
@@ -50,7 +55,8 @@ const NotificationProvider = ({ children }) => {
 
     try {
       console.log('🔢 Fetching unread count...');
-      const response = await notificationAPI.getUnreadCount();
+      
+      const response = await notificationApi.getUnreadCount();
       
       const count = response?.data?.count || response?.count || 0;
       setUnreadCount(count);
@@ -67,7 +73,7 @@ const NotificationProvider = ({ children }) => {
 
     try {
       console.log('✓ Marking as read:', notificationId);
-      await notificationAPI.markAsRead(notificationId);
+      await notificationApi.markAsRead(notificationId);
       
       setNotifications(prev =>
         prev.map(notif =>
@@ -91,7 +97,7 @@ const NotificationProvider = ({ children }) => {
 
     try {
       console.log('✓ Marking all as read...');
-      await notificationAPI.markAllAsRead();
+      await notificationApi.markAllAsRead();
       
       setNotifications(prev =>
         prev.map(notif => ({ ...notif, isRead: true }))
@@ -113,7 +119,7 @@ const NotificationProvider = ({ children }) => {
 
     try {
       console.log('🗑️ Deleting notification:', notificationId);
-      await notificationAPI.delete(notificationId);
+      await notificationApi.deleteNotification(notificationId);
       
       const deletedNotif = notifications.find(n => n._id === notificationId);
       setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
@@ -137,7 +143,7 @@ const NotificationProvider = ({ children }) => {
 
     try {
       console.log('🧹 Clearing all notifications...');
-      await notificationAPI.clearAll();
+      await notificationApi.deleteAllNotifications();
       
       setNotifications([]);
       setUnreadCount(0);
@@ -187,6 +193,15 @@ const NotificationProvider = ({ children }) => {
       {children}
     </NotificationContext.Provider>
   );
+};
+
+// ✅ ADD THIS CUSTOM HOOK
+export const useNotification = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotification must be used within NotificationProvider');
+  }
+  return context;
 };
 
 export { NotificationContext, NotificationProvider };

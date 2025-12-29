@@ -462,6 +462,8 @@ exports.login = async (req, res, next) => {
 // ============================================
 // ✅ FIXED: GET PROFILE - Uses Address Collection
 // ============================================
+// ✅ FIXED: GET PROFILE - Now includes fullName
+// ============================================
 exports.getProfile = catchAsync(async (req, res, next) => {
   console.log("📋 getProfile - req.user:", req.user);
   
@@ -477,20 +479,21 @@ exports.getProfile = catchAsync(async (req, res, next) => {
     return next(new AppError("User not found", 404));
   }
   
-  // ✅ CRITICAL FIX: Fetch ONLY active addresses from Address collection
+  // Fetch ONLY active addresses from Address collection
   const activeAddresses = await Address.find({
     user: req.user.id,
-    isActive: true  // Only get active addresses
-  }).sort({ isDefault: -1, createdAt: -1 }); // Default first, then newest
+    isActive: true
+  }).sort({ isDefault: -1, createdAt: -1 });
   
   console.log("✅ Profile found:", user.email);
   console.log("📍 Active addresses from Address collection:", activeAddresses.length);
   
-  // Build response with addresses from Address collection
+  // ✅ FIX: Build response WITH fullName
   const userProfile = {
     _id: user._id,
     firstname: user.firstname,
     lastname: user.lastname,
+    fullName: `${user.firstname} ${user.lastname}`, // ✅ ADD THIS
     username: user.username,
     email: user.email,
     phone: user.phone,
@@ -500,7 +503,7 @@ exports.getProfile = catchAsync(async (req, res, next) => {
     isActive: user.isActive,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
-    addresses: activeAddresses, // ← Use Address collection, NOT embedded addresses
+    addresses: activeAddresses,
     cart: user.cart || []
   };
   

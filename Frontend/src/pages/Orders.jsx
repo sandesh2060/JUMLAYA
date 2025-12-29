@@ -1,6 +1,6 @@
 // ============================================
-// 📦 UPDATED ORDERS PAGE WITH DELETE FUNCTIONALITY
-// Path: src/pages/Orders.jsx
+// Frontend/src/pages/Orders.jsx
+// PRODUCTION READY - FULLY FIXED VERSION
 // ============================================
 
 import { useState, useEffect } from 'react'
@@ -16,9 +16,16 @@ import {
   DollarSign,
   RefreshCw
 } from 'lucide-react'
-import { orderAPI } from '@api/order.api'
-import { OrderCard } from '../components/order/OrderCard' // ✅ Import OrderCard
+import { orderAPI } from '@/api/order.api'
+import { OrderCard } from '@/components/order/OrderCard'
 import toast from 'react-hot-toast'
+
+// ============================================
+// HELPER FUNCTION: Normalize status
+// ============================================
+const normalizeStatus = (status) => {
+  return status?.toLowerCase() || 'pending';
+};
 
 const Orders = () => {
   const [orders, setOrders] = useState([])
@@ -47,14 +54,14 @@ const Orders = () => {
       const response = await orderAPI.getMyOrders(params)
       console.log('✅ Orders response:', response)
       
-      // Handle different response structures
-      const ordersList = response.data?.data?.orders || response.data?.orders || response.orders || []
+      // ✅ FIXED: Handle response structure correctly
+      const ordersList = response.data?.orders || response.orders || []
       console.log('📦 Orders list:', ordersList)
       
       setOrders(ordersList)
     } catch (error) {
       console.error('❌ Failed to fetch orders:', error)
-      toast.error('Failed to load orders')
+      toast.error(error.response?.data?.message || 'Failed to load orders')
     } finally {
       if (showLoader) setLoading(false)
     }
@@ -66,9 +73,12 @@ const Orders = () => {
       const response = await orderAPI.getMyOrderStats()
       console.log('✅ Stats response:', response)
       
-      setStats(response.data || response)
+      // ✅ FIXED: Handle response structure
+      const statsData = response.data || response
+      setStats(statsData)
     } catch (error) {
       console.error('❌ Failed to fetch stats:', error)
+      // Don't show error toast for stats as it's not critical
     }
   }
 
@@ -111,7 +121,7 @@ const Orders = () => {
     const matchesSearch = 
       order.orderId?.toLowerCase().includes(searchLower) ||
       order.items?.some(item => 
-        item.productName?.toLowerCase().includes(searchLower)
+        item.name?.toLowerCase().includes(searchLower)
       )
     
     return matchesSearch
@@ -190,7 +200,7 @@ const Orders = () => {
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Delivered</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                    {stats.byStatus?.find(s => s._id === 'delivered')?.count || 0}
+                    {stats.byStatus?.find(s => normalizeStatus(s._id) === 'delivered')?.count || 0}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
@@ -205,7 +215,7 @@ const Orders = () => {
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">In Transit</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                    {stats.byStatus?.find(s => s._id === 'shipped')?.count || 0}
+                    {stats.byStatus?.find(s => normalizeStatus(s._id) === 'shipped')?.count || 0}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
@@ -252,7 +262,7 @@ const Orders = () => {
                   
                   {/* Dropdown */}
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-20">
-                    {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(status => (
+                    {['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(status => (
                       <button
                         key={status}
                         onClick={() => {
@@ -297,7 +307,7 @@ const Orders = () => {
               <OrderCard 
                 key={order._id} 
                 order={order}
-                onDelete={handleOrderDelete} // ✅ Pass delete handler
+                onDelete={handleOrderDelete}
               />
             ))}
           </div>

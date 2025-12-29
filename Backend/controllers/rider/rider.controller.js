@@ -1,4 +1,7 @@
-// Backend/controllers/rider/rider.controller.js - UPDATED FOR PROCESSING ORDERS
+// ============================================
+// Backend/controllers/rider/rider.controller.js
+// ✅ COMPLETE FIXED VERSION
+// ============================================
 const mongoose = require('mongoose');
 const Rider = require('../../models/rider.model');
 const Order = require('../../models/order.model');
@@ -6,7 +9,9 @@ const User = require('../../models/user.model');
 const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/AppError');
 
-// ============ AUTHENTICATION & REGISTRATION ============
+// ============================================
+// AUTHENTICATION & REGISTRATION
+// ============================================
 
 exports.registerRider = catchAsync(async (req, res, next) => {
   const {
@@ -73,7 +78,9 @@ exports.registerRider = catchAsync(async (req, res, next) => {
   });
 });
 
-// ============ DASHBOARD ============
+// ============================================
+// DASHBOARD
+// ============================================
 
 exports.getDashboard = catchAsync(async (req, res, next) => {
   const riderId = req.rider._id;
@@ -86,10 +93,10 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
     return next(new AppError('Rider not found', 404));
   }
 
-  // ✅ CHANGED: Show 'Processing' orders instead of 'Confirmed'
+  // ✅ Only show unassigned 'Processing' orders (no rider assigned)
   const pendingOrders = await Order.find({
-    orderStatus: 'Processing', // ✅ Orders ready for delivery
-    rider: null, // ✅ Not yet assigned to any rider
+    orderStatus: 'Processing',
+    rider: null, // ✅ CRITICAL: Only orders without a rider
   })
     .populate('user', 'name phone email')
     .limit(10)
@@ -120,6 +127,32 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
     }
   ]);
 
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 7);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const weeklyDeliveries = await Order.countDocuments({
+    rider: riderId,
+    createdAt: { $gte: weekStart },
+    orderStatus: 'Delivered'
+  });
+
+  const weeklyEarnings = await Order.aggregate([
+    {
+      $match: {
+        rider: new mongoose.Types.ObjectId(riderId),
+        createdAt: { $gte: weekStart },
+        orderStatus: 'Delivered'
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: '$shippingPrice' }
+      }
+    }
+  ]);
+
   res.json({
     success: true,
     data: {
@@ -130,26 +163,30 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
         phone: rider.phoneNumber,
         vehicleType: rider.vehicleType,
         currentLocation: rider.currentLocation,
-        isVerified: rider.verification.isVerified
+        isVerified: rider.verification?.isVerified || false
       },
       status: rider.status,
       stats: {
         todayDeliveries: todayOrders,
         todayEarnings: todayEarnings[0]?.total || 0,
         pendingOrders: pendingOrders.length,
-        completedOrders: rider.stats.completedDeliveries,
-        rating: rider.rating.average,
-        totalEarnings: rider.earnings.total,
-        weeklyDeliveries: rider.stats.weeklyDeliveries,
-        weeklyEarnings: rider.stats.weeklyEarnings
+        completedOrders: rider.stats?.completedDeliveries || 0,
+        rating: rider.rating?.average || 0,
+        totalEarnings: rider.earnings?.total || 0,
+        weeklyDeliveries: weeklyDeliveries,
+        weeklyEarnings: weeklyEarnings[0]?.total || 0,
+        acceptanceRate: rider.stats?.acceptanceRate || 0,
+        onTimeRate: rider.stats?.onTimeDeliveryRate || 0
       },
-      orders: pendingOrders,
-      currentOrders: rider.currentOrders
+      orders: pendingOrders, // ✅ Only unassigned orders
+      currentOrders: rider.currentOrders || []
     }
   });
 });
 
-// ============ STATS ============
+// ============================================
+// STATS
+// ============================================
 
 exports.getStats = catchAsync(async (req, res, next) => {
   const riderId = req.rider._id;
@@ -186,9 +223,9 @@ exports.getStats = catchAsync(async (req, res, next) => {
     completed: orders.filter(o => o.orderStatus === 'Delivered').length,
     cancelled: orders.filter(o => o.orderStatus === 'Cancelled').length,
     totalEarnings: orders.reduce((sum, o) => sum + (o.shippingPrice || 0), 0),
-    averageRating: rider.rating.average,
-    acceptanceRate: rider.stats.acceptanceRate,
-    onTimeRate: rider.stats.onTimeDeliveryRate
+    averageRating: rider.rating?.average || 0,
+    acceptanceRate: rider.stats?.acceptanceRate || 0,
+    onTimeRate: rider.stats?.onTimeDeliveryRate || 0
   };
 
   res.json({
@@ -198,7 +235,9 @@ exports.getStats = catchAsync(async (req, res, next) => {
   });
 });
 
-// ============ STATUS MANAGEMENT ============
+// ============================================
+// STATUS MANAGEMENT
+// ============================================
 
 exports.updateStatus = catchAsync(async (req, res, next) => {
   const riderId = req.rider._id;
@@ -215,21 +254,27 @@ exports.updateStatus = catchAsync(async (req, res, next) => {
     return next(new AppError('Rider not found', 404));
   }
 
-  if (status === 'offline' && rider.currentOrders.length > 0) {
+  if (status === 'offline' && rider.currentOrders && rider.currentOrders.length > 0) {
     return next(new AppError('Cannot go offline while on delivery', 400));
   }
 
-  if (status === 'active' && !rider.verification.isVerified) {
+  if (status === 'active' && rider.verification && !rider.verification.isVerified) {
     return next(new AppError('Account not verified. Please complete verification.', 403));
   }
 
-  await rider.updateStatus(status);
+  // Update status
+  rider.status = status;
+  if (rider.availability) {
+    rider.availability.isAvailable = (status === 'active');
+  }
+  
+  await rider.save();
 
   res.json({
     success: true,
     message: `Status updated to ${status}`,
     status: rider.status,
-    isAvailable: rider.availability.isAvailable
+    isAvailable: rider.availability?.isAvailable || false
   });
 });
 
@@ -250,10 +295,13 @@ exports.updateLocation = catchAsync(async (req, res, next) => {
   rider.currentLocation = {
     type: 'Point',
     coordinates: [lng, lat],
-    address: address || rider.currentLocation.address,
+    address: address || rider.currentLocation?.address || '',
     lastUpdated: new Date()
   };
-  rider.activity.lastLocationUpdate = new Date();
+  
+  if (rider.activity) {
+    rider.activity.lastLocationUpdate = new Date();
+  }
 
   await rider.save();
 
@@ -269,30 +317,33 @@ exports.updateLocation = catchAsync(async (req, res, next) => {
   });
 });
 
-// ============ ORDER MANAGEMENT ============
+// ============================================
+// ORDER MANAGEMENT
+// ============================================
 
 exports.getOrders = catchAsync(async (req, res, next) => {
   const riderId = req.rider._id;
   const { status, page = 1, limit = 20 } = req.query;
 
+  // ✅ Only show THIS rider's orders
   const query = { rider: riderId };
   if (status) query.orderStatus = status;
 
   const orders = await Order.find(query)
     .populate('user', 'name phone email')
     .sort({ createdAt: -1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit);
+    .limit(parseInt(limit))
+    .skip((parseInt(page) - 1) * parseInt(limit));
 
   const total = await Order.countDocuments(query);
 
   res.json({
     success: true,
-    data: orders,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalOrders: total
+    data: {
+      orders,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / limit)
     }
   });
 });
@@ -305,10 +356,10 @@ exports.getPendingOrders = catchAsync(async (req, res, next) => {
     return next(new AppError('Rider not found', 404));
   }
 
-  // ✅ CHANGED: Show 'Processing' orders
+  // ✅ Only unassigned orders
   const orders = await Order.find({
-    orderStatus: 'Processing', // ✅ Changed from 'Confirmed'
-    rider: null
+    orderStatus: 'Processing',
+    rider: null // ✅ CRITICAL: No rider assigned
   })
     .populate('user', 'name phone email')
     .limit(20)
@@ -324,8 +375,9 @@ exports.getPendingOrders = catchAsync(async (req, res, next) => {
 exports.getActiveOrders = catchAsync(async (req, res, next) => {
   const riderId = req.rider._id;
 
+  // ✅ Only THIS rider's active orders
   const orders = await Order.find({
-    rider: riderId,
+    rider: riderId, // ✅ Only this rider's orders
     orderStatus: { $in: ['Shipped', 'Out for Delivery'] }
   })
     .populate('user', 'name phone email')
@@ -335,6 +387,37 @@ exports.getActiveOrders = catchAsync(async (req, res, next) => {
     success: true,
     data: orders,
     count: orders.length
+  });
+});
+
+exports.getOrderHistory = catchAsync(async (req, res, next) => {
+  const riderId = req.rider._id;
+  const { page = 1, limit = 20 } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  const orders = await Order.find({
+    rider: riderId,
+    orderStatus: 'Delivered'
+  })
+    .sort({ deliveredAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .populate('user', 'name email phone')
+    .populate('items.product', 'name images');
+
+  const total = await Order.countDocuments({
+    rider: riderId,
+    orderStatus: 'Delivered'
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      orders,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / limit)
+    }
   });
 });
 
@@ -350,8 +433,9 @@ exports.getOrderDetails = catchAsync(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
+  // ✅ Allow access to unassigned orders OR rider's own orders
   if (order.rider && order.rider.toString() !== riderId.toString()) {
-    return next(new AppError('Access denied', 403));
+    return next(new AppError('Access denied - Order assigned to another rider', 403));
   }
 
   res.json({
@@ -370,8 +454,9 @@ exports.acceptOrder = catchAsync(async (req, res, next) => {
     return next(new AppError('Rider not found', 404));
   }
 
-  if (!rider.canAcceptOrders) {
-    return next(new AppError('Cannot accept order. Check your status and active order count.', 400));
+  // Check if rider can accept orders
+  if (rider.status !== 'active') {
+    return next(new AppError('You must be active to accept orders', 400));
   }
 
   const order = await Order.findById(orderId);
@@ -380,17 +465,38 @@ exports.acceptOrder = catchAsync(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
-  // ✅ CHANGED: Accept 'Processing' orders instead of 'Confirmed'
-  if (order.orderStatus !== 'Processing' || order.rider) {
+  // ✅ CRITICAL: Check if order is already assigned
+  if (order.rider) {
+    return next(new AppError('Order already assigned to another rider', 400));
+  }
+
+  if (order.orderStatus !== 'Processing') {
     return next(new AppError('Order not available for acceptance', 400));
   }
 
+  // ✅ Assign rider to order
   order.rider = riderId;
   order.orderStatus = 'Shipped';
   order.riderAcceptedAt = Date.now();
+  
+  // Add status history
+  if (order.statusHistory) {
+    order.statusHistory.push({
+      status: 'Shipped',
+      note: `Order accepted by rider ${rider.riderCode}`,
+      updatedBy: riderId,
+      timestamp: new Date()
+    });
+  }
+  
   await order.save();
 
-  await rider.acceptOrder(orderId);
+  // Update rider's current orders
+  if (!rider.currentOrders) {
+    rider.currentOrders = [];
+  }
+  rider.currentOrders.push(orderId);
+  await rider.save();
 
   res.json({
     success: true,
@@ -400,14 +506,15 @@ exports.acceptOrder = catchAsync(async (req, res, next) => {
       orderId: order.orderId,
       status: order.orderStatus,
       totalPrice: order.totalPrice,
-      shippingPrice: order.shippingPrice
+      shippingPrice: order.shippingPrice,
+      rider: riderId
     }
   });
 });
 
 exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
-  const { status } = req.body;
+  const { status, note } = req.body;
   const riderId = req.rider._id;
 
   const order = await Order.findById(orderId);
@@ -416,20 +523,31 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
-  if (order.rider.toString() !== riderId.toString()) {
-    return next(new AppError('Access denied', 403));
+  // ✅ Verify rider owns this order
+  if (!order.rider || order.rider.toString() !== riderId.toString()) {
+    return next(new AppError('Access denied - You are not assigned to this order', 403));
   }
 
   const validTransitions = {
     'Shipped': ['Out for Delivery', 'Cancelled'],
-    'Out for Delivery': ['Delivered']
+    'Out for Delivery': ['Delivered', 'Cancelled']
   };
 
   if (!validTransitions[order.orderStatus]?.includes(status)) {
-    return next(new AppError('Invalid status transition', 400));
+    return next(new AppError(`Cannot change status from ${order.orderStatus} to ${status}`, 400));
   }
 
   order.orderStatus = status;
+  
+  // Add status history
+  if (order.statusHistory) {
+    order.statusHistory.push({
+      status,
+      note: note || `Order ${status} by rider`,
+      updatedBy: riderId,
+      timestamp: new Date()
+    });
+  }
   
   if (status === 'Out for Delivery') {
     order.riderPickedUpAt = Date.now();
@@ -442,8 +560,28 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
 
   if (status === 'Delivered') {
     const rider = await Rider.findById(riderId);
-    await rider.completeOrder(orderId);
-    await rider.addEarnings(order.shippingPrice, orderId, 'delivery');
+    
+    // Remove from current orders
+    if (rider.currentOrders) {
+      rider.currentOrders = rider.currentOrders.filter(
+        id => id.toString() !== orderId.toString()
+      );
+    }
+    
+    // Update stats
+    if (!rider.stats) {
+      rider.stats = {};
+    }
+    rider.stats.completedDeliveries = (rider.stats.completedDeliveries || 0) + 1;
+    
+    // Add earnings
+    if (!rider.earnings) {
+      rider.earnings = { total: 0, pending: 0, paid: 0 };
+    }
+    rider.earnings.total = (rider.earnings.total || 0) + (order.shippingPrice || 0);
+    rider.earnings.pending = (rider.earnings.pending || 0) + (order.shippingPrice || 0);
+    
+    await rider.save();
   }
 
   res.json({
@@ -463,11 +601,118 @@ exports.pickupOrder = catchAsync(async (req, res, next) => {
 });
 
 exports.deliverOrder = catchAsync(async (req, res, next) => {
-  req.body.status = 'Delivered';
-  return exports.updateOrderStatus(req, res, next);
+  const { orderId } = req.params;
+  const { note, deliveredAt } = req.body; // ✅ Accept both note and deliveredAt
+  const riderId = req.rider._id;
+
+  const order = await Order.findById(orderId);
+  
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+
+  // ✅ Verify rider owns this order
+  if (!order.rider || order.rider.toString() !== riderId.toString()) {
+    return next(new AppError('Access denied - You are not assigned to this order', 403));
+  }
+
+  // ✅ Check valid transition
+  if (order.orderStatus !== 'Out for Delivery') {
+    return next(new AppError(`Cannot deliver order with status: ${order.orderStatus}`, 400));
+  }
+
+  // ✅ Update order status
+  order.orderStatus = 'Delivered';
+  order.deliveryNotes = note || 'Delivered successfully';
+  order.riderDeliveredAt = deliveredAt || Date.now();
+  order.deliveredAt = deliveredAt || Date.now();
+  order.actualDeliveryTime = Date.now();
+  
+  // Add status history
+  if (order.statusHistory) {
+    order.statusHistory.push({
+      status: 'Delivered',
+      comment: note || 'Order delivered by rider',
+      updatedBy: riderId,
+      updatedAt: new Date()
+    });
+  }
+  
+  await order.save();
+
+  // ✅ Update rider stats
+  const rider = await Rider.findById(riderId);
+  
+  if (rider) {
+    // Remove from current orders
+    if (rider.currentOrders) {
+      rider.currentOrders = rider.currentOrders.filter(
+        id => id.toString() !== orderId.toString()
+      );
+    }
+    
+    // Update stats
+    if (!rider.stats) rider.stats = {};
+    rider.stats.completedDeliveries = (rider.stats.completedDeliveries || 0) + 1;
+    rider.stats.todayDeliveries = (rider.stats.todayDeliveries || 0) + 1;
+    rider.stats.weeklyDeliveries = (rider.stats.weeklyDeliveries || 0) + 1;
+    rider.stats.monthlyDeliveries = (rider.stats.monthlyDeliveries || 0) + 1;
+    
+    // Add earnings
+    if (!rider.earnings) {
+      rider.earnings = { total: 0, pending: 0, paid: 0, thisWeek: 0, thisMonth: 0 };
+    }
+    const shippingAmount = order.shippingPrice || 0;
+    rider.earnings.total = (rider.earnings.total || 0) + shippingAmount;
+    rider.earnings.pending = (rider.earnings.pending || 0) + shippingAmount;
+    rider.earnings.thisWeek = (rider.earnings.thisWeek || 0) + shippingAmount;
+    rider.earnings.thisMonth = (rider.earnings.thisMonth || 0) + shippingAmount;
+    
+    // Update today's earnings
+    rider.stats.todayEarnings = (rider.stats.todayEarnings || 0) + shippingAmount;
+    rider.stats.weeklyEarnings = (rider.stats.weeklyEarnings || 0) + shippingAmount;
+    rider.stats.monthlyEarnings = (rider.stats.monthlyEarnings || 0) + shippingAmount;
+    
+    // Update activity
+    if (!rider.activity) rider.activity = {};
+    rider.activity.lastDelivery = new Date();
+    
+    // ✅ CRITICAL: Update status based on remaining orders
+    if (rider.currentOrders.length === 0) {
+      rider.status = 'active'; // ✅ Back to active when no more deliveries
+    }
+    
+    await rider.save();
+    
+    console.log('✅ Rider updated after delivery:', {
+      riderId,
+      completedDeliveries: rider.stats.completedDeliveries,
+      currentOrders: rider.currentOrders.length,
+      status: rider.status
+    });
+  }
+
+  res.json({
+    success: true,
+    message: 'Order delivered successfully',
+    data: {
+      order: {
+        id: order._id,
+        orderId: order.orderId,
+        status: order.orderStatus,
+        deliveredAt: order.deliveredAt
+      },
+      rider: {
+        status: rider?.status,
+        activeOrders: rider?.currentOrders?.length || 0
+      }
+    }
+  });
 });
 
-// ============ PROFILE ============
+// ============================================
+// PROFILE
+// ============================================
 
 exports.getProfile = catchAsync(async (req, res, next) => {
   const riderId = req.rider._id;
@@ -509,6 +754,10 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
     { new: true, runValidators: true }
   );
 
+  if (!rider) {
+    return next(new AppError('Rider not found', 404));
+  }
+
   res.json({
     success: true,
     message: 'Profile updated successfully',
@@ -516,7 +765,9 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
   });
 });
 
-// ============ EARNINGS ============
+// ============================================
+// EARNINGS
+// ============================================
 
 exports.getEarnings = catchAsync(async (req, res, next) => {
   const riderId = req.rider._id;
@@ -544,9 +795,9 @@ exports.getEarnings = catchAsync(async (req, res, next) => {
     }
   }
 
-  const earningsQuery = dateFilter.$gte
+  const earningsQuery = dateFilter.$gte && rider.earningsHistory
     ? rider.earningsHistory.filter(e => e.date >= dateFilter.$gte)
-    : rider.earningsHistory;
+    : rider.earningsHistory || [];
 
   const paginatedEarnings = earningsQuery
     .slice((page - 1) * limit, page * limit);
@@ -554,15 +805,15 @@ exports.getEarnings = catchAsync(async (req, res, next) => {
   res.json({
     success: true,
     summary: {
-      total: rider.earnings.total,
-      pending: rider.earnings.pending,
-      paid: rider.earnings.paid,
-      thisWeek: rider.earnings.thisWeek,
-      thisMonth: rider.earnings.thisMonth
+      total: rider.earnings?.total || 0,
+      pending: rider.earnings?.pending || 0,
+      paid: rider.earnings?.paid || 0,
+      thisWeek: rider.earnings?.thisWeek || 0,
+      thisMonth: rider.earnings?.thisMonth || 0
     },
     earnings: paginatedEarnings,
     pagination: {
-      currentPage: page,
+      currentPage: parseInt(page),
       totalPages: Math.ceil(earningsQuery.length / limit),
       total: earningsQuery.length
     }

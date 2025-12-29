@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Package, 
@@ -7,57 +7,94 @@ import {
   ChevronRight, 
   Trash2, 
   AlertCircle, 
-  X,
   Loader2,
   ImageOff
 } from 'lucide-react';
-import { Badge } from '@/components/common/Badge';
-import { formatPrice, formatDateTime, getImageUrl } from '@/utils/helpers';
-import { orderAPI } from '@/api/order.api';
 import toast from 'react-hot-toast';
 
 // ============================================
-// STATUS CONFIGURATIONS
+// MOCK API (Replace with real import)
 // ============================================
-const STATUS_VARIANTS = {
-  pending: 'warning',
-  confirmed: 'info',
-  processing: 'info',
-  shipped: 'primary',
-  delivered: 'success',
-  cancelled: 'danger',
-  returned: 'warning',
+const orderAPI = {
+  cancelOrder: async (id, reason) => {
+    const response = await fetch(`http://localhost:4001/api/orders/${id}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      },
+      body: JSON.stringify({ reason })
+    });
+    if (!response.ok) throw new Error('Failed to cancel order');
+    return response.json();
+  }
 };
 
-const PAYMENT_STATUS_VARIANTS = {
-  pending: 'warning',
-  completed: 'success',
-  failed: 'danger',
-  refunded: 'info',
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+const formatPrice = (price) => {
+  if (!price) return 'रू 0';
+  return `रू ${Number(price).toLocaleString('en-IN')}`;
+};
+
+const formatDateTime = (date) => {
+  if (!date) return 'N/A';
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return 'https://via.placeholder.com/400x400?text=No+Image';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  const baseUrl = 'http://localhost:4001';
+  const cleanPath = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
+  return `${baseUrl}/${cleanPath}`;
+};
+
+// ============================================
+// STATUS CONFIGURATION (CASE-INSENSITIVE)
+// ============================================
+const normalizeStatus = (status) => {
+  return status?.toLowerCase() || 'pending';
+};
+
+const STATUS_CONFIG = {
+  pending: { variant: 'warning', color: 'bg-yellow-500 text-white' },
+  confirmed: { variant: 'info', color: 'bg-blue-500 text-white' },
+  processing: { variant: 'info', color: 'bg-purple-500 text-white' },
+  shipped: { variant: 'primary', color: 'bg-indigo-500 text-white' },
+  'out for delivery': { variant: 'primary', color: 'bg-cyan-500 text-white' },
+  delivered: { variant: 'success', color: 'bg-green-500 text-white' },
+  cancelled: { variant: 'danger', color: 'bg-red-500 text-white' },
+  returned: { variant: 'warning', color: 'bg-orange-500 text-white' }
+};
+
+const getStatusConfig = (status) => {
+  const normalized = normalizeStatus(status);
+  return STATUS_CONFIG[normalized] || STATUS_CONFIG.pending;
 };
 
 // ============================================
 // DELETE CONFIRMATION MODAL
 // ============================================
-const DeleteConfirmationModal = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  orderNumber, 
-  isDeleting 
-}) => {
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, orderNumber, isDeleting }) => {
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-slideUp"
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-start gap-4 mb-6">
           <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full flex-shrink-0">
             <AlertCircle className="text-red-600 dark:text-red-400" size={24} />
@@ -76,14 +113,12 @@ const DeleteConfirmationModal = ({
           </div>
         </div>
 
-        {/* Warning Message */}
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
           <p className="text-sm text-red-800 dark:text-red-300">
             <strong>Warning:</strong> Deleting this order will permanently remove it from your order history.
           </p>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3">
           <button
             onClick={onClose}
@@ -116,7 +151,7 @@ const DeleteConfirmationModal = ({
 };
 
 // ============================================
-// IMAGE COMPONENT WITH ERROR HANDLING
+// PRODUCT IMAGE COMPONENT
 // ============================================
 const ProductImage = ({ src, alt, className }) => {
   const [hasError, setHasError] = useState(false);
@@ -151,18 +186,31 @@ const ProductImage = ({ src, alt, className }) => {
 };
 
 // ============================================
+// BADGE COMPONENT
+// ============================================
+const Badge = ({ children, className }) => (
+  <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${className}`}>
+    {children}
+  </span>
+);
+
+// ============================================
 // MAIN ORDER CARD COMPONENT
 // ============================================
 export const OrderCard = ({ order, onDelete }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Safe data extraction with fallbacks
+  // Safe data extraction with normalization
   const firstItem = order?.items?.[0] || {};
   const remainingItems = (order?.items?.length || 1) - 1;
   const orderId = order?.orderId || order?._id || 'N/A';
-  const orderStatus = order?.orderStatus?.toLowerCase() || 'pending';
-  const paymentStatus = order?.paymentStatus?.toLowerCase() || 'pending';
+  
+  // ✅ FIXED: Normalize status to lowercase
+  const orderStatus = normalizeStatus(order?.orderStatus);
+  const paymentStatus = normalizeStatus(order?.paymentStatus);
+  
+  const statusConfig = getStatusConfig(orderStatus);
 
   // ============================================
   // DELETE HANDLER
@@ -171,19 +219,15 @@ export const OrderCard = ({ order, onDelete }) => {
     try {
       setIsDeleting(true);
 
-      // Call API to cancel/delete order
       await orderAPI.cancelOrder(order._id, 'Deleted by user');
 
-      // Success notification
       toast.success('Order deleted successfully', {
         icon: '✅',
         duration: 3000,
       });
 
-      // Close modal
       setShowDeleteModal(false);
 
-      // Notify parent component to update list
       if (onDelete) {
         onDelete(order._id);
       }
@@ -204,9 +248,7 @@ export const OrderCard = ({ order, onDelete }) => {
     }
   };
 
-  // ============================================
-  // PREVENT DELETE ON CERTAIN STATUSES
-  // ============================================
+  // Can only delete pending/confirmed orders
   const canDelete = ['pending', 'confirmed'].includes(orderStatus);
 
   return (
@@ -229,17 +271,12 @@ export const OrderCard = ({ order, onDelete }) => {
                 </p>
               </div>
             </div>
+            
             <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="flex flex-col items-end gap-2">
-                <Badge variant={STATUS_VARIANTS[orderStatus]}>
-                  {orderStatus.toUpperCase()}
-                </Badge>
-                <Badge variant={PAYMENT_STATUS_VARIANTS[paymentStatus]}>
-                  {paymentStatus}
-                </Badge>
-              </div>
+              <Badge className={statusConfig.color}>
+                {orderStatus.toUpperCase()}
+              </Badge>
               
-              {/* Delete Button - Only show for deletable orders */}
               {canDelete && (
                 <button
                   onClick={(e) => {
@@ -263,13 +300,13 @@ export const OrderCard = ({ order, onDelete }) => {
             {/* Products Preview */}
             <div className="flex items-center gap-4 mb-4">
               <ProductImage
-                src={getImageUrl(firstItem?.productImage || firstItem?.image)}
-                alt={firstItem?.productName || firstItem?.name || 'Product'}
+                src={getImageUrl(firstItem?.image)}
+                alt={firstItem?.name || 'Product'}
                 className="w-20 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
               />
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                  {firstItem?.productName || firstItem?.name || 'Product'}
+                  {firstItem?.name || 'Product'}
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Qty: {firstItem?.quantity || 1} × {formatPrice(firstItem?.price)}
@@ -287,7 +324,7 @@ export const OrderCard = ({ order, onDelete }) => {
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</p>
                 <p className="font-bold text-lg text-gray-900 dark:text-gray-100">
-                  {formatPrice(order?.total || order?.totalPrice)}
+                  {formatPrice(order?.totalPrice || order?.total)}
                 </p>
               </div>
               <div>
@@ -319,7 +356,7 @@ export const OrderCard = ({ order, onDelete }) => {
           <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {order?.items?.length || 0} {(order?.items?.length || 0) === 1 ? 'item' : 'items'} • {formatPrice(order?.total || order?.totalPrice)}
+                {order?.items?.length || 0} {(order?.items?.length || 0) === 1 ? 'item' : 'items'} • {formatPrice(order?.totalPrice || order?.total)}
               </span>
               <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-medium group-hover:translate-x-1 transition-transform">
                 View Details

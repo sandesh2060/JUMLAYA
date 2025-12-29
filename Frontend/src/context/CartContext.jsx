@@ -1,6 +1,9 @@
-// Frontend/src/context/CartContext.jsx
+// ============================================
+// CartContext.jsx - FIXED
+// Path: Frontend/src/context/CartContext.jsx
+// ============================================
 import { createContext, useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom'; // ✅ ADD THIS
+import { useLocation } from 'react-router-dom';
 import { cartAPI } from '../api/cart.api';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -9,14 +12,14 @@ const CartContext = createContext(null);
 
 const CartProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
-  const location = useLocation(); // ✅ ADD THIS
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Fetch cart from backend
   const fetchCart = useCallback(async () => {
-    // ✅ ADD THIS CHECK - Skip if admin route
+    // Skip if admin route
     if (location.pathname.startsWith('/admin')) {
       setItems([]);
       setLoading(false);
@@ -45,14 +48,12 @@ const CartProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, location.pathname]); // ✅ ADD location.pathname to dependencies
+  }, [isAuthenticated, location.pathname]);
 
   // Fetch cart on mount and when auth changes
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
-
-  
 
   // Add item to cart
   const addToCart = async (productId, quantity = 1) => {
@@ -78,22 +79,26 @@ const CartProvider = ({ children }) => {
     }
   };
 
-  // Update cart item quantity
-  const updateCartItem = async (itemId, quantity) => {
+  // ✅ FIXED: Update cart item quantity
+  // Backend expects: { productId, quantity }
+  const updateCartItem = async (productId, quantity) => {
     if (!isAuthenticated) {
       toast.error('Please login first');
       return;
     }
 
     try {
-      console.log('🔄 Updating cart item:', { itemId, quantity });
-      const response = await cartAPI.update(itemId, quantity);
+      console.log('🔄 Updating cart item:', { productId, quantity });
+      
+      // ✅ FIXED: Pass productId (not itemId) to API
+      const response = await cartAPI.update(productId, quantity);
       
       // Update local state
       const cartItems = response?.data?.cart?.items || response?.data?.items || [];
       setItems(cartItems);
       
-      toast.success('Cart updated!');
+      // Don't show toast for every quantity change (too annoying)
+      // toast.success('Cart updated!');
       return response;
     } catch (err) {
       console.error('❌ Error updating cart:', err);
@@ -102,16 +107,19 @@ const CartProvider = ({ children }) => {
     }
   };
 
-  // Remove item from cart
-  const removeFromCart = async (itemId) => {
+  // ✅ FIXED: Remove item from cart
+  // Backend expects productId in URL params
+  const removeFromCart = async (productId) => {
     if (!isAuthenticated) {
       toast.error('Please login first');
       return;
     }
 
     try {
-      console.log('🗑️ Removing from cart:', itemId);
-      const response = await cartAPI.remove(itemId);
+      console.log('🗑️ Removing from cart:', productId);
+      
+      // ✅ FIXED: Pass productId (not itemId) to API
+      const response = await cartAPI.remove(productId);
       
       // Update local state
       const cartItems = response?.data?.cart?.items || response?.data?.items || [];
@@ -181,5 +189,4 @@ const CartProvider = ({ children }) => {
   );
 };
 
-// Export Context and Provider separately at the end
 export { CartContext, CartProvider };

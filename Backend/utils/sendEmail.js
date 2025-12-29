@@ -8,11 +8,18 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendEmail = async ({ to, subject, text, html }) => {
+const sendEmail = async ({ email, to, subject, text, html }) => {
   try {
+    // Use 'email' if provided, otherwise fall back to 'to'
+    const recipient = email || to;
+    
+    if (!recipient) {
+      throw new Error('No recipient email address provided');
+    }
+
     const info = await transporter.sendMail({
       from: `"Jumlaya Web Support" <${process.env.EMAIL_USER}>`,
-      to,
+      to: recipient,
       subject,
       text,
       html,
@@ -22,7 +29,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
     return true;
   } catch (error) {
     console.error("Email sending failed:", error);
-    return false;
+    throw error; // Re-throw so controller can catch it
   }
 };
 

@@ -1,330 +1,105 @@
-// ============================================
-// Frontend/src/rider/utils/riderApi.js
-// API utilities for rider dashboard
-// ============================================
-import axios from 'axios';
+import axios from '../../api/axios.config';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
+export const riderApi = {
+  // ============ PROFILE ============
+  getProfile: () => axios.get('/api/rider/profile'),
+  
+  updateProfile: (data) => axios.put('/api/rider/profile', data),
+  
+  uploadDocuments: (formData) => 
+    axios.post('/api/rider/documents/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
 
-// Create axios instance with auth token
-const createAuthRequest = () => {
-  const token = localStorage.getItem('authToken');
-  return axios.create({
-    baseURL: API_URL,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
-    },
-  });
+  // ============ LOCATION ============
+  updateLocation: (latitude, longitude, address) => 
+    axios.post('/api/rider/location', { latitude, longitude, address }),
+
+  // ============ STATUS ============
+  updateStatus: (status) => 
+    axios.put('/api/rider/status', { status }),
+  
+  toggleAvailability: () => 
+    axios.post('/api/rider/toggle-availability'),
+
+  // ============ ORDERS ============
+  orders: {
+    getActive: () => axios.get('/api/rider/orders/active'),
+    
+    getHistory: (page = 1) => 
+      axios.get(`/api/rider/orders/history?page=${page}`),
+    
+    getDetails: (orderId) => 
+      axios.get(`/api/rider/orders/${orderId}`),
+    
+    accept: (orderId) => 
+      axios.post(`/api/rider/orders/${orderId}/accept`),
+    
+    pickup: (orderId) => 
+      axios.post(`/api/rider/orders/${orderId}/pickup`),
+    
+    startDelivery: (orderId) => 
+      axios.post(`/api/rider/orders/${orderId}/start-delivery`),
+    
+    complete: (orderId, data = {}) => 
+      axios.post(`/api/rider/orders/${orderId}/complete`, data),
+    
+    updateStatus: (orderId, status, note) => 
+      axios.put(`/api/rider/orders/${orderId}/status`, { status, note }),
+    
+    reportIssue: (orderId, issueType, description) => 
+      axios.post(`/api/rider/orders/${orderId}/report-issue`, { 
+        issueType, 
+        description 
+      }),
+  },
+
+  // ============ NOTIFICATIONS ============
+  notifications: {
+    getAll: (page = 1, filter = 'all') => 
+      axios.get('/api/rider/notifications', { 
+        params: { page, limit: 20, filter } 
+      }),
+    
+    getById: (notificationId) => 
+      axios.get(`/api/rider/notifications/${notificationId}`),
+    
+    getUnreadCount: () => 
+      axios.get('/api/rider/notifications/unread-count'),
+    
+    markAsRead: (notificationId) => 
+      axios.put(`/api/rider/notifications/${notificationId}/read`),
+    
+    markAllAsRead: () => 
+      axios.put('/api/rider/notifications/mark-all-read'),
+    
+    delete: (notificationId) => 
+      axios.delete(`/api/rider/notifications/${notificationId}`),
+    
+    deleteAll: () => 
+      axios.delete('/api/rider/notifications'),
+    
+    getPreferences: () => 
+      axios.get('/api/rider/notifications/preferences/settings'),
+    
+    updatePreferences: (preferences) => 
+      axios.put('/api/rider/notifications/preferences/settings', preferences),
+  },
+
+  // ============ EARNINGS ============
+  getEarnings: (period = 'all') => 
+    axios.get('/api/rider/earnings', { params: { period } }),
+  
+  getEarningsHistory: (page = 1) => 
+    axios.get(`/api/rider/earnings/history?page=${page}`),
+
+  // ============ STATISTICS ============
+  getStatistics: () => 
+    axios.get('/api/rider/statistics'),
+
+  // ============ NEARBY ORDERS ============
+  getNearbyOrders: () => 
+    axios.get('/api/rider/nearby-orders'),
 };
 
-const riderAPI = {
-  // ============================================
-  // DASHBOARD & STATS
-  // ============================================
-  
-  /**
-   * Get rider dashboard data
-   * Returns: stats, pending orders, current location
-   */
-  getDashboard: async () => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get('/rider/dashboard');
-      return response.data;
-    } catch (error) {
-      console.error('Get dashboard error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get rider earnings and statistics
-   */
-  getEarnings: async (period = 'today') => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get(`/rider/earnings?period=${period}`);
-      return response.data;
-    } catch (error) {
-      console.error('Get earnings error:', error);
-      throw error;
-    }
-  },
-
-  // ============================================
-  // RIDER STATUS & LOCATION
-  // ============================================
-  
-  /**
-   * Update rider status (offline/active/on_delivery/inactive)
-   */
-  updateStatus: async (status) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.patch('/rider/status', { status });
-      return response.data;
-    } catch (error) {
-      console.error('Update status error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Update rider's current location
-   */
-updateLocation: async ({ lat, lng }) => {
-  try {
-    const api = createAuthRequest();
-    const response = await api.patch('/rider/location', {
-      lat,   // ✅ Fixed
-      lng,   // ✅ Fixed
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Update location error:', error);
-    throw error;
-  }
-},
-
-  // ============================================
-  // ORDER MANAGEMENT
-  // ============================================
-  
-  /**
-   * Get all orders assigned to rider
-   */
-  getOrders: async (status = null) => {
-    try {
-      const api = createAuthRequest();
-      const url = status ? `/rider/orders?status=${status}` : '/rider/orders';
-      const response = await api.get(url);
-      return response.data;
-    } catch (error) {
-      console.error('Get orders error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get single order details
-   */
-  getOrderById: async (orderId) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get(`/rider/orders/${orderId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Get order error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Accept an assigned order
-   */
-  acceptOrder: async (orderId) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.post(`/rider/orders/${orderId}/accept`);
-      return response.data;
-    } catch (error) {
-      console.error('Accept order error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Mark order as picked up from restaurant
-   */
-  pickupOrder: async (orderId) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.post(`/rider/orders/${orderId}/pickup`);
-      return response.data;
-    } catch (error) {
-      console.error('Pickup order error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Mark order as delivered
-   */
-  deliverOrder: async (orderId, deliveryProof = {}) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.post(`/rider/orders/${orderId}/deliver`, deliveryProof);
-      return response.data;
-    } catch (error) {
-      console.error('Deliver order error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Reject an order with reason
-   */
-  rejectOrder: async (orderId, reason) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.post(`/rider/orders/${orderId}/reject`, { reason });
-      return response.data;
-    } catch (error) {
-      console.error('Reject order error:', error);
-      throw error;
-    }
-  },
-
-  // ============================================
-  // NAVIGATION & DIRECTIONS
-  // ============================================
-  
-  /**
-   * Get directions from current location to destination
-   */
-  getDirections: async (orderId) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get(`/rider/orders/${orderId}/directions`);
-      return response.data;
-    } catch (error) {
-      console.error('Get directions error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get distance and ETA to customer
-   */
-  getETA: async (orderId) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get(`/rider/orders/${orderId}/eta`);
-      return response.data;
-    } catch (error) {
-      console.error('Get ETA error:', error);
-      throw error;
-    }
-  },
-
-  // ============================================
-  // RIDER PROFILE
-  // ============================================
-  
-  /**
-   * Get rider profile
-   */
-  getProfile: async () => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get('/rider/profile');
-      return response.data;
-    } catch (error) {
-      console.error('Get profile error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Update rider profile
-   */
-  updateProfile: async (profileData) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.patch('/rider/profile', profileData);
-      return response.data;
-    } catch (error) {
-      console.error('Update profile error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Upload rider documents (license, vehicle registration, etc.)
-   */
-  uploadDocument: async (documentType, file) => {
-    try {
-      const api = createAuthRequest();
-      const formData = new FormData();
-      formData.append('document', file);
-      formData.append('type', documentType);
-      
-      const response = await api.post('/rider/documents', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Upload document error:', error);
-      throw error;
-    }
-  },
-
-  // ============================================
-  // ANALYTICS & HISTORY
-  // ============================================
-  
-  /**
-   * Get delivery history
-   */
-  getHistory: async (page = 1, limit = 20) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get(`/rider/history?page=${page}&limit=${limit}`);
-      return response.data;
-    } catch (error) {
-      console.error('Get history error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get performance metrics
-   */
-  getPerformance: async (period = 'week') => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get(`/rider/performance?period=${period}`);
-      return response.data;
-    } catch (error) {
-      console.error('Get performance error:', error);
-      throw error;
-    }
-  },
-
-  // ============================================
-  // NOTIFICATIONS
-  // ============================================
-  
-  /**
-   * Get rider notifications
-   */
-  getNotifications: async () => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.get('/rider/notifications');
-      return response.data;
-    } catch (error) {
-      console.error('Get notifications error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Mark notification as read
-   */
-  markNotificationRead: async (notificationId) => {
-    try {
-      const api = createAuthRequest();
-      const response = await api.patch(`/rider/notifications/${notificationId}/read`);
-      return response.data;
-    } catch (error) {
-      console.error('Mark notification error:', error);
-      throw error;
-    }
-  },
-};
-
-export default riderAPI;
+export default riderApi;

@@ -1,5 +1,5 @@
 // ============================================
-// Backend/models/cart.model.js - COMPLETE FIXED VERSION
+// Backend/models/cart.model.js - FIXED WITH DYNAMIC SETTINGS
 // ============================================
 
 const mongoose = require("mongoose");
@@ -115,19 +115,17 @@ cartSchema.methods.updateItemQuantity = async function (productId, quantity) {
   return this.save();
 };
 
-// Remove item from cart - FIXED: Using filter instead of .remove()
+// Remove item from cart
 cartSchema.methods.removeItem = async function (productId) {
   console.log('🗑️ Removing item from cart:', productId);
   console.log('📦 Current items before removal:', this.items.length);
   
-  // Filter out the item to remove
   this.items = this.items.filter(
     (item) => item.product.toString() !== productId.toString()
   );
   
   console.log('📦 Items after removal:', this.items.length);
   
-  // Save and return
   await this.save();
   console.log('✅ Cart saved successfully');
   return this;
@@ -169,7 +167,6 @@ cartSchema.methods.saveForLater = async function (productId) {
 
   const item = this.items[itemIndex];
   
-  // Check if already in saved for later
   const alreadySaved = this.savedForLater.some(
     (saved) => saved.product.toString() === productId.toString()
   );
@@ -181,7 +178,6 @@ cartSchema.methods.saveForLater = async function (productId) {
     });
   }
 
-  // Remove from cart items using splice
   this.items.splice(itemIndex, 1);
   return this.save();
 };
@@ -196,7 +192,6 @@ cartSchema.methods.moveToCart = async function (productId, price) {
     throw new Error("Item not found in saved for later");
   }
 
-  // Check if already in cart
   const existingItem = this.items.find(
     (item) => item.product.toString() === productId.toString()
   );
@@ -212,47 +207,69 @@ cartSchema.methods.moveToCart = async function (productId, price) {
     });
   }
 
-  // Remove from saved for later using splice
   this.savedForLater.splice(savedIndex, 1);
   return this.save();
 };
 
-// Pre-save: calculate totals
-cartSchema.pre("save", function (next) {
-  // Calculate subtotals for each item
-  this.items.forEach((item) => {
-    item.subtotal = item.price * item.quantity;
-  });
-  
-  // Calculate cart subtotal
-  this.subtotal = this.items.reduce((sum, item) => sum + item.subtotal, 0);
-  
-  // Calculate shipping fee
-  this.shippingFee = this.subtotal >= 2000 ? 0 : 100;
-  
-  // Calculate tax (13%)
-  this.tax = Math.round(this.subtotal * 0.13);
+// ✅ FIXED: Pre-save hook now uses dynamic settings from database
+cartSchema.pre("save", async function (next) {
+  try {
+    // Calculate subtotals for each item
+    this.items.forEach((item) => {
+      item.subtotal = item.price * item.quantity;
+    });
+    
+    // Calculate cart subtotal
+    this.subtotal = this.items.reduce((sum, item) => sum + item.subtotal, 0);
+    
+    // ✅ Get settings from database dynamically
+    const Settings = mongoose.model('Settings');
+    const settings = await Settings.findOne({ isActive: true });
+    
+    if (settings) {
+      // ✅ Use database settings
+      const freeShippingThreshold = settings.freeShippingThreshold || 2000;
+      const shippingFee = settings.shippingFee || 100;
+      const taxRate = settings.taxRate || 13;
+      
+      console.log('🔧 Using settings:', { freeShippingThreshold, shippingFee, taxRate });
+      
+      // Calculate shipping (free if above threshold)
+      this.shippingFee = this.subtotal >= freeShippingThreshold ? 0 : shippingFee;
+      
+      // Calculate tax (taxRate is a percentage)
+      this.tax = Math.round(this.subtotal * (taxRate / 100));
+    } else {
+      // ✅ Fallback to reasonable defaults if no settings found
+      console.warn('⚠️ No settings found, using defaults');
+      this.shippingFee = this.subtotal >= 2000 ? 0 : 100;
+      this.tax = Math.round(this.subtotal * 0.13);
+    }
 
-  // Calculate coupon discount
-  let couponDiscount = 0;
-  if (this.appliedCoupon?.code) {
-    couponDiscount =
-      this.appliedCoupon.discountType === "percentage"
-        ? Math.round(this.subtotal * (this.appliedCoupon.discount / 100))
-        : this.appliedCoupon.discount;
+    // Calculate coupon discount
+    let couponDiscount = 0;
+    if (this.appliedCoupon?.code) {
+      couponDiscount =
+        this.appliedCoupon.discountType === "percentage"
+          ? Math.round(this.subtotal * (this.appliedCoupon.discount / 100))
+          : this.appliedCoupon.discount;
+    }
+
+    // Calculate total
+    this.total = Math.max(
+      0,
+      this.subtotal + this.tax + this.shippingFee - this.discount - couponDiscount
+    );
+    
+    // Update activity tracking
+    this.lastActivity = new Date();
+    this.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    
+    next();
+  } catch (error) {
+    console.error('❌ Error in cart pre-save:', error);
+    next(error);
   }
-
-  // Calculate total
-  this.total = Math.max(
-    0,
-    this.subtotal + this.tax + this.shippingFee - this.discount - couponDiscount
-  );
-  
-  // Update activity tracking
-  this.lastActivity = new Date();
-  this.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  
-  next();
 });
 
 module.exports = mongoose.model("Cart", cartSchema);

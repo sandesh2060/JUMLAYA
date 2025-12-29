@@ -21,7 +21,7 @@ export const formatPrice = (price, currency = 'NPR') => {
 
   // Currency symbols
   const symbols = {
-    NPR: 'रू',
+    NPR: 'NPR',
     USD: '$',
     EUR: '€',
     GBP: '£',

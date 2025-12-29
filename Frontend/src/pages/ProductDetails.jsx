@@ -1,7 +1,8 @@
-// pages/ProductDetails.jsx - FIXED to handle both slug and ID
+// pages/ProductDetails.jsx - WITH i18n SUPPORT
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ShoppingCart, Heart, Star, MessageCircle } from "lucide-react";
+import { useTranslation } from 'react-i18next'; // ✅ ADD THIS
 import { ProductImageGallery } from "@components/product/ProductImageGallery";
 import { ReviewForm } from "@components/product/ReviewForm";
 import { ReviewList } from "@components/product/ReviewList";
@@ -18,6 +19,7 @@ import { productAPI } from "@api/product.api";
 import toast from "react-hot-toast";
 
 const ProductDetails = () => {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const params = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
@@ -33,7 +35,6 @@ const ProductDetails = () => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
-  // ✅ FIX: Get either slug or id from params
   const identifier = params.slug || params.id || params['*'];
 
   useEffect(() => {
@@ -45,11 +46,9 @@ const ProductDetails = () => {
   const fetchProduct = async () => {
     try {
       let data;
-      // ✅ FIX: Try to fetch by slug first, if it fails try by ID
       try {
         data = await productAPI.getBySlug(identifier);
       } catch (error) {
-        // If slug fails, try fetching by ID
         if (error.response?.status === 404) {
           data = await productAPI.getById(identifier);
         } else {
@@ -59,7 +58,7 @@ const ProductDetails = () => {
       setProduct(data.product);
     } catch (error) {
       console.error("Failed to fetch product:", error);
-      toast.error("Failed to load product");
+      toast.error(t('productDetails.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -67,7 +66,7 @@ const ProductDetails = () => {
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
-      toast.error("Please login to add items to cart");
+      toast.error(t('productCard.errors.loginCart'));
       navigate("/login");
       return;
     }
@@ -86,7 +85,7 @@ const ProductDetails = () => {
 
   const handleWishlist = async () => {
     if (!isAuthenticated) {
-      toast.error("Please login to manage your wishlist");
+      toast.error(t('productCard.errors.loginWishlist'));
       navigate("/login");
       return;
     }
@@ -110,7 +109,7 @@ const ProductDetails = () => {
     setShowReviewForm(false);
     setEditingReview(null);
     fetchProduct();
-    toast.success("Review submitted successfully!");
+    toast.success(t('productDetails.reviews.submitSuccess'));
   };
 
   const handleEditReview = (review) => {
@@ -136,7 +135,7 @@ const ProductDetails = () => {
     return (
       <div className="container mx-auto px-4 py-8 bg-white dark:bg-gray-900">
         <p className="text-center text-gray-500 dark:text-gray-400">
-          Product not found
+          {t('productDetails.notFound')}
         </p>
       </div>
     );
@@ -149,7 +148,7 @@ const ProductDetails = () => {
       <div className="container mx-auto px-4 py-8">
         <Breadcrumb
           items={[
-            { label: "Products", link: "/products" },
+            { label: t('nav.products'), link: "/products" },
             { label: product.name },
           ]}
         />
@@ -170,12 +169,12 @@ const ProductDetails = () => {
             <div className="flex items-center gap-4 mb-4">
               <Rating value={product.rating || 0} showValue />
               <span className="text-gray-500 dark:text-gray-400">
-                ({product.reviewCount || 0} reviews)
+                ({product.reviewCount || 0} {t('productDetails.reviewsCount')})
               </span>
               {product.stock > 0 ? (
-                <Badge variant="success">In Stock</Badge>
+                <Badge variant="success">{t('inStock')}</Badge>
               ) : (
-                <Badge variant="danger">Out of Stock</Badge>
+                <Badge variant="danger">{t('outOfStock')}</Badge>
               )}
             </div>
 
@@ -197,7 +196,7 @@ const ProductDetails = () => {
                           product.originalPrice) *
                           100
                       )}
-                      % OFF
+                      % {t('productCard.off')}
                     </Badge>
                   </div>
                 )}
@@ -212,7 +211,7 @@ const ProductDetails = () => {
               <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Quantity
+                    {t('quantity')}
                   </label>
                   <input
                     type="number"
@@ -223,7 +222,7 @@ const ProductDetails = () => {
                     className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   />
                   <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
-                    {product.stock} available
+                    {product.stock} {t('productDetails.available')}
                   </span>
                 </div>
 
@@ -236,17 +235,17 @@ const ProductDetails = () => {
                     {addingToCart ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Adding...
+                        {t('productDetails.adding')}
                       </>
                     ) : addedToCart ? (
                       <>
                         <ShoppingCart size={20} />
-                        Added to Cart
+                        {t('productDetails.addedToCart')}
                       </>
                     ) : (
                       <>
                         <ShoppingCart size={20} />
-                        Add to Cart
+                        {t('addToCart')}
                       </>
                     )}
                   </button>
@@ -277,12 +276,13 @@ const ProductDetails = () => {
             <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
               <dl className="space-y-3">
                 <div className="flex justify-between">
-                  <dt className="text-gray-600 dark:text-gray-400">Category</dt>
+                  <dt className="text-gray-600 dark:text-gray-400">
+                    {t('productDetails.category')}
+                  </dt>
                   <dd className="font-medium text-gray-900 dark:text-white">
                     {product.category?.name}
                   </dd>
                 </div>
-               
               </dl>
             </div>
           </div>
@@ -301,7 +301,7 @@ const ProductDetails = () => {
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                Description
+                {t('description')}
                 {activeTab === "description" && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 dark:bg-green-400"></div>
                 )}
@@ -315,7 +315,7 @@ const ProductDetails = () => {
                 }`}
               >
                 <MessageCircle size={20} />
-                Reviews ({product.reviewCount || 0})
+                {t('reviews')} ({product.reviewCount || 0})
                 {activeTab === "reviews" && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 dark:bg-green-400"></div>
                 )}
@@ -327,7 +327,7 @@ const ProductDetails = () => {
           {activeTab === "description" && (
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                Product Description
+                {t('productDetails.productDescription')}
               </h2>
               <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                 {product.description}
@@ -346,7 +346,7 @@ const ProductDetails = () => {
                     </div>
                     <Rating value={product.rating || 0} size={24} />
                     <p className="text-gray-600 dark:text-gray-400 mt-2">
-                      Based on {product.reviewCount || 0} reviews
+                      {t('productDetails.reviews.basedOn', { count: product.reviewCount || 0 })}
                     </p>
                   </div>
                   <div className="md:col-span-2">
@@ -383,7 +383,7 @@ const ProductDetails = () => {
                     onClick={() => setShowReviewForm(!showReviewForm)}
                     variant={showReviewForm ? "outline" : "primary"}
                   >
-                    {showReviewForm ? "Cancel" : "Write a Review"}
+                    {showReviewForm ? t('cancel') : t('productDetails.reviews.writeReview')}
                   </Button>
                 </div>
               )}

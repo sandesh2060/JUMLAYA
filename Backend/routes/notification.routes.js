@@ -1,168 +1,32 @@
+// ============================================
+// notification.routes.js
+// Path: Backend/routes/notification.routes.js
+// ============================================
+
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middlewares/auth.middleware');
+const notificationController = require('../controllers/notification.controller');
+const { authenticate } = require('../middlewares/auth.middleware');
 
-// Mock notifications - Replace with database in production
-const mockNotifications = [];
+// All routes require authentication
+router.use(authenticate);
 
-// GET /api/notifications - Get all notifications
-router.get('/', protect, async (req, res) => {
-  try {
-    const { limit = 50, skip = 0 } = req.query;
-    
-    // Filter by user ID
-    const userNotifications = mockNotifications
-      .filter(n => n.userId === req.user._id.toString())
-      .slice(parseInt(skip), parseInt(skip) + parseInt(limit));
+// Get all notifications for current user
+router.get('/', notificationController.getNotifications);
 
-    res.status(200).json({
-      success: true,
-      data: {
-        notifications: userNotifications,
-        total: userNotifications.length
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch notifications',
-      error: error.message 
-    });
-  }
-});
+// Get unread count
+router.get('/unread-count', notificationController.getUnreadCount);
 
-// GET /api/notifications/unread/count - Get unread count
-router.get('/unread/count', protect, async (req, res) => {
-  try {
-    const count = mockNotifications
-      .filter(n => n.userId === req.user._id.toString() && !n.isRead)
-      .length;
+// Mark all as read
+router.patch('/mark-all-read', notificationController.markAllAsRead);
 
-    res.status(200).json({
-      success: true,
-      data: { count }
-    });
-  } catch (error) {
-    console.error('Error fetching unread count:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch unread count',
-      error: error.message 
-    });
-  }
-});
+// Mark single notification as read
+router.patch('/:id/read', notificationController.markAsRead);
 
-// PATCH /api/notifications/:id/read - Mark notification as read
-router.patch('/:id/read', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const notification = mockNotifications.find(
-      n => n._id === id && n.userId === req.user._id.toString()
-    );
-    
-    if (!notification) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notification not found'
-      });
-    }
-    
-    notification.isRead = true;
+// Delete notification
+router.delete('/:id', notificationController.deleteNotification);
 
-    res.status(200).json({
-      success: true,
-      message: 'Notification marked as read',
-      data: { notification }
-    });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to mark notification as read',
-      error: error.message 
-    });
-  }
-});
-
-// PATCH /api/notifications/read-all - Mark all notifications as read
-router.patch('/read-all', protect, async (req, res) => {
-  try {
-    mockNotifications
-      .filter(n => n.userId === req.user._id.toString())
-      .forEach(n => n.isRead = true);
-
-    res.status(200).json({
-      success: true,
-      message: 'All notifications marked as read'
-    });
-  } catch (error) {
-    console.error('Error marking all as read:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to mark all as read',
-      error: error.message 
-    });
-  }
-});
-
-// DELETE /api/notifications/:id - Delete notification
-router.delete('/:id', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const index = mockNotifications.findIndex(
-      n => n._id === id && n.userId === req.user._id.toString()
-    );
-    
-    if (index === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notification not found'
-      });
-    }
-    
-    mockNotifications.splice(index, 1);
-
-    res.status(200).json({
-      success: true,
-      message: 'Notification deleted'
-    });
-  } catch (error) {
-    console.error('Error deleting notification:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to delete notification',
-      error: error.message 
-    });
-  }
-});
-
-// DELETE /api/notifications/clear-all - Clear all notifications
-router.delete('/clear-all', protect, async (req, res) => {
-  try {
-    const initialLength = mockNotifications.length;
-    
-    // Remove all notifications for this user
-    for (let i = mockNotifications.length - 1; i >= 0; i--) {
-      if (mockNotifications[i].userId === req.user._id.toString()) {
-        mockNotifications.splice(i, 1);
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'All notifications cleared'
-    });
-  } catch (error) {
-    console.error('Error clearing notifications:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to clear notifications',
-      error: error.message 
-    });
-  }
-});
+// Delete all read notifications
+router.delete('/read/all', notificationController.deleteAllRead);
 
 module.exports = router;

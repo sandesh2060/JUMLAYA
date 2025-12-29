@@ -1,7 +1,5 @@
-// ============================================
-// Store Settings Context
-// Path: Frontend/src/context/StoreContext.jsx
-// ============================================
+// Frontend/src/context/StoreContext.jsx
+// COMPLETE FILE - Full implementation with shipping
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '@/api/axios.config';
@@ -19,6 +17,7 @@ export const useStore = () => {
 
 export const StoreProvider = ({ children }) => {
   const [settings, setSettings] = useState(null);
+  const [shippingMethods, setShippingMethods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -28,90 +27,149 @@ export const StoreProvider = ({ children }) => {
     storeEmail: 'support@jumlaya.com',
     storePhone: '+977 9800000000',
     storeAddress: 'Kathmandu, Nepal',
-    currency: 'Rs.',
+    currency: 'रु',
     currencyCode: 'NPR',
     taxRate: 13,
     shippingFee: 100,
-    freeShippingThreshold: 5000,
-    minOrderAmount: 500,
+    freeShippingThreshold: 500,
+    minOrderAmount: 100,
     maxOrderAmount: 100000,
     paymentMethods: {
       cod: { enabled: true },
       esewa: { enabled: true },
-      khalti: { enabled: true },
-      card: { enabled: false }
+      khalti: { enabled: true }
     },
     socialMedia: {
-      facebook: 'https://facebook.com/jumlaya',
-      instagram: 'https://instagram.com/jumlaya',
-      twitter: 'https://twitter.com/jumlaya',
+      facebook: '',
+      instagram: '',
+      twitter: '',
       youtube: '',
       tiktok: ''
-    },
-    logo: '/logo.png',
-    favicon: '/favicon.ico'
+    }
   };
+
+  // Default shipping methods (fallback)
+  const defaultShippingMethods = [
+    {
+      _id: 'default-1',
+      name: 'Standard Delivery',
+      description: 'Delivery within 3-5 business days',
+      cost: 100,
+      estimatedDays: '3-5',
+      isActive: true,
+      isFreeShippingEligible: true,
+      freeShippingThreshold: 500,
+      icon: '📦',
+      priority: 0
+    }
+  ];
 
   // Fetch settings from API
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/settings');
+      console.log('📦 Fetching store settings from /api/public/settings');
       
-      if (response.data?.success) {
-        setSettings(response.data.data.settings);
-        setError(null);
-      } else {
-        throw new Error('Failed to load settings');
+      const response = await apiClient.get('/public/settings');
+      
+      console.log('📦 Full API Response:', response);
+      console.log('📦 response.data:', response.data);
+      
+      // Handle multiple possible response formats
+      let settingsData = null;
+      
+      if (response.data?.data?.settings) {
+        settingsData = response.data.data.settings;
+        console.log('✅ Format 1: response.data.data.settings');
+      } else if (response.data?.data) {
+        settingsData = response.data.data;
+        console.log('✅ Format 2: response.data.data');
+      } else if (response.data?.settings) {
+        settingsData = response.data.settings;
+        console.log('✅ Format 3: response.data.settings');
+      } else if (response.data && typeof response.data === 'object' && response.data.storeName) {
+        settingsData = response.data;
+        console.log('✅ Format 4: Direct settings object');
       }
+      
+      if (settingsData) {
+        setSettings(settingsData);
+        setError(null);
+        console.log('✅ Store settings loaded successfully:', settingsData);
+      } else {
+        console.warn('⚠️ Unexpected API response structure:', response.data);
+        throw new Error('Invalid response format - settings not found in response');
+      }
+      
     } catch (err) {
-      console.error('❌ Error fetching store settings:', err);
+      console.error('❌ Error fetching store settings:', err.message);
+      console.error('❌ Full error:', err);
       setError(err.message);
-      // Use default settings as fallback
       setSettings(defaultSettings);
+      console.warn('⚠️ Using default settings as fallback');
+      
+      if (!settings) {
+        toast.error('Using default store settings', {
+          duration: 2000,
+          icon: '⚠️'
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Update settings (admin only)
-  const updateSettings = async (updates) => {
+  // Fetch shipping methods from API
+  const fetchShippingMethods = async () => {
     try {
-      const response = await apiClient.put('/admin/settings', updates);
+      console.log('🚚 Fetching shipping methods from /api/public/settings/shipping');
       
-      if (response.data?.success) {
-        setSettings(response.data.data.settings);
-        toast.success('Settings updated successfully');
-        return response.data.data.settings;
+      const response = await apiClient.get('/public/settings/shipping');
+      
+      console.log('🚚 Shipping API Response:', response.data);
+      
+      // Handle multiple possible response formats
+      let shippingData = null;
+      
+      if (response.data?.data?.shippingMethods) {
+        shippingData = response.data.data.shippingMethods;
+      } else if (response.data?.shippingMethods) {
+        shippingData = response.data.shippingMethods;
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        shippingData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        shippingData = response.data;
       }
+      
+      if (shippingData && Array.isArray(shippingData) && shippingData.length > 0) {
+        const activeMethods = shippingData.filter(method => method.isActive !== false);
+        setShippingMethods(activeMethods);
+        console.log('✅ Shipping methods loaded:', activeMethods);
+      } else {
+        console.warn('⚠️ No shipping methods found, using defaults');
+        setShippingMethods(defaultShippingMethods);
+      }
+      
     } catch (err) {
-      console.error('❌ Error updating settings:', err);
-      toast.error(err.response?.data?.message || 'Failed to update settings');
-      throw err;
+      console.error('❌ Error fetching shipping methods:', err.message);
+      setShippingMethods(defaultShippingMethods);
+      console.warn('⚠️ Using default shipping methods as fallback');
     }
   };
 
-  // Update specific section (admin only)
-  const updateSettingSection = async (section, updates) => {
-    try {
-      const response = await apiClient.patch(`/admin/settings/${section}`, updates);
-      
-      if (response.data?.success) {
-        setSettings(response.data.data.settings);
-        toast.success(`${section} settings updated`);
-        return response.data.data.settings;
-      }
-    } catch (err) {
-      console.error(`❌ Error updating ${section} settings:`, err);
-      toast.error(err.response?.data?.message || `Failed to update ${section} settings`);
-      throw err;
-    }
-  };
+  // Fetch both settings and shipping on mount
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchSettings();
+      await fetchShippingMethods();
+    };
+    loadData();
+  }, []);
 
   // Helper: Format currency
   const formatCurrency = (amount) => {
-    if (!amount && amount !== 0) return `${settings?.currency || 'Rs.'} 0`;
-    return `${settings?.currency || 'Rs.'} ${amount.toLocaleString()}`;
+    if (!amount && amount !== 0) return `${settings?.currency || 'रु'} 0`;
+    return `${settings?.currency || 'रु'} ${amount.toLocaleString()}`;
   };
 
   // Helper: Calculate tax
@@ -120,11 +178,65 @@ export const StoreProvider = ({ children }) => {
     return (amount * taxRate) / 100;
   };
 
-  // Helper: Calculate shipping
+  // Helper: Calculate shipping (Legacy - uses first active method or settings)
   const calculateShipping = (subtotal) => {
-    const threshold = settings?.freeShippingThreshold || 5000;
+    if (shippingMethods.length > 0) {
+      const method = shippingMethods[0];
+      if (method.isFreeShippingEligible && 
+          method.freeShippingThreshold && 
+          subtotal >= method.freeShippingThreshold) {
+        return 0;
+      }
+      return method.cost;
+    }
+    
+    // Fallback to settings
+    const threshold = settings?.freeShippingThreshold || 500;
     const fee = settings?.shippingFee || 100;
     return subtotal >= threshold ? 0 : fee;
+  };
+
+  // Helper: Calculate shipping cost for a specific method
+  const calculateShippingCost = (methodId, subtotal) => {
+    const method = shippingMethods.find(m => m._id === methodId);
+    
+    if (!method) {
+      return calculateShipping(subtotal);
+    }
+    
+    if (method.isFreeShippingEligible && 
+        method.freeShippingThreshold && 
+        subtotal >= method.freeShippingThreshold) {
+      return 0;
+    }
+    
+    return method.cost;
+  };
+
+  // Helper: Get available shipping methods with calculated costs
+  const getAvailableShippingMethods = (subtotal) => {
+    return shippingMethods.map(method => ({
+      ...method,
+      finalCost: calculateShippingCost(method._id, subtotal),
+      isFree: method.isFreeShippingEligible && 
+              method.freeShippingThreshold && 
+              subtotal >= method.freeShippingThreshold
+    }));
+  };
+
+  // Helper: Get default shipping method (first active one)
+  const getDefaultShippingMethod = () => {
+    return shippingMethods.length > 0 ? shippingMethods[0] : null;
+  };
+
+  // Helper: Get cheapest shipping method
+  const getCheapestShippingMethod = (subtotal) => {
+    const methods = getAvailableShippingMethods(subtotal);
+    if (methods.length === 0) return null;
+    
+    return methods.reduce((cheapest, current) => {
+      return current.finalCost < cheapest.finalCost ? current : cheapest;
+    });
   };
 
   // Helper: Check if payment method is enabled
@@ -132,25 +244,51 @@ export const StoreProvider = ({ children }) => {
     return settings?.paymentMethods?.[method]?.enabled || false;
   };
 
-  // Fetch settings on mount
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const value = {
-    settings: settings || defaultSettings,
-    loading,
-    error,
-    fetchSettings,
-    updateSettings,
-    updateSettingSection,
-    
-    // Helper functions
-    formatCurrency,
-    calculateTax,
-    calculateShipping,
-    isPaymentMethodEnabled,
+  // Helper: Get tax rate
+  const getTaxRate = () => {
+    return settings?.taxRate || 13;
   };
 
-  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+  // Helper: Get shipping fee (Legacy)
+  const getShippingFee = () => {
+    return settings?.shippingFee || 100;
+  };
+
+  // Helper: Get free shipping threshold (Legacy)
+  const getFreeShippingThreshold = () => {
+    return settings?.freeShippingThreshold || 500;
+  };
+
+  const value = {
+    // State
+    settings: settings || defaultSettings,
+    shippingMethods,
+    loading,
+    error,
+    
+    // Actions
+    fetchSettings,
+    fetchShippingMethods,
+    
+    // Helper functions - Settings
+    formatCurrency,
+    calculateTax,
+    isPaymentMethodEnabled,
+    getTaxRate,
+    getShippingFee,
+    getFreeShippingThreshold,
+    
+    // Helper functions - Shipping
+    calculateShipping,
+    calculateShippingCost,
+    getAvailableShippingMethods,
+    getDefaultShippingMethod,
+    getCheapestShippingMethod,
+  };
+
+  return (
+    <StoreContext.Provider value={value}>
+      {children}
+    </StoreContext.Provider>
+  );
 };

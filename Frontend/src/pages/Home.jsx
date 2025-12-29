@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next"; // ✅ ADD THIS
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowRight,
   Leaf,
@@ -14,6 +16,7 @@ import { Button } from "@components/common/Button";
 import { productAPI } from "@api/product.api";
 
 const Home = () => {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
@@ -77,40 +80,40 @@ const Home = () => {
   const features = [
     {
       icon: Leaf,
-      title: "100% Organic",
-      description: "Certified organic products from trusted farms",
+      title: t("home.features.organic.title"),
+      description: t("home.features.organic.description"),
       color:
         "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
     },
     {
       icon: Truck,
-      title: "Fast Delivery",
-      description: "Quick and reliable shipping to your door",
+      title: t("home.features.delivery.title"),
+      description: t("home.features.delivery.description"),
       color: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
     },
     {
       icon: Shield,
-      title: "Secure Payment",
-      description: "Safe and encrypted transactions",
+      title: t("home.features.payment.title"),
+      description: t("home.features.payment.description"),
       color:
         "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
     },
     {
       icon: Star,
-      title: "Quality Assured",
-      description: "Premium quality products guaranteed",
+      title: t("home.features.quality.title"),
+      description: t("home.features.quality.description"),
       color:
         "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
     },
   ];
 
   const benefits = [
-    "Fresh from local farms",
-    "No harmful chemicals",
-    "Eco-friendly packaging",
-    "Fair trade certified",
-    "Support local farmers",
-    "Sustainable sourcing",
+    t("home.benefits.fresh"),
+    t("home.benefits.noChemicals"),
+    t("home.benefits.ecoFriendly"),
+    t("home.benefits.fairTrade"),
+    t("home.benefits.supportLocal"),
+    t("home.benefits.sustainable"),
   ];
 
   return (
@@ -158,7 +161,7 @@ const Home = () => {
             }`}
           >
             <span className="inline-block px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-semibold mb-6 animate-bounce">
-              🌿 100% Organic & Fresh  
+              🌿 {t("home.hero.badge")}
             </span>
           </div>
 
@@ -169,9 +172,9 @@ const Home = () => {
                 : "opacity-0 translate-y-10"
             }`}
           >
-            Fresh & Organic
+            {t("home.hero.title")}
             <span className="block text-green-600 dark:text-green-400 mt-2">
-              Products Delivered
+              {t("home.hero.subtitle")}
             </span>
           </h1>
 
@@ -182,8 +185,7 @@ const Home = () => {
                 : "opacity-0 translate-y-10"
             }`}
           >
-            Experience the taste of nature with our premium selection of organic
-            products, delivered fresh to your doorstep
+            {t("home.hero.description")}
           </p>
 
           <div
@@ -195,13 +197,13 @@ const Home = () => {
           >
             <Link to="/products">
               <Button size="lg" className="group">
-                Shop Now{" "}
+                {t("home.hero.shopNow")}{" "}
                 <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
             <Link to="/about">
               <Button variant="outline" size="lg">
-                Learn More
+                {t("home.hero.learnMore")}
               </Button>
             </Link>
           </div>
@@ -219,7 +221,7 @@ const Home = () => {
                 50K+
               </div>
               <div className="text-gray-600 dark:text-gray-400">
-                Happy Customers
+                {t("home.stats.customers")}
               </div>
             </div>
             <div className="text-center">
@@ -227,7 +229,7 @@ const Home = () => {
                 1000+
               </div>
               <div className="text-gray-600 dark:text-gray-400">
-                Organic Products
+                {t("home.stats.products")}
               </div>
             </div>
             <div className="text-center">
@@ -235,7 +237,7 @@ const Home = () => {
                 100%
               </div>
               <div className="text-gray-600 dark:text-gray-400">
-                Organic Certified
+                {t("home.stats.certified")}
               </div>
             </div>
             <div className="text-center">
@@ -243,7 +245,7 @@ const Home = () => {
                 24/7
               </div>
               <div className="text-gray-600 dark:text-gray-400">
-                Customer Support
+                {t("home.stats.support")}
               </div>
             </div>
           </div>
@@ -265,11 +267,10 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Why Choose JUMLAYA?
+              {t("home.whyChoose.title")}
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              We're committed to bringing you the finest organic products with
-              exceptional service
+              {t("home.whyChoose.description")}
             </p>
           </div>
 
@@ -305,12 +306,10 @@ const Home = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
-                The Organic Difference
+                {t("home.organic.title")}
               </h2>
               <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-                When you choose organic, you're choosing health for yourself,
-                your family, and the planet. Our products are grown without
-                synthetic pesticides, GMOs, or artificial additives.
+                {t("home.organic.description")}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -326,7 +325,7 @@ const Home = () => {
 
               <Link to="/about">
                 <Button size="lg">
-                  Learn More About Us <ArrowRight className="ml-2" />
+                  {t("home.organic.learnMore")} <ArrowRight className="ml-2" />
                 </Button>
               </Link>
             </div>
@@ -342,10 +341,10 @@ const Home = () => {
                   <Clock className="w-8 h-8 text-green-600 dark:text-green-400" />
                   <div>
                     <div className="font-bold text-gray-900 dark:text-white">
-                      Same Day
+                      {t("home.delivery.sameDay")}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-300">
-                      Delivery Available
+                      {t("home.delivery.available")}
                     </div>
                   </div>
                 </div>
@@ -364,15 +363,15 @@ const Home = () => {
           <div className="flex justify-between items-center mb-12">
             <div>
               <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Featured Products
+                {t("home.featured.title")}
               </h2>
               <p className="text-xl text-gray-600 dark:text-gray-300">
-                Handpicked selection of our best organic products
+                {t("home.featured.description")}
               </p>
             </div>
             <Link to="/products" className="hidden md:block">
               <Button variant="outline">
-                View All Products <ArrowRight className="ml-2" />
+                {t("home.featured.viewAll")} <ArrowRight className="ml-2" />
               </Button>
             </Link>
           </div>
@@ -382,7 +381,7 @@ const Home = () => {
           <div className="mt-8 text-center md:hidden">
             <Link to="/products">
               <Button>
-                View All Products <ArrowRight className="ml-2" />
+                {t("home.featured.viewAll")} <ArrowRight className="ml-2" />
               </Button>
             </Link>
           </div>
@@ -396,11 +395,10 @@ const Home = () => {
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-6">
-            Ready to Go Organic?
+            {t("home.cta.title")}
           </h2>
           <p className="text-xl text-green-50 mb-8">
-            Join thousands of happy customers who've made the switch to
-            healthier, more sustainable living
+            {t("home.cta.description")}
           </p>
           <Link to="/products">
             <Button
@@ -408,7 +406,7 @@ const Home = () => {
               variant="secondary"
               className="bg-white text-green-600 hover:bg-green-50"
             >
-              Start Shopping Now <ArrowRight className="ml-2" />
+              {t("home.cta.button")} <ArrowRight className="ml-2" />
             </Button>
           </Link>
         </div>

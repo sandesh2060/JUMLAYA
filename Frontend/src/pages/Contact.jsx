@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mail, Phone, MapPin, Send, Clock, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
+import publicSettingsAPI from '@/api/publicSettings.api'
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,45 @@ const Contact = () => {
     message: ''
   })
   const [loading, setLoading] = useState(false)
+  const [pageLoading, setPageLoading] = useState(true)
+  
+  // Dynamic contact info from backend
+  const [contactInfo, setContactInfo] = useState({
+    storeName: 'JUMLAYA',
+    storeEmail: 'support@jumlaya.com',
+    storePhone: '+977 9812345678',
+    storeAddress: 'Kathmandu, Nepal',
+    storeHoursText: 'Mon - Sat: 9AM - 6PM',
+    socialMedia: {}
+  })
+
+  useEffect(() => {
+    fetchContactInfo()
+  }, [])
+
+  const fetchContactInfo = async () => {
+    try {
+      setPageLoading(true)
+      const response = await publicSettingsAPI.getContactInfo()
+      
+      if (response.success) {
+        setContactInfo({
+          storeName: response.data.storeName || 'JUMLAYA',
+          storeEmail: response.data.storeEmail || 'support@jumlaya.com',
+          storePhone: response.data.storePhone || '+977 9812345678',
+          storeAddress: response.data.storeAddress || 'Kathmandu, Nepal',
+          storeHoursText: response.data.storeHoursText || 'Mon - Sat: 9AM - 6PM',
+          socialMedia: response.data.socialMedia || {}
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching contact info:', error)
+      toast.error('Failed to load contact information')
+      // Continue with default values if fetch fails
+    } finally {
+      setPageLoading(false)
+    }
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -21,46 +61,62 @@ const Contact = () => {
     e.preventDefault()
     setLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      toast.success('Message sent successfully! We will get back to you soon.')
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        subject: '',
-        message: ''
-      })
+    try {
+      const response = await publicSettingsAPI.submitContactForm(formData)
+      
+      if (response.success) {
+        toast.success(response.message || 'Message sent successfully! We will get back to you soon.')
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          subject: '',
+          message: ''
+        })
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to send message. Please try again.'
+      toast.error(errorMessage)
+    } finally {
       setLoading(false)
-    }, 1500)
+    }
   }
 
-  const contactInfo = [
+  const contactInfoCards = [
     {
       icon: <Phone className="w-6 h-6" />,
       title: 'Phone',
-      details: '+977 9812345678',
-      link: 'tel:+9779812345678'
+      details: contactInfo.storePhone,
+      link: `tel:${contactInfo.storePhone.replace(/\s/g, '')}`
     },
     {
       icon: <Mail className="w-6 h-6" />,
       title: 'Email',
-      details: 'support@jumlaya.com',
-      link: 'mailto:support@jumlaya.com'
+      details: contactInfo.storeEmail,
+      link: `mailto:${contactInfo.storeEmail}`
     },
     {
       icon: <MapPin className="w-6 h-6" />,
       title: 'Address',
-      details: 'Kathmandu, Nepal',
+      details: contactInfo.storeAddress,
       link: 'https://maps.google.com'
     },
     {
       icon: <Clock className="w-6 h-6" />,
       title: 'Business Hours',
-      details: 'Mon - Sat: 9AM - 6PM',
+      details: contactInfo.storeHoursText,
       link: null
     }
   ]
+
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12 px-4 transition-colors">
@@ -78,7 +134,7 @@ const Contact = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Contact Information Cards */}
           <div className="lg:col-span-1 space-y-6">
-            {contactInfo.map((info, index) => (
+            {contactInfoCards.map((info, index) => (
               <div
                 key={index}
                 className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700 animate-slide-right hover:scale-105 group"
@@ -97,7 +153,7 @@ const Contact = () => {
                         href={info.link}
                         target={info.link.startsWith('http') ? '_blank' : undefined}
                         rel={info.link.startsWith('http') ? 'noopener noreferrer' : undefined}
-                        className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors break-words"
                       >
                         {info.details}
                       </a>
@@ -109,7 +165,7 @@ const Contact = () => {
               </div>
             ))}
 
-            {/* Social Media or Additional Info */}
+            {/* Quick Response Info */}
             <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl p-6 shadow-lg text-white animate-slide-right" style={{ animationDelay: '400ms' }}>
               <MessageSquare className="w-8 h-8 mb-4" />
               <h3 className="font-semibold text-lg mb-2">Quick Response</h3>
@@ -236,7 +292,7 @@ const Contact = () => {
               <div className="text-center">
                 <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">Map Location</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">Kathmandu, Nepal</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">{contactInfo.storeAddress}</p>
               </div>
             </div>
           </div>

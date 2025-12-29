@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next' // ✅ ADD THIS
 import { ProductGrid } from '@components/product/ProductGrid'
 import { ProductFilters } from '@components/product/ProductFilters'
 import { Pagination } from '@components/common/Pagination'
@@ -8,6 +9,7 @@ import { SORT_OPTIONS } from '@utils/constants'
 import { productAPI } from '@api/product.api'
 
 const Products = () => {
+  const { t } = useTranslation() // ✅ ADD THIS
   const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -78,9 +80,19 @@ const Products = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // ✅ Translated sort options
+  const translatedSortOptions = [
+    { value: 'newest', label: t('productsPage.sortOptions.newest') },
+    { value: 'price-asc', label: t('productsPage.sortOptions.priceAsc') },
+    { value: 'price-desc', label: t('productsPage.sortOptions.priceDesc') },
+    { value: 'name-asc', label: t('productsPage.sortOptions.nameAsc') },
+    { value: 'name-desc', label: t('productsPage.sortOptions.nameDesc') },
+    { value: 'popular', label: t('productsPage.sortOptions.popular') },
+  ]
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <Breadcrumb items={[{ label: 'Products' }]} />
+      <Breadcrumb items={[{ label: t('nav.products') }]} />
 
       <div className="flex flex-col lg:flex-row gap-8 mt-6">
         {/* Filters Sidebar */}
@@ -98,15 +110,15 @@ const Products = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               {searchParams.get('search')
-                ? `Search results for "${searchParams.get('search')}"`
-                : 'All Products'}
+                ? t('productsPage.searchResults', { query: searchParams.get('search') })
+                : t('productsPage.title')}
             </h1>
             <select
               onChange={handleSortChange}
               value={searchParams.get('sort') || 'newest'}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
-              {SORT_OPTIONS.map((option) => (
+              {translatedSortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -117,11 +129,35 @@ const Products = () => {
           {/* Results count */}
           {!loading && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Showing {products.length} products
+              {t('productsPage.showing', { count: products.length })}
             </p>
           )}
 
-          <ProductGrid products={products} loading={loading} />
+          {/* Loading state */}
+          {loading && (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">{t('productsPage.loading')}</p>
+            </div>
+          )}
+
+          {/* No results */}
+          {!loading && products.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🔍</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                {t('productsPage.noResults')}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                {t('productsPage.noResultsMessage')}
+              </p>
+            </div>
+          )}
+
+          {/* Products grid */}
+          {!loading && products.length > 0 && (
+            <ProductGrid products={products} loading={loading} />
+          )}
 
           {totalPages > 1 && (
             <div className="mt-8">

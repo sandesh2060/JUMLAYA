@@ -204,11 +204,11 @@ export default function Wishlist() {
 
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-2xl font-bold text-red-600 dark:text-red-400">
-                      ₹{product.salePrice || product.price}
+                      NPR {product.salePrice || product.price}
                     </span>
                     {product.discount > 0 && (
                       <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                        ₹{product.price}
+                        NPR {product.price}
                       </span>
                     )}
                   </div>

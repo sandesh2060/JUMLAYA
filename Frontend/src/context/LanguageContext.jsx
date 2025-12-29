@@ -10,12 +10,9 @@ const LanguageProvider = ({ children }) => {
     localStorage.getItem('language') || 'en'
   );
 
+  // ✅ ONLY English and Nepali
   const languages = [
-    { code: "en", name: "English", flag: "🇺🇸" },
-    { code: "es", name: "Español", flag: "🇪🇸" },
-    { code: "fr", name: "Français", flag: "🇫🇷" },
-    { code: "de", name: "Deutsch", flag: "🇩🇪" },
-    { code: "hi", name: "हिन्दी", flag: "🇮🇳" },
+    { code: "en", name: "English", flag: "🇬🇧" },
     { code: "ne", name: "नेपाली", flag: "🇳🇵" },
   ];
 

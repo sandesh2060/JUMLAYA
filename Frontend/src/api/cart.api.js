@@ -1,74 +1,78 @@
 // ============================================
-// FIXED: cart.api.js - MATCHES YOUR BACKEND ROUTES
+// cart.api.js - FIXED
 // Path: Frontend/src/api/cart.api.js
 // ============================================
-import api from './axios.config';
+import apiClient from './axios.config';
 
 export const cartAPI = {
   // Get user's cart
   get: async () => {
-    const response = await api.get('/cart');
+    const response = await apiClient.get('/cart');
     return response.data;
   },
 
-  // ✅ FIXED: Add item to cart - Changed from /cart/add to /cart
+  // Add item to cart
+  // Backend expects: { productId, quantity }
   add: async (productId, quantity = 1) => {
-    const response = await api.post('/cart', { 
-      productId, 
-      quantity 
+    const response = await apiClient.post('/cart', {
+      productId,
+      quantity
     });
     return response.data;
   },
 
-  // ✅ FIXED: Update cart item - Changed from /cart/items/:itemId to /cart/:productId
+  // ✅ FIXED: Update cart item
+  // Backend expects: { productId, quantity } in request body
   update: async (productId, quantity) => {
-    const response = await api.put(`/cart/${productId}`, { 
-      quantity 
+    console.log('📤 cart.api.update called with:', { productId, quantity });
+    
+    const response = await apiClient.put('/cart', {
+      productId,  // ✅ Send productId (not itemId)
+      quantity
     });
     return response.data;
   },
 
-  // ✅ FIXED: Remove item - Changed from /cart/items/:itemId to /cart/:productId
+  // ✅ FIXED: Remove item from cart
+  // Backend expects: productId in URL params
   remove: async (productId) => {
-    const response = await api.delete(`/cart/${productId}`);
+    console.log('📤 cart.api.remove called with productId:', productId);
+    
+    const response = await apiClient.delete(`/cart/${productId}`);
     return response.data;
   },
 
-  // ✅ FIXED: Clear entire cart - Changed from /cart to /cart/clear
+  // Clear entire cart
   clear: async () => {
-    const response = await api.delete('/cart/clear');
+    const response = await apiClient.delete('/cart');
     return response.data;
   },
 
-  // Get cart count
-  getCount: async () => {
-    const response = await api.get('/cart/count');
-    return response.data;
-  },
-
-  // ✅ FIXED: Apply coupon - Changed from /cart/coupon to /cart/coupon/apply
+  // Apply coupon
   applyCoupon: async (couponCode) => {
-    const response = await api.post('/cart/coupon/apply', { 
-      code: couponCode 
+    const response = await apiClient.post('/cart/coupon', {
+      couponCode
     });
     return response.data;
   },
 
-  // ✅ FIXED: Remove coupon - Changed from /cart/coupon to /cart/coupon/remove
+  // Remove coupon
   removeCoupon: async () => {
-    const response = await api.delete('/cart/coupon/remove');
+    const response = await apiClient.delete('/cart/coupon');
     return response.data;
   },
 
-  // Save for later
+  // Save item for later
   saveForLater: async (productId) => {
-    const response = await api.post(`/cart/save-for-later/${productId}`);
+    const response = await apiClient.post(`/cart/save-for-later/${productId}`);
     return response.data;
   },
 
-  // Move to cart from saved items
+  // Move item back to cart
   moveToCart: async (productId) => {
-    const response = await api.post(`/cart/move-to-cart/${productId}`);
+    const response = await apiClient.post(`/cart/move-to-cart/${productId}`);
     return response.data;
-  },
+  }
 };
+
+export default cartAPI;

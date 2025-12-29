@@ -1,5 +1,9 @@
+// ============================================
+// ProductCard.jsx - WITH i18n SUPPORT (UPDATED)
+// ============================================
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, Heart } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 import { Rating } from "@components/common/Rating";
 import { formatPrice, getImageUrl } from "@utils/helpers";
 import { useCart } from "@hooks/useCart";
@@ -9,6 +13,7 @@ import toast from "react-hot-toast";
 import { useState } from "react";
 
 export const ProductCard = ({ product }) => {
+  const { t } = useTranslation();
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
@@ -16,7 +21,6 @@ export const ProductCard = ({ product }) => {
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(false);
 
-  // Check if product is in wishlist
   const inWishlist = isInWishlist(product._id);
 
   const handleWishlist = async (e) => {
@@ -24,7 +28,7 @@ export const ProductCard = ({ product }) => {
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      toast.error("Please login to manage your wishlist");
+      toast.error(t('productCard.errors.loginWishlist'));
       navigate("/login");
       return;
     }
@@ -49,13 +53,13 @@ export const ProductCard = ({ product }) => {
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      toast.error("Please login to add items to cart");
+      toast.error(t('productCard.errors.loginCart'));
       navigate("/login");
       return;
     }
 
     if (product.stock === 0) {
-      toast.error("This product is out of stock");
+      toast.error(t('productCard.errors.outOfStock'));
       return;
     }
 
@@ -63,16 +67,13 @@ export const ProductCard = ({ product }) => {
 
     try {
       await addToCart(product._id, 1);
-      // Successfully added - toast is already shown in CartContext
     } catch (error) {
       console.error("Add to cart error:", error);
-      // Error toast is already shown in CartContext
     } finally {
       setCartLoading(false);
     }
   };
 
-  // ✅ FIX: Use slug if available, fallback to _id
   const productLink = product.slug ? `/products/${product.slug}` : `/products/${product._id}`;
 
   return (
@@ -92,7 +93,7 @@ export const ProductCard = ({ product }) => {
             onClick={handleWishlist}
             disabled={wishlistLoading}
             className="absolute top-3 right-3 p-2.5 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed z-10"
-            title={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+            title={inWishlist ? t('productCard.removeFromWishlist') : t('productCard.addToWishlist')}
           >
             {wishlistLoading ? (
               <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
@@ -111,7 +112,7 @@ export const ProductCard = ({ product }) => {
           {/* Discount Badge */}
           {product.discount > 0 && (
             <div className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-lg text-sm font-bold shadow-lg">
-              {product.discount}% OFF
+              {product.discount}% {t('productCard.off')}
             </div>
           )}
 
@@ -119,7 +120,7 @@ export const ProductCard = ({ product }) => {
           {product.stock === 0 && (
             <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center backdrop-blur-sm">
               <span className="bg-white dark:bg-gray-800 px-4 py-2 rounded-lg font-semibold text-gray-900 dark:text-white shadow-lg">
-                Out of Stock
+                {t('productCard.outOfStock')}
               </span>
             </div>
           )}
@@ -158,7 +159,7 @@ export const ProductCard = ({ product }) => {
                 onClick={handleAddToCart}
                 disabled={cartLoading}
                 className="p-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-all hover:scale-110 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                title="Add to cart"
+                title={t('productCard.addToCart')}
               >
                 {cartLoading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -172,7 +173,7 @@ export const ProductCard = ({ product }) => {
           {/* Stock Status */}
           {product.stock > 0 && product.stock <= 10 && (
             <div className="mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium">
-              Only {product.stock} left in stock!
+              {t('productCard.stockLeft', { stock: product.stock })}
             </div>
           )}
         </div>

@@ -1,13 +1,15 @@
 // ============================================
-// FILE: NotificationPanel.jsx (CUSTOMER VERSION)
+// FILE: NotificationPanel.jsx - WITH i18n SUPPORT
 // Path: Frontend/src/components/common/NotificationPanel.jsx
 // ============================================
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next'; // ✅ ADD THIS
 import { useNotification } from '../../hooks/useNotification';
 import { formatDistanceToNow } from 'date-fns';
 
 const NotificationPanel = () => {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef(null);
   
@@ -61,7 +63,7 @@ const NotificationPanel = () => {
   };
 
   const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to clear all notifications?')) {
+    if (window.confirm(t('notifications.confirmClearAll'))) {
       await clearAll();
     }
   };
@@ -107,7 +109,7 @@ const NotificationPanel = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white focus:outline-none hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-        aria-label="Notifications"
+        aria-label={t('notifications.aria.label')}
       >
         <Bell size={22} />
         
@@ -126,7 +128,7 @@ const NotificationPanel = () => {
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-gray-900 dark:text-white">
-                Notifications
+                {t('notifications.title')}
               </h3>
               {unreadCount > 0 && (
                 <span className="px-2 py-0.5 text-xs font-medium text-white bg-red-500 rounded-full">
@@ -142,7 +144,7 @@ const NotificationPanel = () => {
                     <button
                       onClick={handleMarkAllAsRead}
                       className="p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 rounded transition-colors"
-                      title="Mark all as read"
+                      title={t('notifications.markAllRead')}
                     >
                       <CheckCheck className="w-4 h-4" />
                     </button>
@@ -150,7 +152,7 @@ const NotificationPanel = () => {
                   <button
                     onClick={handleClearAll}
                     className="p-1.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded transition-colors"
-                    title="Clear all"
+                    title={t('notifications.clearAll')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -159,6 +161,7 @@ const NotificationPanel = () => {
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded transition-colors"
+                aria-label={t('close')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -175,10 +178,10 @@ const NotificationPanel = () => {
               <div className="flex flex-col items-center justify-center p-8 text-center">
                 <Bell className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-2" />
                 <p className="text-gray-500 dark:text-gray-400 font-medium">
-                  No notifications yet
+                  {t('notifications.empty.title')}
                 </p>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                  We'll notify you when something important happens
+                  {t('notifications.empty.message')}
                 </p>
               </div>
             ) : (
@@ -217,7 +220,7 @@ const NotificationPanel = () => {
                                   markAsRead(notification._id);
                                 }}
                                 className="p-1 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 rounded"
-                                title="Mark as read"
+                                title={t('notifications.markAsRead')}
                               >
                                 <Check className="w-3.5 h-3.5" />
                               </button>
@@ -225,7 +228,7 @@ const NotificationPanel = () => {
                             <button
                               onClick={(e) => handleDelete(e, notification._id)}
                               className="p-1 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 rounded"
-                              title="Delete"
+                              title={t('delete')}
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -257,7 +260,7 @@ const NotificationPanel = () => {
                 }}
                 className="w-full text-center text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium"
               >
-                View all notifications
+                {t('notifications.viewAll')}
               </button>
             </div>
           )}

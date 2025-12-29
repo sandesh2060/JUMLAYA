@@ -77,7 +77,7 @@ app.use(
   "/api",
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 1000,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -130,9 +130,16 @@ app.get("/api/health", (req, res) => {
 // =====================================================
 // PUBLIC API ROUTES
 // =====================================================
+// ✅ Public Settings Route (no auth required) - MUST BE FIRST
+app.use("/api/public/settings", require("./routes/publicSettings.routes"));
+
 app.use("/api/users", require("./routes/user.routes"));
 app.use("/api/products", require("./routes/product.routes"));
 app.use("/api/otp", require("./routes/otp.routes"));
+
+// ✅ ADDED: Password Reset Routes (FORGOT PASSWORD, RESET PASSWORD, etc.)
+app.use("/api/password", require("./routes/password.routes"));
+
 app.use("/api/orders", require("./routes/order.routes"));
 app.use("/api/cart", require("./routes/cart.routes"));
 app.use("/api/categories", require("./routes/category.routes"));
@@ -174,6 +181,7 @@ try {
 } catch (error) {
   console.error("❌ Failed to load admin.dashboard.routes:", error.message);
 }
+
 // Admin Rider Management Routes
 try {
   app.use("/api/admin/riders", require("./routes/admin.rider.routes"));
@@ -181,6 +189,7 @@ try {
 } catch (error) {
   console.error("❌ Failed to load admin.rider.routes:", error.message);
 }
+
 // Admin User Management Routes
 try {
   app.use("/api/admin/users", require("./routes/admin.user.routes"));
@@ -202,7 +211,8 @@ try {
   console.warn("⚠️ admin.order.routes.js not found - using fallback");
   app.use("/api/admin/orders", require("./routes/order.routes"));
 }
-//rider routes
+
+// Rider Routes
 app.use('/api/rider', require('./routes/rider.routes'));
 
 // =====================================================

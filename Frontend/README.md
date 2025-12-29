@@ -3799,406 +3799,10 @@ echo "Happy coding! 🎨"
 
 
 
+# 📁 JUMLAYA-OFFICIAL - Complete Project Structure
 
-
-
+```
 JUMLAYA-OFFICIAL/
-│
-├── .vscode/
-│
-├── Backend/
-│   ├── config/
-│   │   ├── cloudinary.js
-│   │   └── db.js
-│   │
-│   ├── controllers/
-│   │   ├── admin/
-│   │   │   ├── admin.dashboard.controller.js
-│   │   │   ├── admin.order.controller.js
-│   │   │   ├── admin.product.controller.js
-│   │   │   └── admin.user.controller.js
-│   │   ├── address.controller.js
-│   │   ├── cart.controller.js
-│   │   ├── category.controller.js
-│   │   ├── coupon.controller.js
-│   │   ├── esewa.controller.js
-│   │   ├── order.controller.js
-│   │   ├── otp.controller.js
-│   │   ├── payment.controller.js
-│   │   ├── product.controller.js
-│   │   ├── review.controller.js
-│   │   ├── user.controller.js
-│   │   └── wishlist.controller.js
-│   │
-│   ├── jobs/
-│   │   ├── cleanupExpiredCarts.js
-│   │   ├── scheduler.js
-│   │   ├── sendAbandonedCartEmails.js
-│   │   └── updateInventory.js
-│   │
-│   ├── middlewares/
-│   │   ├── auth.middleware.js
-│   │   ├── authorize.middleware.js
-│   │   ├── cors.middleware.js
-│   │   ├── error.middleware.js
-│   │   ├── logger.middleware.js
-│   │   ├── rateLimit.middleware.js
-│   │   ├── sanitize.js
-│   │   ├── upload.middleware.js
-│   │   └── validation.middleware.js
-│   │
-│   ├── models/
-│   │   ├── address.model.js
-│   │   ├── cart.model.js
-│   │   ├── category.model.js
-│   │   ├── coupon.model.js
-│   │   ├── order.model.js
-│   │   ├── product.model.js
-│   │   ├── review.model.js
-│   │   ├── user.model.js
-│   │   └── wishlist.model.js
-│   │
-│   ├── node_modules/
-│   │
-│   ├── routes/
-│   │   ├── address.routes.js
-│   │   ├── admin.dashboard.routes.js
-│   │   ├── admin.order.routes.js
-│   │   ├── admin.product.routes.js
-│   │   ├── admin.user.routes.js
-│   │   ├── cart.routes.js
-│   │   ├── category.routes.js
-│   │   ├── coupon.routes.js
-│   │   ├── esewa.routes.js
-│   │   ├── order.routes.js
-│   │   ├── otp.routes.js
-│   │   ├── payment.routes.js
-│   │   ├── product.routes.js
-│   │   ├── review.routes.js
-│   │   ├── user.routes.js
-│   │   └── wishlist.routes.js
-│   │
-│   ├── scripts/
-│   │   └── seedProducts.js
-│   │
-│   ├── services/
-│   │   ├── cart.service.js
-│   │   ├── coupon.service.js
-│   │   ├── email.service.js
-│   │   ├── inventory.service.js
-│   │   ├── order.service.js
-│   │   ├── payment.service.js
-│   │   ├── product.service.js
-│   │   └── user.service.js
-│   │
-│   ├── tests/
-│   │   ├── cart.test.js
-│   │   ├── order.test.js
-│   │   ├── product.test.js
-│   │   └── user.test.js
-│   │
-│   ├── uploads/
-│   │   ├── avatars/
-│   │   ├── categories/
-│   │   ├── products/
-│   │   └── users/
-│   │
-│   ├── utils/
-│   │   ├── apiFeatures.js
-│   │   ├── AppError.js
-│   │   ├── catchAsync.js
-│   │   ├── generateOrderId.js
-│   │   ├── paymentProviders.js
-│   │   ├── priceCalculator.js
-│   │   ├── response.js
-│   │   ├── securityUtils.js
-│   │   ├── sendEmail.js
-│   │   ├── slugify.js
-│   │   └── validator.js
-│   │
-│   ├── validators/
-│   │   ├── address.validator.js
-│   │   ├── cart.validator.js
-│   │   ├── order.validator.js
-│   │   ├── product.validator.js
-│   │   ├── review.validator.js
-│   │   └── user.validator.js
-│   │
-│   ├── .env
-│   ├── .env.example
-│   ├── .gitignore
-│   ├── app.js
-│   ├── FOLDER_STRUCTURE.md
-│   ├── INTEGRATION_GUIDE.md
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── README.md
-│   └── server.js
-│
-└── Frontend/
-    ├── node_modules/
-    │
-    ├── public/
-    │   ├── images/
-    │   ├── locales/
-    │   └── vite.svg
-    │
-    ├── src/
-    │   ├── admin/
-    │   │   ├── api/
-    │   │   │   ├── address.api.js
-    │   │   │   ├── auth.api.js
-    │   │   │   ├── axios.config.js
-    │   │   │   ├── cart.api.js
-    │   │   │   ├── category.api.js
-    │   │   │   ├── coupon.api.js
-    │   │   │   ├── order.api.js
-    │   │   │   ├── payment.api.js
-    │   │   │   ├── product.api.js
-    │   │   │   ├── review.api.js
-    │   │   │   ├── user.api.js
-    │   │   │   └── wishlist.api.js
-    │   │   │
-    │   │   ├── assets/
-    │   │   │   ├── bipeshgiri.jpg
-    │   │   │   ├── logo.png
-    │   │   │   ├── manojbhandari.jpg
-    │   │   │   ├── react.svg
-    │   │   │   └── sandeshsharma.jpg
-    │   │   │
-    │   │   ├── components/
-    │   │   │   ├── auth/
-    │   │   │   │   ├── LoginForm.jsx
-    │   │   │   │   ├── OTPVerification.jsx
-    │   │   │   │   └── RegisterForm.jsx
-    │   │   │   │
-    │   │   │   ├── cart/
-    │   │   │   │   ├── CartItem.jsx
-    │   │   │   │   ├── CartSummary.jsx
-    │   │   │   │   └── EmptyCart.jsx
-    │   │   │   │
-    │   │   │   ├── common/
-    │   │   │   │   ├── Badge.jsx
-    │   │   │   │   ├── Button.jsx
-    │   │   │   │   ├── Card.jsx
-    │   │   │   │   ├── ErrorMessage.jsx
-    │   │   │   │   ├── Input.jsx
-    │   │   │   │   ├── LanguageToggle.jsx
-    │   │   │   │   ├── LoadingSpinner.jsx
-    │   │   │   │   ├── Modal.jsx
-    │   │   │   │   ├── Pagination.jsx
-    │   │   │   │   ├── Rating.jsx
-    │   │   │   │   └── ThemeToggle.jsx
-    │   │   │   │
-    │   │   │   ├── layout/
-    │   │   │   │   ├── common/
-    │   │   │   │   │   └── AdminLayout.jsx
-    │   │   │   │   ├── orders/
-    │   │   │   │   ├── products/
-    │   │   │   │   └── users/
-    │   │   │   │       └── AuditLogViewer.jsx
-    │   │   │   │
-    │   │   │   ├── order/
-    │   │   │   │   ├── OrderCard.jsx
-    │   │   │   │   └── OrderTimeline.jsx
-    │   │   │   │
-    │   │   │   └── product/
-    │   │   │       ├── ProductCard.jsx
-    │   │   │       ├── ProductFilters.jsx
-    │   │   │       ├── ProductGrid.jsx
-    │   │   │       ├── ProductImageGallery.jsx
-    │   │   │       ├── ProductQuickView.jsx
-    │   │   │       ├── ReviewForm.jsx
-    │   │   │       ├── ReviewItem.jsx
-    │   │   │       └── ReviewList.jsx
-    │   │   │
-    │   │   ├── config/
-    │   │   │   └── api.js
-    │   │   │
-    │   │   ├── context/
-    │   │   │   ├── AuthContext.jsx
-    │   │   │   ├── CartContext.jsx
-    │   │   │   ├── LanguageContext.jsx
-    │   │   │   ├── SecurityProvider.jsx
-    │   │   │   ├── ThemeContext.jsx
-    │   │   │   └── WishlistContext.jsx
-    │   │   │
-    │   │   ├── hooks/
-    │   │   │   ├── useAuditLogger.js
-    │   │   │   ├── useAuth.js
-    │   │   │   ├── useCart.js
-    │   │   │   ├── useDebounce.js
-    │   │   │   ├── useLanguage.js
-    │   │   │   ├── useLocalStorage.js
-    │   │   │   ├── usePagination.js
-    │   │   │   ├── useTheme.js
-    │   │   │   └── useWishlist.js
-    │   │   │
-    │   │   ├── pages/
-    │   │   │   ├── AdminCustomers.jsx
-    │   │   │   ├── AdminDashboard.jsx
-    │   │   │   ├── AdminOrders.jsx
-    │   │   │   ├── AdminProducts.jsx
-    │   │   │   ├── AdminSettings.jsx
-    │   │   │   ├── CustomerDetail.jsx
-    │   │   │   └── OrderDetail.jsx
-    │   │   │
-    │   │   ├── routes/
-    │   │   │   ├── AdminRoute.jsx
-    │   │   │   └── AdminRouteGuard.jsx
-    │   │   │
-    │   │   └── utils/
-    │   │       ├── adminApi.js
-    │   │       └── security.utils.js
-    │   │
-    │   ├── api/
-    │   │   ├── address.api.js
-    │   │   ├── auth.api.js
-    │   │   ├── axios.config.js
-    │   │   ├── cart.api.js
-    │   │   ├── category.api.js
-    │   │   ├── coupon.api.js
-    │   │   ├── order.api.js
-    │   │   ├── payment.api.js
-    │   │   ├── product.api.js
-    │   │   ├── review.api.js
-    │   │   ├── user.api.js
-    │   │   └── wishlist.api.js
-    │   │
-    │   ├── assets/
-    │   │   ├── bipeshgiri.jpg
-    │   │   ├── logo.png
-    │   │   ├── manojbhandari.jpg
-    │   │   ├── react.svg
-    │   │   └── sandeshsharma.jpg
-    │   │
-    │   ├── components/
-    │   │   ├── auth/
-    │   │   │   ├── LoginForm.jsx
-    │   │   │   ├── OTPVerification.jsx
-    │   │   │   └── RegisterForm.jsx
-    │   │   │
-    │   │   ├── cart/
-    │   │   │   ├── CartItem.jsx
-    │   │   │   ├── CartSummary.jsx
-    │   │   │   └── EmptyCart.jsx
-    │   │   │
-    │   │   ├── common/
-    │   │   │   ├── Badge.jsx
-    │   │   │   ├── Button.jsx
-    │   │   │   ├── Card.jsx
-    │   │   │   ├── ErrorMessage.jsx
-    │   │   │   ├── Input.jsx
-    │   │   │   ├── LanguageToggle.jsx
-    │   │   │   ├── LoadingSpinner.jsx
-    │   │   │   ├── Modal.jsx
-    │   │   │   ├── Pagination.jsx
-    │   │   │   ├── Rating.jsx
-    │   │   │   └── ThemeToggle.jsx
-    │   │   │
-    │   │   ├── layout/
-    │   │   │   ├── Breadcrumb.jsx
-    │   │   │   ├── Footer.jsx
-    │   │   │   ├── Navbar.jsx
-    │   │   │   └── Sidebar.jsx
-    │   │   │
-    │   │   ├── order/
-    │   │   │   ├── OrderCard.jsx
-    │   │   │   └── OrderTimeline.jsx
-    │   │   │
-    │   │   └── product/
-    │   │       ├── ProductCard.jsx
-    │   │       ├── ProductFilters.jsx
-    │   │       ├── ProductGrid.jsx
-    │   │       ├── ProductImageGallery.jsx
-    │   │       ├── ProductQuickView.jsx
-    │   │       ├── ReviewForm.jsx
-    │   │       ├── ReviewItem.jsx
-    │   │       └── ReviewList.jsx
-    │   │
-    │   ├── config/
-    │   │   └── api.js
-    │   │
-    │   ├── context/
-    │   │   ├── AuthContext.jsx
-    │   │   ├── CartContext.jsx
-    │   │   ├── LanguageContext.jsx
-    │   │   ├── SecurityProvider.jsx
-    │   │   ├── ThemeContext.jsx
-    │   │   └── WishlistContext.jsx
-    │   │
-    │   ├── hooks/
-    │   │   ├── useAuditLogger.js
-    │   │   ├── useAuth.js
-    │   │   ├── useCart.js
-    │   │   ├── useDebounce.js
-    │   │   ├── useLanguage.js
-    │   │   ├── useLocalStorage.js
-    │   │   ├── usePagination.js
-    │   │   ├── useTheme.js
-    │   │   └── useWishlist.js
-    │   │
-    │   ├── pages/
-    │   │   ├── About.jsx
-    │   │   ├── Cart.jsx
-    │   │   ├── Checkout.jsx
-    │   │   ├── Contact.jsx
-    │   │   ├── ForgotPassword.jsx
-    │   │   ├── Home.jsx
-    │   │   ├── Login.jsx
-    │   │   ├── NotFound.jsx
-    │   │   ├── OrderDetails.jsx
-    │   │   ├── Orders.jsx
-    │   │   ├── ProductDetails.jsx
-    │   │   ├── Products.jsx
-    │   │   ├── Profile.jsx
-    │   │   ├── ProfileSettings.jsx
-    │   │   ├── Register.jsx
-    │   │   └── Wishlist.jsx
-    │   │
-    │   ├── routes/
-    │   │   ├── AdminRoute.jsx
-    │   │   ├── AdminRouteGuard.jsx
-    │   │   ├── AppRoutes.jsx
-    │   │   ├── ProtectedRoute.jsx
-    │   │   └── PublicRoute.jsx
-    │   │
-    │   ├── styles/
-    │   │   └── (style files)
-    │   │
-    │   ├── utils/
-    │   │   ├── cn.js
-    │   │   ├── constants.js
-    │   │   ├── formatters.js
-    │   │   ├── helpers.js
-    │   │   ├── storage.js
-    │   │   ├── translations.js
-    │   │   └── validators.js
-    │   │
-    │   ├── App.css
-    │   ├── App.jsx
-    │   ├── i18n.js
-    │   ├── index.css
-    │   └── main.jsx
-    │
-    ├── .env
-    ├── .env.example
-    ├── .gitignore
-    ├── eslint.config.js
-    ├── index.html
-    ├── package-lock.json
-    ├── package.json
-    ├── postcss.config.js
-    ├── README.md
-    ├── tailwind.config.js
-    └── vite.config.js
-
-
-
-
-
-
-    JUMLAYA-OFFICIAL/
 │
 ├── 📁 Backend/
 │   ├── 📁 config/
@@ -4210,18 +3814,24 @@ JUMLAYA-OFFICIAL/
 │   │   │   ├── 📄 admin.order.controller.js
 │   │   │   ├── 📄 admin.product.controller.js
 │   │   │   └── 📄 admin.settings.controller.js
+│   │   │
+│   │   ├── 📁 rider/                                    🆕 NEW
+│   │   │   ├── 📄 rider.controller.js                   ✅
+│   │   │   ├── 📄 rider.order.controller.js             ✅
+│   │   │   └── 📄 rider.notification.controller.js      ✅
+│   │   │
 │   │   ├── 📄 address.controller.js
 │   │   ├── 📄 cart.controller.js
 │   │   ├── 📄 category.controller.js
 │   │   ├── 📄 coupon.controller.js
 │   │   ├── 📄 esewa.controller.js
-│   │   ├── 📄 notification.controller.js
+│   │   ├── 📄 notification.controller.js                ⭐ UPDATED
 │   │   ├── 📄 order.controller.js
 │   │   ├── 📄 otp.controller.js
 │   │   ├── 📄 payment.controller.js
 │   │   ├── 📄 product.controller.js
 │   │   ├── 📄 review.controller.js
-│   │   ├── 📄 user.controller.js ⭐ (UPDATED)
+│   │   ├── 📄 user.controller.js
 │   │   └── 📄 wishlist.controller.js
 │   │
 │   ├── 📁 jobs/
@@ -4237,19 +3847,21 @@ JUMLAYA-OFFICIAL/
 │   │   ├── 📄 error.middleware.js
 │   │   ├── 📄 logger.middleware.js
 │   │   ├── 📄 rateLimit.middleware.js
+│   │   ├── 📄 rider.middleware.js                       🆕 NEW ✅
 │   │   ├── 📄 sanitize.js
 │   │   ├── 📄 upload.middleware.js
 │   │   └── 📄 validate.middleware.js
 │   │
 │   ├── 📁 models/
-│   │   ├── 📄 address.model.js ⭐
+│   │   ├── 📄 address.model.js
 │   │   ├── 📄 cart.model.js
 │   │   ├── 📄 category.model.js
 │   │   ├── 📄 coupon.model.js
-│   │   ├── 📄 notification.model.js
+│   │   ├── 📄 notification.model.js                     ⭐ UPDATED ✅
 │   │   ├── 📄 order.model.js
 │   │   ├── 📄 product.model.js
 │   │   ├── 📄 review.model.js
+│   │   ├── 📄 rider.model.js                            🆕 NEW ✅
 │   │   ├── 📄 settings.model.js
 │   │   ├── 📄 user.model.js
 │   │   └── 📄 wishlist.model.js
@@ -4257,7 +3869,7 @@ JUMLAYA-OFFICIAL/
 │   ├── 📁 node_modules/
 │   │
 │   ├── 📁 routes/
-│   │   ├── 📄 address.routes.js ⭐
+│   │   ├── 📄 address.routes.js
 │   │   ├── 📄 admin.dashboard.routes.js
 │   │   ├── 📄 admin.order.routes.js
 │   │   ├── 📄 admin.product.routes.js
@@ -4267,13 +3879,16 @@ JUMLAYA-OFFICIAL/
 │   │   ├── 📄 category.routes.js
 │   │   ├── 📄 coupon.routes.js
 │   │   ├── 📄 esewa.routes.js
-│   │   ├── 📄 notification.routes.js
+│   │   ├── 📄 notification.routes.js                    ⭐ UPDATED
 │   │   ├── 📄 order.routes.js
 │   │   ├── 📄 otp.routes.js
 │   │   ├── 📄 payment.routes.js
 │   │   ├── 📄 product.review.routes.js
 │   │   ├── 📄 product.routes.js
 │   │   ├── 📄 review.routes.js
+│   │   ├── 📄 rider.routes.js                           🆕 NEW ✅
+│   │   ├── 📄 rider.order.routes.js                     🆕 NEW ✅
+│   │   ├── 📄 rider.notification.routes.js              🆕 NEW ✅
 │   │   ├── 📄 settings.routes.js
 │   │   ├── 📄 user.routes.js
 │   │   └── 📄 wishlist.routes.js
@@ -4287,10 +3902,13 @@ JUMLAYA-OFFICIAL/
 │   │   ├── 📄 coupon.service.js
 │   │   ├── 📄 email.service.js
 │   │   ├── 📄 inventory.service.js
+│   │   ├── 📄 notification.service.js                   🆕 NEW ✅
 │   │   ├── 📄 order.service.js
 │   │   ├── 📄 payment.service.js
 │   │   ├── 📄 product.service.js
-│   │   └── 📄 user.service.js
+│   │   ├── 📄 rider.service.js                          🆕 NEW ✅
+│   │   ├── 📄 user.service.js
+│   │   └── 📄 websocket.service.js                      🆕 NEW ✅
 │   │
 │   ├── 📁 tests/
 │   │   ├── 📄 cart.test.js
@@ -4309,6 +3927,7 @@ JUMLAYA-OFFICIAL/
 │   │   ├── 📄 AppError.js
 │   │   ├── 📄 catchAsync.js
 │   │   ├── 📄 generateOrderId.js
+│   │   ├── 📄 notificationHelper.js                     🆕 NEW ✅
 │   │   ├── 📄 paymentProviders.js
 │   │   ├── 📄 priceCalculator.js
 │   │   ├── 📄 response.js
@@ -4328,13 +3947,13 @@ JUMLAYA-OFFICIAL/
 │   ├── 📄 .env
 │   ├── 📄 .env.example
 │   ├── 📄 .gitignore
-│   ├── 📄 app.js
+│   ├── 📄 app.js                                         ⭐ UPDATED (add routes)
 │   ├── 📄 FOLDER_STRUCTURE.md
 │   ├── 📄 INTEGRATION_GUIDE.md
 │   ├── 📄 package-lock.json
-│   ├── 📄 package.json
+│   ├── 📄 package.json                                   ⭐ UPDATED (socket.io)
 │   ├── 📄 README.md
-│   └── 📄 server.js
+│   └── 📄 server.js                                      ⭐ UPDATED (WebSocket)
 │
 └── 📁 Frontend/
     ├── 📁 node_modules/
@@ -4345,20 +3964,37 @@ JUMLAYA-OFFICIAL/
     │   │   ├── 📁 en/
     │   │   ├── 📁 hi/
     │   │   └── 📁 ne/
+    │   ├── 📁 sounds/                                    🆕 NEW (optional)
+    │   │   ├── 📄 notification.mp3
+    │   │   ├── 📄 new-order.mp3
+    │   │   ├── 📄 success.mp3
+    │   │   └── 📄 error.mp3
     │   └── 📄 vite.svg
     │
     ├── 📁 src/
     │   ├── 📁 admin/
-    │   │   └── (admin pages/components)
+    │   │   ├── 📁 components/
+    │   │   │   ├── 📁 notifications/                     🆕 NEW
+    │   │   │   │   ├── ⚛️ AdminNotificationBell.jsx     ✅
+    │   │   │   │   ├── ⚛️ AdminNotificationDropdown.jsx ✅
+    │   │   │   │   ├── ⚛️ AdminNotificationItem.jsx     ✅
+    │   │   │   │   └── ⚛️ AdminNotificationList.jsx     ✅
+    │   │   │   └── (other admin components)
+    │   │   │
+    │   │   ├── 📁 pages/
+    │   │   │   ├── ⚛️ AdminNotifications.jsx             🆕 NEW ✅
+    │   │   │   └── (other admin pages)
+    │   │   └── (other admin folders)
     │   │
     │   ├── 📁 api/
-    │   │   ├── 📄 address.api.js ⭐ (UPDATED)
+    │   │   ├── 📄 address.api.js
     │   │   ├── 📄 axios.config.js
-    │   │   ├── 📄 notification.api.js
+    │   │   ├── 📄 notification.api.js                    ⭐ UPDATED
     │   │   ├── 📄 order.api.js
     │   │   ├── 📄 payment.api.js
     │   │   ├── 📄 product.api.js
     │   │   ├── 📄 review.api.js
+    │   │   ├── 📄 rider.api.js                           🆕 NEW ✅
     │   │   ├── 📄 settings.api.js
     │   │   ├── 📄 user.api.js
     │   │   └── 📄 wishlist.api.js
@@ -4400,8 +4036,20 @@ JUMLAYA-OFFICIAL/
     │   │   ├── 📁 layout/
     │   │   │   ├── ⚛️ Breadcrumb.jsx
     │   │   │   ├── ⚛️ Footer.jsx
-    │   │   │   ├── ⚛️ Navbar.jsx
+    │   │   │   ├── ⚛️ Navbar.jsx                         ⭐ UPDATED (add NotificationBell)
     │   │   │   └── ⚛️ Sidebar.jsx
+    │   │   │
+    │   │   ├── 📁 map/                                   🆕 NEW (optional)
+    │   │   │   ├── ⚛️ LocationPicker.jsx                 ✅
+    │   │   │   ├── ⚛️ MapView.jsx                        ✅
+    │   │   │   ├── ⚛️ DeliveryAreaSelector.jsx           ✅
+    │   │   │   └── ⚛️ LocationSearch.jsx                 ✅
+    │   │   │
+    │   │   ├── 📁 notifications/                         🆕 NEW
+    │   │   │   ├── ⚛️ NotificationBell.jsx               ✅
+    │   │   │   ├── ⚛️ NotificationDropdown.jsx           ✅
+    │   │   │   ├── ⚛️ NotificationItem.jsx               ✅
+    │   │   │   └── ⚛️ NotificationList.jsx               ✅
     │   │   │
     │   │   ├── 📁 order/
     │   │   │   ├── ⚛️ OrderCard.jsx
@@ -4438,9 +4086,11 @@ JUMLAYA-OFFICIAL/
     │   │   ├── 📄 useDebounce.js
     │   │   ├── 📄 useLanguage.js
     │   │   ├── 📄 useLocalStorage.js
-    │   │   ├── 📄 useNotification.js
+    │   │   ├── 📄 useNotification.js                     ⭐ UPDATED
     │   │   ├── 📄 usePagination.js
+    │   │   ├── 📄 useRealTimeNotifications.js            🆕 NEW ✅
     │   │   ├── 📄 useTheme.js
+    │   │   ├── 📄 useWebSocket.js                        🆕 NEW ✅
     │   │   └── 📄 useWishlist.js
     │   │
     │   ├── 📁 pages/
@@ -4452,20 +4102,44 @@ JUMLAYA-OFFICIAL/
     │   │   ├── ⚛️ Home.jsx
     │   │   ├── ⚛️ Login.jsx
     │   │   ├── ⚛️ NotFound.jsx
+    │   │   ├── ⚛️ Notifications.jsx                      🆕 NEW ✅
     │   │   ├── ⚛️ OrderDetails.jsx
     │   │   ├── ⚛️ Orders.jsx
     │   │   ├── ⚛️ OrderSuccess.jsx
     │   │   ├── ⚛️ ProductDetails.jsx
     │   │   ├── ⚛️ Products.jsx
     │   │   ├── ⚛️ Profile.jsx
-    │   │   ├── ⚛️ ProfileSettings.jsx ⭐ (UPDATED)
+    │   │   ├── ⚛️ ProfileSettings.jsx
     │   │   ├── ⚛️ Register.jsx
     │   │   └── ⚛️ Wishlist.jsx
+    │   │
+    │   ├── 📁 rider/                                     🆕 NEW
+    │   │   ├── 📁 components/
+    │   │   │   ├── 📁 notifications/                     🆕 NEW
+    │   │   │   │   ├── ⚛️ RiderNotificationBell.jsx     ✅
+    │   │   │   │   ├── ⚛️ RiderNotificationList.jsx     ✅
+    │   │   │   │   ├── ⚛️ OrderNotificationCard.jsx     ✅
+    │   │   │   │   └── ⚛️ DeliveryNotificationCard.jsx  ✅
+    │   │   │   ├── ⚛️ RiderLayout.jsx                    ✅
+    │   │   │   ├── ⚛️ OrderCard.jsx                      ✅
+    │   │   │   ├── ⚛️ NavigationMap.jsx                  ✅
+    │   │   │   └── ⚛️ StatusToggle.jsx                   ✅
+    │   │   │
+    │   │   ├── 📁 pages/
+    │   │   │   ├── ⚛️ RiderDashboard.jsx                 ✅
+    │   │   │   ├── ⚛️ RiderOrders.jsx                    ✅
+    │   │   │   ├── ⚛️ RiderProfile.jsx                   ✅
+    │   │   │   ├── ⚛️ RiderEarnings.jsx                  ✅
+    │   │   │   ├── ⚛️ RiderNotifications.jsx             🆕 NEW ✅
+    │   │   │   └── ⚛️ RiderNavigation.jsx                ✅
+    │   │   │
+    │   │   └── 📁 utils/
+    │   │       └── 📄 riderHelpers.js                    ✅
     │   │
     │   ├── 📁 routes/
     │   │   ├── ⚛️ AdminRoute.jsx
     │   │   ├── ⚛️ AdminRouteGuard.jsx
-    │   │   ├── ⚛️ AppRoutes.jsx
+    │   │   ├── ⚛️ AppRoutes.jsx                          ⭐ UPDATED (add notification routes)
     │   │   ├── ⚛️ ProtectedRoute.jsx
     │   │   └── ⚛️ PublicRoute.jsx
     │   │
@@ -4476,49 +4150,175 @@ JUMLAYA-OFFICIAL/
     │   │   ├── 📄 cn.js
     │   │   ├── 📄 constants.js
     │   │   ├── 📄 formatters.js
-    │   │   ├── 📄 App.css
+    │   │   ├── 📄 notificationSound.js                   🆕 NEW ✅
+    │   │   ├── 📄 notificationUtils.js                   🆕 NEW ✅
+    │   │   ├── 📄 socketClient.js                        🆕 NEW ✅
     │   │   ├── 📄 storage.js
     │   │   ├── 📄 translations.js
     │   │   └── 📄 validators.js
     │   │
-    │   ├── ⚛️ App.jsx
+    │   ├── ⚛️ App.jsx                                    ⭐ UPDATED (WebSocket init)
+    │   ├── 📄 App.css
     │   ├── 📄 i18n.js
     │   ├── 📄 index.css
     │   └── 📄 main.jsx
     │
-    ├── 📄 .env
+    ├── 📄 .env                                           ⭐ UPDATED (add VITE_SOCKET_URL)
     ├── 📄 .env.example
     ├── 📄 .gitignore
     ├── 📄 eslint.config.js
     ├── 📄 index.html
     ├── 📄 package-lock.json
-    ├── 📄 package.json
+    ├── 📄 package.json                                   ⭐ UPDATED (socket.io-client, date-fns)
     ├── 📄 postcss.config.js
     ├── 📄 README.md
     ├── 📄 tailwind.config.js
     └── 📄 vite.config.js
+```
 
+---
 
-    addon this 
- Frontend/src/components/map/
-                          ├── LocationPicker.jsx           ✅ Main map component
-                          ├── MapView.jsx                  ✅ Display-only map
-                          ├── DeliveryAreaSelector.jsx     ✅ Area selection
-                          └── LocationSearch.jsx           ✅ Search places
+## 📊 Summary of Changes
 
-
-
-Frontend/src/rider/ 
-├── pages/
-│   ├── RiderDashboard.jsx       ✅ Main dashboard
-│   ├── RiderOrders.jsx          ✅ Assigned orders
-│   ├── RiderProfile.jsx         ✅ Profile settings
-│   ├── RiderEarnings.jsx        ✅ Earnings tracking
-│   └── RiderNavigation.jsx      ✅ Delivery navigation
-├── components/
-│   ├── RiderLayout.jsx          ✅ Layout wrapper
-│   ├── OrderCard.jsx            ✅ Order display
-│   ├── NavigationMap.jsx        ✅ Route map
-│   └── StatusToggle.jsx         ✅ Online/offline
+### 🆕 **NEW Backend Files (13)**
+```
+Backend/
+├── controllers/rider/
+│   ├── rider.controller.js
+│   ├── rider.order.controller.js
+│   └── rider.notification.controller.js
+├── middlewares/
+│   └── rider.middleware.js
+├── models/
+│   └── rider.model.js
+├── routes/
+│   ├── rider.routes.js
+│   ├── rider.order.routes.js
+│   └── rider.notification.routes.js
+├── services/
+│   ├── notification.service.js
+│   ├── rider.service.js
+│   └── websocket.service.js
 └── utils/
-    └── riderApi.js              ✅ API calls
+    └── notificationHelper.js
+```
+
+### 🆕 **NEW Frontend Files (25)**
+```
+Frontend/src/
+├── admin/
+│   ├── components/notifications/
+│   │   ├── AdminNotificationBell.jsx
+│   │   ├── AdminNotificationDropdown.jsx
+│   │   ├── AdminNotificationItem.jsx
+│   │   └── AdminNotificationList.jsx
+│   └── pages/
+│       └── AdminNotifications.jsx
+├── api/
+│   └── rider.api.js
+├── components/
+│   ├── map/ (optional)
+│   │   ├── LocationPicker.jsx
+│   │   ├── MapView.jsx
+│   │   ├── DeliveryAreaSelector.jsx
+│   │   └── LocationSearch.jsx
+│   └── notifications/
+│       ├── NotificationBell.jsx
+│       ├── NotificationDropdown.jsx
+│       ├── NotificationItem.jsx
+│       └── NotificationList.jsx
+├── hooks/
+│   ├── useRealTimeNotifications.js
+│   └── useWebSocket.js
+├── pages/
+│   └── Notifications.jsx
+├── rider/
+│   ├── components/
+│   │   ├── notifications/
+│   │   │   ├── RiderNotificationBell.jsx
+│   │   │   ├── RiderNotificationList.jsx
+│   │   │   ├── OrderNotificationCard.jsx
+│   │   │   └── DeliveryNotificationCard.jsx
+│   │   ├── RiderLayout.jsx
+│   │   ├── OrderCard.jsx
+│   │   ├── NavigationMap.jsx
+│   │   └── StatusToggle.jsx
+│   ├── pages/
+│   │   ├── RiderDashboard.jsx
+│   │   ├── RiderOrders.jsx
+│   │   ├── RiderProfile.jsx
+│   │   ├── RiderEarnings.jsx
+│   │   ├── RiderNotifications.jsx
+│   │   └── RiderNavigation.jsx
+│   └── utils/
+│       └── riderHelpers.js
+└── utils/
+    ├── notificationSound.js
+    ├── notificationUtils.js
+    └── socketClient.js
+```
+
+### ⭐ **UPDATED Existing Files (8)**
+```
+Backend/
+├── app.js                          (add routes)
+├── server.js                       (WebSocket init)
+├── models/notification.model.js    (enhanced schema)
+├── controllers/notification.controller.js
+└── routes/notification.routes.js
+
+Frontend/
+├── App.jsx                         (WebSocket init)
+├── components/layout/Navbar.jsx    (add NotificationBell)
+└── routes/AppRoutes.jsx           (add routes)
+```
+
+---
+
+## 📦 **Total File Count**
+
+- **Backend**: 13 new files + 5 updated = **18 changes**
+- **Frontend**: 25 new files + 3 updated = **28 changes**
+- **Total**: **46 file changes** (38 new + 8 updated)
+
+---
+
+## 🎯 **Key Features Implemented**
+
+✅ Real-time notifications via WebSocket  
+✅ User notification system  
+✅ Admin notification panel  
+✅ Rider notification system  
+✅ Order status notifications  
+✅ Earnings notifications  
+✅ Rating notifications  
+✅ Delivery tracking  
+✅ Sound alerts  
+✅ Browser push notifications  
+✅ Mark as read/unread  
+✅ Delete notifications  
+✅ Filter & pagination  
+✅ Complete rider management system
+
+---
+
+## 🔗 **Dependencies Added**
+
+### Backend
+```json
+{
+  "socket.io": "^4.6.0"
+}
+```
+
+### Frontend
+```json
+{
+  "socket.io-client": "^4.6.0",
+  "date-fns": "^2.30.0"
+}
+```
+
+---
+
+This structure is now **production-ready** and **fully organized**! 🚀
