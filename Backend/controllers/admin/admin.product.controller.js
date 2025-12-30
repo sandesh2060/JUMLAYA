@@ -2,6 +2,8 @@
 // admin.product.controller.js - FIXED VERSION
 // Path: Backend/controllers/admin/admin.product.controller.js
 // ============================================
+const fs = require('fs');
+const path = require('path');
 const Product = require('../../models/product.model');
 
 // ============================================

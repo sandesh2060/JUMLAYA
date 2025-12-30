@@ -47,6 +47,7 @@ import AdminSettings from "@/admin/pages/AdminSettings";
 import CustomerDetail from "@/admin/pages/CustomerDetail";
 import OrderDetail from "@/admin/pages/OrderDetail";
 import RiderManagement from "@/admin/pages/RiderManagement";
+import AuditLogViewer from "@/admin/pages/AuditLogViewer";
 
 // ============ RIDER PAGES ============
 import RiderDashboard from "@/rider/pages/RiderDashboard";
@@ -80,8 +81,18 @@ const AlreadyLoggedIn = () => {
       <div className="text-center max-w-md px-4">
         <div className="mb-6">
           <div className="mx-auto h-20 w-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg
+              className="h-10 w-10 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           </div>
         </div>
@@ -89,7 +100,8 @@ const AlreadyLoggedIn = () => {
           You're Already Logged In
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mb-8">
-          Please log out before creating a new account or accessing the login page.
+          Please log out before creating a new account or accessing the login
+          page.
         </p>
         <div className="space-y-3">
           <a
@@ -174,6 +186,8 @@ function App() {
 
         {/* Settings */}
         <Route path="settings" element={<AdminSettings />} />
+        {/* Audit Logs */}
+        <Route path="audit-logs" element={<AuditLogViewer />} />
       </Route>
 
       {/* ============================================ */}

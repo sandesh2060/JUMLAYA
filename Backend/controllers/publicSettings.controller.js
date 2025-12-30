@@ -26,7 +26,6 @@ exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
   if (!settings) {
     console.log('⚠️ No settings found, returning default settings');
     
-    // Return default settings structure that matches your database
     return sendSuccess(res, 200, 'Public settings fetched successfully', {
       storeName: 'JUMLAYA',
       storeEmail: 'sharmasandesh66@gmail.com',
@@ -34,7 +33,7 @@ exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
       storeAddress: 'Kathmandu, Nepal',
       currency: 'रु',
       currencyCode: 'NPR',
-      taxRate: 13, // ✅ Fixed to 13% instead of 200%
+      taxRate: 13,
       shippingFee: 100,
       freeShippingThreshold: 2000,
       minOrderAmount: 100,
@@ -57,7 +56,6 @@ exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
     });
   }
 
-  // ✅ Return settings with corrected taxRate if it's wrong in DB
   const publicSettings = {
     storeName: settings.storeName,
     storeEmail: settings.storeEmail,
@@ -65,7 +63,7 @@ exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
     storeAddress: settings.storeAddress,
     currency: settings.currency,
     currencyCode: settings.currencyCode,
-    taxRate: settings.taxRate > 100 ? 13 : settings.taxRate, // ✅ Auto-correct if > 100
+    taxRate: settings.taxRate > 100 ? 13 : settings.taxRate,
     shippingFee: settings.shippingFee,
     freeShippingThreshold: settings.freeShippingThreshold,
     minOrderAmount: settings.minOrderAmount,
@@ -82,7 +80,6 @@ exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
   };
 
   console.log('✅ Public settings fetched, taxRate:', publicSettings.taxRate);
-
   sendSuccess(res, 200, 'Public settings fetched successfully', publicSettings);
 });
 
@@ -275,7 +272,6 @@ exports.getTaxSettings = catchAsync(async (req, res, next) => {
     });
   }
 
-  // ✅ Handle both flat taxRate and nested tax.rate
   const taxRate = settings.taxRate || settings.tax?.rate || 13;
   const correctedTaxRate = taxRate > 100 ? 13 : taxRate;
 
