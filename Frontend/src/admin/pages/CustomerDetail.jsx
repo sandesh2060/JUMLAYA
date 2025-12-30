@@ -1,5 +1,5 @@
 // ============================================
-// CustomerDetail.jsx
+// CustomerDetail.jsx - WITH AVATAR IMAGE
 // Path: Frontend/src/admin/pages/CustomerDetail.jsx
 // ============================================
 import { useState, useEffect } from 'react';
@@ -31,6 +31,24 @@ const CustomerDetail = () => {
     totalOrders: 0,
     totalSpent: 0,
   });
+
+  // ✅ Helper function to get full image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    const backendUrl = import.meta.env.VITE_API_URL.replace('/api', '');
+    return `${backendUrl}${imagePath}`;
+  };
+
+  // ✅ Helper function to get initials
+  const getInitials = (customer) => {
+    if (!customer) return 'U';
+    const first = customer.firstname || '';
+    const last = customer.lastname || '';
+    return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || 'U';
+  };
 
   // Fetch customer details
   useEffect(() => {
@@ -92,7 +110,7 @@ const CustomerDetail = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <button
@@ -128,9 +146,25 @@ const CustomerDetail = () => {
       {/* Customer Info Card */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="flex items-start gap-6">
-          {/* Avatar */}
-          <div className="w-24 h-24 rounded-full bg-primary-600 flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
-            {customer.firstname?.charAt(0)}{customer.lastname?.charAt(0)}
+          {/* Avatar - WITH IMAGE SUPPORT */}
+          <div className="relative flex-shrink-0">
+            {customer.avatar && getImageUrl(customer.avatar) ? (
+              <img
+                src={getImageUrl(customer.avatar)}
+                alt={`${customer.firstname} ${customer.lastname}`}
+                className="w-24 h-24 rounded-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextElementSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div 
+              className="w-24 h-24 rounded-full bg-primary-600 flex items-center justify-center text-white text-3xl font-bold"
+              style={{ display: customer.avatar ? 'none' : 'flex' }}
+            >
+              {getInitials(customer)}
+            </div>
           </div>
 
           {/* Info */}

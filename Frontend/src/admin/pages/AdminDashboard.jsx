@@ -32,6 +32,17 @@ const AdminDashboard = () => {
   const [topProducts, setTopProducts] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
 
+  // Helper function to get full image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '/placeholder.png';
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    // Remove /api from VITE_API_URL for static files
+    const backendUrl = import.meta.env.VITE_API_URL.replace('/api', '');
+    return `${backendUrl}${imagePath}`;
+  };
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -123,8 +134,6 @@ const AdminDashboard = () => {
     },
   ];
 
- 
-
   return (
     <div className="space-y-6 p-6">
       {/* Welcome Header */}
@@ -192,7 +201,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Orders - FIXED */}
+        {/* Recent Orders */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
@@ -222,11 +231,9 @@ const AdminDashboard = () => {
                     onClick={() => handleViewOrder(order._id)}
                   >
                     <div className="flex-1">
-                      {/* ✅ FIXED: Properly display order ID */}
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         Order #{order.orderId || order._id?.slice(-6)}
                       </p>
-                      {/* ✅ FIXED: Properly display customer name */}
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {order.user?.firstname && order.user?.lastname 
                           ? `${order.user.firstname} ${order.user.lastname}`
@@ -234,7 +241,6 @@ const AdminDashboard = () => {
                       </p>
                     </div>
                     <div className="text-right mr-4">
-                      {/* ✅ FIXED: Use totalPrice (matches backend) */}
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
                         Rs. {(order.totalPrice || 0).toLocaleString()}
                       </p>
@@ -268,7 +274,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Top Products */}
+        {/* Top Products - FIXED IMAGE RENDERING */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
@@ -304,7 +310,7 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                     <img
-                      src={product.images?.[0] || '/placeholder.png'}
+                      src={getImageUrl(product.images?.[0])}
                       alt={product.name}
                       className="w-12 h-12 rounded-lg object-cover"
                       onError={(e) => (e.target.src = '/placeholder.png')}
@@ -336,7 +342,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Low Stock Alert */}
+      {/* Low Stock Alert - FIXED IMAGE RENDERING */}
       {lowStockProducts.length > 0 && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
           <div className="flex items-start gap-3">
@@ -356,9 +362,10 @@ const AdminDashboard = () => {
                   >
                     <div className="flex items-center gap-3">
                       <img
-                        src={product.images?.[0] || '/placeholder.png'}
+                        src={getImageUrl(product.images?.[0])}
                         alt={product.name}
                         className="w-10 h-10 rounded object-cover"
+                        onError={(e) => (e.target.src = '/placeholder.png')}
                       />
                       <div>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">

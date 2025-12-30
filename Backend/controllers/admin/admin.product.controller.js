@@ -26,10 +26,8 @@ exports.getAllProducts = async (req, res) => {
       minStock
     } = req.query;
 
-    // Build query
     const query = { isDeleted: { $ne: true } };
 
-    // Search filter
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -38,31 +36,25 @@ exports.getAllProducts = async (req, res) => {
       ];
     }
 
-    // Category filter
     if (category && category !== 'all') {
       query.category = category;
     }
 
-    // Status filter
     if (status) {
       query.status = status;
     }
 
-    // ✅ FIXED: Stock filters
-    // Low stock filter (stock <= 10)
     if (lowStock === 'true') {
       query.stock = { $lte: 10 };
     }
-    
-    // Max stock filter (stock <= maxStock value)
+
     if (maxStock) {
       const maxStockValue = parseInt(maxStock);
       if (!isNaN(maxStockValue)) {
         query.stock = { $lte: maxStockValue };
       }
     }
-    
-    // Min stock filter (stock >= minStock value)
+
     if (minStock) {
       const minStockValue = parseInt(minStock);
       if (!isNaN(minStockValue)) {
@@ -71,13 +63,9 @@ exports.getAllProducts = async (req, res) => {
       }
     }
 
-    console.log('📦 Final query:', JSON.stringify(query, null, 2));
-
-    // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const sortOrder = order === 'desc' ? -1 : 1;
 
-    // Fetch products
     const [products, total] = await Promise.all([
       Product.find(query)
         .populate('category', 'name')
@@ -87,8 +75,6 @@ exports.getAllProducts = async (req, res) => {
         .lean(),
       Product.countDocuments(query)
     ]);
-
-    console.log('✅ Products fetched:', products.length, 'Total:', total);
 
     res.json({
       success: true,
@@ -101,7 +87,6 @@ exports.getAllProducts = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error fetching products:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch products',
@@ -116,7 +101,6 @@ exports.getAllProducts = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('📦 Fetching product:', id);
 
     const product = await Product.findById(id)
       .populate('category', 'name')
@@ -129,8 +113,6 @@ exports.getProductById = async (req, res) => {
       });
     }
 
-    console.log('✅ Product fetched:', product.name);
-
     res.json({
       success: true,
       message: 'Product retrieved successfully',
@@ -138,7 +120,6 @@ exports.getProductById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error fetching product:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch product',
@@ -152,11 +133,7 @@ exports.getProductById = async (req, res) => {
 // ============================================
 exports.createProduct = async (req, res) => {
   try {
-    console.log('📦 Creating product:', req.body.name);
-
     const product = await Product.create(req.body);
-
-    console.log('✅ Product created:', product._id);
 
     res.status(201).json({
       success: true,
@@ -165,7 +142,6 @@ exports.createProduct = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error creating product:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create product',
@@ -180,7 +156,6 @@ exports.createProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('📦 Updating product:', id);
 
     const product = await Product.findByIdAndUpdate(
       id,
@@ -195,8 +170,6 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
-    console.log('✅ Product updated:', product.name);
-
     res.json({
       success: true,
       message: 'Product updated successfully',
@@ -204,7 +177,6 @@ exports.updateProduct = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error updating product:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update product',
@@ -214,14 +186,12 @@ exports.updateProduct = async (req, res) => {
 };
 
 // ============================================
-// DELETE PRODUCT (Admin - Soft Delete)
+// DELETE PRODUCT (Admin)
 // ============================================
 exports.deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('📦 Permanently deleting product:', id);
 
-    // ✅ FIX: Use findByIdAndDelete to actually remove from database
     const product = await Product.findByIdAndDelete(id);
 
     if (!product) {
@@ -231,15 +201,12 @@ exports.deleteProduct = async (req, res) => {
       });
     }
 
-    console.log('✅ Product permanently deleted:', product.name);
-
     res.json({
       success: true,
       message: 'Product deleted successfully'
     });
 
   } catch (error) {
-    console.error('❌ Error deleting product:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete product',
@@ -249,45 +216,11 @@ exports.deleteProduct = async (req, res) => {
 };
 
 // ============================================
-// PERMANENT DELETE (Optional - for cleanup)
-// ============================================
-exports.permanentDeleteProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log('📦 Permanently deleting product:', id);
-
-    const product = await Product.findByIdAndDelete(id);
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    console.log('✅ Product permanently deleted:', product.name);
-
-    res.json({
-      success: true,
-      message: 'Product permanently deleted'
-    });
-
-  } catch (error) {
-    console.error('❌ Error permanently deleting product:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to permanently delete product',
-      error: error.message
-    });
-  }
-};
-// ============================================
 // UPLOAD PRODUCT IMAGES (Admin)
 // ============================================
 exports.uploadProductImages = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('📦 Uploading images for product:', id);
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
@@ -296,10 +229,8 @@ exports.uploadProductImages = async (req, res) => {
       });
     }
 
-    // Get image URLs from uploaded files
     const imageUrls = req.files.map(file => `/uploads/products/${file.filename}`);
 
-    // Update product with new images
     const product = await Product.findByIdAndUpdate(
       id,
       { $push: { images: { $each: imageUrls } } },
@@ -313,8 +244,6 @@ exports.uploadProductImages = async (req, res) => {
       });
     }
 
-    console.log('✅ Images uploaded:', imageUrls.length);
-
     res.json({
       success: true,
       message: 'Images uploaded successfully',
@@ -323,7 +252,6 @@ exports.uploadProductImages = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error uploading images:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to upload images',
@@ -340,8 +268,6 @@ exports.deleteProductImage = async (req, res) => {
     const { id } = req.params;
     const { imageUrl } = req.body;
 
-    console.log('📦 Deleting image from product:', id);
-
     const product = await Product.findByIdAndUpdate(
       id,
       { $pull: { images: imageUrl } },
@@ -355,8 +281,6 @@ exports.deleteProductImage = async (req, res) => {
       });
     }
 
-    console.log('✅ Image deleted');
-
     res.json({
       success: true,
       message: 'Image deleted successfully',
@@ -364,7 +288,98 @@ exports.deleteProductImage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error deleting image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete image',
+      error: error.message
+    });
+  }
+};
+
+// ============================================
+// UPLOAD SINGLE IMAGE (Before creating product)
+// ============================================
+exports.uploadImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    const imageUrl = `/uploads/products/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      message: 'Image uploaded successfully',
+      imageUrl,
+      filename: req.file.filename
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload image',
+      error: error.message
+    });
+  }
+};
+
+// ============================================
+// UPLOAD MULTIPLE IMAGES (Before creating product)
+// ============================================
+exports.uploadMultipleImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image files provided'
+      });
+    }
+
+    const imageUrls = req.files.map(file => `/uploads/products/${file.filename}`);
+
+    res.json({
+      success: true,
+      message: `${imageUrls.length} images uploaded successfully`,
+      imageUrls,
+      filenames: req.files.map(f => f.filename)
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload images',
+      error: error.message
+    });
+  }
+};
+
+// ============================================
+// DELETE IMAGE FROM SERVER (By filename)
+// ============================================
+exports.deleteImageFile = async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    const filePath = path.join(__dirname, '../../uploads/products', filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Image file not found'
+      });
+    }
+
+    fs.unlinkSync(filePath);
+
+    res.json({
+      success: true,
+      message: 'Image deleted successfully'
+    });
+
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to delete image',

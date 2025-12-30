@@ -1,14 +1,16 @@
-// Backend/controllers/order.controller.js - WITH NOTIFICATIONS
+// Backend/controllers/order.controller.js - WITH NOTIFICATIONS AND PDF INVOICE
 const Order = require('../models/order.model');
 const Product = require('../models/product.model');
 const User = require('../models/user.model');
 const Address = require('../models/address.model');
 const Cart = require('../models/cart.model');
+const Settings = require('../models/settings.model');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/AppError');
 const { successResponse } = require('../utils/response');
 const { generateOrderId } = require('../utils/generateOrderId');
-const { notifyOrderPlaced, notifyOrderCancelled, notifyOrderReturned } = require('../utils/notificationHelper'); // ✅ Import
+const { notifyOrderPlaced, notifyOrderCancelled, notifyOrderReturned } = require('../utils/notificationHelper');
+const { generateInvoicePDF } = require('../utils/invoiceGenerator'); // ✅ ADD THIS
 const mongoose = require('mongoose');
 
 // Helper to get user ID
@@ -223,21 +225,14 @@ exports.cancelOrder = catchAsync(async (req, res, next) => {
   }
 
   // ✅ CREATE NOTIFICATION
-  await createNotification({
-    recipient: userId,
-    type: 'order_cancelled',
-    title: 'Order Cancelled',
-    message: `Your order #${order.orderId} has been cancelled. ${reason || ''}`,
-    relatedOrder: order._id,
-    priority: 'medium'
-  });
+  await notifyOrderCancelled(userId, order);
 
   return successResponse(res, { order }, 'Order cancelled successfully');
 });
 
-// Keep all your other functions the same (getMyOrders, getOrder, etc.)
-// Just copy them from your original file
-
+// ==========================================
+// GET MY ORDERS
+// ==========================================
 exports.getMyOrders = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   const { status, page = 1, limit = 10 } = req.query;
@@ -265,6 +260,9 @@ exports.getMyOrders = catchAsync(async (req, res, next) => {
   }, 'Orders retrieved successfully');
 });
 
+// ==========================================
+// GET SINGLE ORDER
+// ==========================================
 exports.getOrder = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   const { id } = req.params;
@@ -274,6 +272,7 @@ exports.getOrder = catchAsync(async (req, res, next) => {
     user: userId
   })
     .populate('items.product', 'name images price salePrice')
+    .populate('rider', 'firstname lastname email phone profilePhoto vehicleType vehicleNumber rating')
     .lean();
 
   if (!order) {
@@ -283,6 +282,9 @@ exports.getOrder = catchAsync(async (req, res, next) => {
   return successResponse(res, order, 'Order retrieved successfully');
 });
 
+// ==========================================
+// GET ORDER STATS
+// ==========================================
 exports.getMyOrderStats = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
 
@@ -310,6 +312,9 @@ exports.getMyOrderStats = catchAsync(async (req, res, next) => {
   }, 'Order statistics retrieved');
 });
 
+// ==========================================
+// TRACK ORDER
+// ==========================================
 exports.trackOrder = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   const { id } = req.params;
@@ -333,6 +338,9 @@ exports.trackOrder = catchAsync(async (req, res, next) => {
   }, 'Order tracking info retrieved');
 });
 
+// ==========================================
+// REQUEST RETURN
+// ==========================================
 exports.requestReturn = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   const { id } = req.params;
@@ -373,6 +381,9 @@ exports.requestReturn = catchAsync(async (req, res, next) => {
   return successResponse(res, { order }, 'Return request submitted successfully');
 });
 
+// ==========================================
+// REORDER
+// ==========================================
 exports.reorder = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   const { id } = req.params;
@@ -407,35 +418,67 @@ exports.reorder = catchAsync(async (req, res, next) => {
   }, 'Items added to cart successfully');
 });
 
+// ==========================================
+// ✅ DOWNLOAD INVOICE AS PDF - FIXED
+// ==========================================
 exports.downloadInvoice = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   const { id } = req.params;
 
+  console.log('📄 Generating invoice for order:', id);
+
+  // Fetch order with all details
   const order = await Order.findOne({
     _id: id,
     user: userId
-  }).populate('items.product', 'name');
+  }).lean();
 
   if (!order) {
+    console.log('❌ Order not found:', id);
     return next(new AppError('Order not found', 404));
   }
-  
-  return successResponse(res, {
-    invoice: {
-      orderNumber: order.orderId,
-      date: order.createdAt,
-      items: order.items,
-      subtotal: order.itemsPrice,
-      tax: order.taxPrice,
-      shipping: order.shippingPrice,
-      discount: order.discountAmount,
-      total: order.totalPrice,
-      customer: {
-        name: order.shippingAddress.fullName,
-        email: order.shippingAddress.email,
-        phone: order.shippingAddress.phone
-      },
-      address: order.shippingAddress
+
+  console.log('✅ Order found:', order.orderId);
+
+  // Fetch store settings
+  let settings = {};
+  try {
+    const storeSettings = await Settings.findOne({ isActive: true });
+    if (storeSettings) {
+      settings = {
+        storeName: storeSettings.storeName,
+        storeEmail: storeSettings.storeEmail,
+        storePhone: storeSettings.storePhone,
+        storeAddress: storeSettings.storeAddress,
+        currency: storeSettings.currency,
+        taxRate: storeSettings.taxRate
+      };
+      console.log('✅ Settings loaded:', settings.storeName);
     }
-  }, 'Invoice data retrieved');
+  } catch (error) {
+    console.log('⚠️ Using default settings:', error.message);
+  }
+
+  // Generate PDF
+  try {
+    const doc = generateInvoicePDF(order, settings);
+
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    // Pipe the PDF to the response
+    doc.pipe(res);
+
+    // Finalize the PDF and end the stream
+    doc.end();
+
+    console.log('✅ Invoice PDF generated successfully');
+  } catch (error) {
+    console.error('❌ PDF generation error:', error);
+    return next(new AppError('Failed to generate invoice PDF', 500));
+  }
 });

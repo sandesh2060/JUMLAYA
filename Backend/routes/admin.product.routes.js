@@ -1,5 +1,5 @@
 // ============================================
-// admin.product.routes.js
+// admin.product.routes.js - UPDATED WITH IMAGE UPLOADS
 // Path: Backend/routes/admin.product.routes.js
 // ============================================
 const express = require('express');
@@ -14,7 +14,28 @@ router.use(protect);
 router.use(adminOnly);
 
 // ============================================
-// PRODUCT ROUTES
+// IMAGE UPLOAD ROUTES (Place BEFORE :id routes)
+// ============================================
+
+// POST /api/admin/products/upload-image - Upload single image
+router.post(
+  '/upload-image',
+  upload.single('image'),
+  productController.uploadImage
+);
+
+// POST /api/admin/products/upload-images - Upload multiple images
+router.post(
+  '/upload-images',
+  upload.array('images', 5),
+  productController.uploadMultipleImages
+);
+
+// DELETE /api/admin/products/delete-image/:filename - Delete image file
+router.delete('/delete-image/:filename', productController.deleteImageFile);
+
+// ============================================
+// PRODUCT CRUD ROUTES
 // ============================================
 
 // GET /api/admin/products - Get all products with filters
@@ -32,14 +53,14 @@ router.put('/:id', productController.updateProduct);
 // DELETE /api/admin/products/:id - Delete product (soft delete)
 router.delete('/:id', productController.deleteProduct);
 
-// POST /api/admin/products/:id/images - Upload product images
+// POST /api/admin/products/:id/images - Upload product images (for existing product)
 router.post(
   '/:id/images',
   upload.array('images', 5),
   productController.uploadProductImages
 );
 
-// DELETE /api/admin/products/:id/images - Delete product image
+// DELETE /api/admin/products/:id/images - Delete product image (from existing product)
 router.delete('/:id/images', productController.deleteProductImage);
 
 module.exports = router;

@@ -23,6 +23,17 @@ const AdminProducts = () => {
     loading: false
   })
 
+  // ✅ Helper function to get full image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '/placeholder.png'
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath
+    }
+    // Remove /api from VITE_API_URL for static files
+    const backendUrl = import.meta.env.VITE_API_URL.replace('/api', '')
+    return `${backendUrl}${imagePath}`
+  }
+
   useEffect(() => {
     fetchProducts()
   }, [currentPage, filterCategory])
@@ -226,7 +237,7 @@ const AdminProducts = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <img
-                              src={product.images?.[0] || '/placeholder.png'}
+                              src={getImageUrl(product.images?.[0])}
                               alt={product.name}
                               className="w-12 h-12 rounded-lg object-cover"
                               onError={(e) => e.target.src = '/placeholder.png'}

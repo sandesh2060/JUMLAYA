@@ -1,5 +1,5 @@
 // ============================================
-// 🔧 FIXED AdminCustomers.jsx
+// 🔧 FIXED AdminCustomers.jsx - WITH AVATAR IMAGES
 // Path: src/admin/pages/AdminCustomers.jsx
 // ============================================
 import { useState, useEffect, useCallback } from 'react'
@@ -25,6 +25,16 @@ const AdminCustomers = () => {
   const [sortOrder, setSortOrder] = useState('desc')
   const [showFilters, setShowFilters] = useState(false)
   const [selectedCustomers, setSelectedCustomers] = useState([])
+
+  // ✅ Helper function to get full image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath
+    }
+    const backendUrl = import.meta.env.VITE_API_URL.replace('/api', '')
+    return `${backendUrl}${imagePath}`
+  }
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -109,7 +119,7 @@ const AdminCustomers = () => {
     toast.success('Export feature coming soon!')
   }
 
-  // ✅ FIXED: Helper function to get initials
+  // ✅ Helper function to get initials
   const getInitials = (customer) => {
     const first = customer?.firstname || customer?.name || ''
     const last = customer?.lastname || ''
@@ -126,7 +136,7 @@ const AdminCustomers = () => {
     return 'U'
   }
 
-  // ✅ FIXED: Helper function to get full name
+  // ✅ Helper function to get full name
   const getFullName = (customer) => {
     const first = customer?.firstname || customer?.name || ''
     const last = customer?.lastname || ''
@@ -366,7 +376,21 @@ const AdminCustomers = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center flex-shrink-0">
+                          {customer.avatar && getImageUrl(customer.avatar) ? (
+                            <img
+                              src={getImageUrl(customer.avatar)}
+                              alt={getFullName(customer)}
+                              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                              onError={(e) => {
+                                e.target.style.display = 'none'
+                                e.target.nextElementSibling.style.display = 'flex'
+                              }}
+                            />
+                          ) : null}
+                          <div 
+                            className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center flex-shrink-0"
+                            style={{ display: customer.avatar ? 'none' : 'flex' }}
+                          >
                             <span className="text-sm font-medium text-primary-600 dark:text-primary-300">
                               {getInitials(customer)}
                             </span>

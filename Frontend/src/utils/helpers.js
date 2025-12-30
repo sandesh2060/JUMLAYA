@@ -129,7 +129,7 @@ export const getRelativeTime = (date) => {
  * @param {string} fallback - Fallback image URL
  * @returns {string} Complete image URL
  */
-export const getImageUrl = (imageUrl, fallback = 'https://via.placeholder.com/400x400?text=No+Image') => {
+export const getImageUrl = (imageUrl, fallback = '/placeholder.png') => {
   if (!imageUrl) return fallback;
   
   // If it's already a full URL, return as is
@@ -137,13 +137,19 @@ export const getImageUrl = (imageUrl, fallback = 'https://via.placeholder.com/40
     return imageUrl;
   }
   
-  // If it's a relative path, construct full URL
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  // If it's a local placeholder, return as is
+  if (imageUrl.startsWith('/placeholder')) {
+    return imageUrl;
+  }
   
-  // Remove leading slash if present
-  const cleanPath = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
+  // Get backend URL and remove /api suffix for static files
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
+  const backendUrl = apiUrl.replace('/api', '');
   
-  return `${baseUrl}/${cleanPath}`;
+  // Ensure imagePath starts with /
+  const normalizedPath = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+  
+  return `${backendUrl}${normalizedPath}`;
 };
 
 /**

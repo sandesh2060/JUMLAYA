@@ -40,26 +40,18 @@ const AdminProductForm = () => {
   const fetchCategories = async () => {
     try {
       setLoadingCategories(true)
-      console.log('📦 Fetching categories...')
-      
       const response = await adminAPI.categories.getAll()
-      console.log('✅ Categories API Response:', response)
-      
-      // Handle different response structures
       const categoriesData = response.categories || response.data || response
       
       if (Array.isArray(categoriesData)) {
-        console.log('✅ Categories loaded:', categoriesData.length)
         setCategories(categoriesData)
       } else {
-        console.error('❌ Categories is not an array:', categoriesData)
         toast.error('Invalid categories data format')
         setCategories([])
       }
-      
     } catch (error) {
       console.error('❌ Error fetching categories:', error)
-      toast.error('Failed to load categories. Please refresh the page.')
+      toast.error('Failed to load categories')
       setCategories([])
     } finally {
       setLoadingCategories(false)
@@ -69,14 +61,8 @@ const AdminProductForm = () => {
   const fetchProduct = async () => {
     try {
       setLoading(true)
-      console.log('📦 Fetching product:', id)
-      
       const response = await adminAPI.products.getById(id)
-      console.log('✅ Product API Response:', response)
-      
       const product = response.product || response.data || response
-
-      console.log('📦 Product loaded for editing:', product)
 
       setFormData({
         name: product.name || '',
@@ -96,7 +82,7 @@ const AdminProductForm = () => {
       })
     } catch (error) {
       console.error('❌ Error fetching product:', error)
-      toast.error(error.response?.data?.message || 'Failed to load product')
+      toast.error('Failed to load product')
       navigate('/admin/products')
     } finally {
       setLoading(false)
@@ -111,6 +97,68 @@ const AdminProductForm = () => {
     }))
   }
 
+  // ✅ NEW: Handle file selection and upload
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    
+    if (files.length === 0) return
+
+    // Check total images limit
+    if (formData.images.length + files.length > 5) {
+      toast.error('Maximum 5 images allowed')
+      return
+    }
+
+    try {
+      setUploading(true)
+      
+      // Upload images one by one
+      const uploadPromises = files.map(file => adminAPI.products.uploadImage(file))
+      const responses = await Promise.all(uploadPromises)
+      
+      // Extract image URLs
+      const newImageUrls = responses.map(res => res.imageUrl)
+      
+      // Add to form data
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...newImageUrls]
+      }))
+      
+      toast.success(`${files.length} image(s) uploaded successfully!`)
+    } catch (error) {
+      console.error('❌ Error uploading images:', error)
+      toast.error('Failed to upload images')
+    } finally {
+      setUploading(false)
+      // Reset file input
+      e.target.value = ''
+    }
+  }
+
+  // ✅ NEW: Remove image and delete from server
+  const handleRemoveImage = async (imageUrl, index) => {
+    try {
+      // Extract filename from URL
+      const filename = imageUrl.split('/').pop()
+      
+      // Delete from server
+      await adminAPI.products.deleteImageFile(filename)
+      
+      // Remove from form data
+      setFormData(prev => ({
+        ...prev,
+        images: prev.images.filter((_, i) => i !== index)
+      }))
+      
+      toast.success('Image removed')
+    } catch (error) {
+      console.error('❌ Error removing image:', error)
+      toast.error('Failed to remove image')
+    }
+  }
+
+  // Keep the URL method as backup
   const handleAddImageUrl = () => {
     const imageUrl = prompt('Enter image URL:')
     if (imageUrl && imageUrl.trim()) {
@@ -124,14 +172,6 @@ const AdminProductForm = () => {
       }))
       toast.success('Image added')
     }
-  }
-
-  const handleRemoveImage = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }))
-    toast.success('Image removed')
   }
 
   const handleSubmit = async (e) => {
@@ -165,8 +205,6 @@ const AdminProductForm = () => {
         stock: parseInt(formData.stock)
       }
 
-      console.log('📤 Submitting product data:', submitData)
-
       let response
       if (isEditMode) {
         response = await adminAPI.products.update(id, submitData)
@@ -176,11 +214,9 @@ const AdminProductForm = () => {
         toast.success('Product created successfully! 🎉')
       }
 
-      console.log('✅ Product saved:', response)
       navigate('/admin/products')
     } catch (error) {
       console.error('❌ Error saving product:', error)
-      console.error('Error details:', error.response?.data)
       toast.error(error.response?.data?.message || 'Failed to save product')
     } finally {
       setLoading(false)
@@ -280,11 +316,6 @@ const AdminProductForm = () => {
                   </option>
                 ))}
               </select>
-              {!loadingCategories && categories.length === 0 && (
-                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                  ⚠️ No categories found. Please add categories first or check your API connection.
-                </p>
-              )}
             </div>
 
             <div>
@@ -375,9 +406,6 @@ const AdminProductForm = () => {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 placeholder="0.00"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                For showing discount (optional)
-              </p>
             </div>
 
             <div>
@@ -398,7 +426,7 @@ const AdminProductForm = () => {
           </div>
         </div>
 
-        {/* Product Images */}
+        {/* Product Images - UPDATED */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Product Images
@@ -408,7 +436,7 @@ const AdminProductForm = () => {
             {formData.images.map((image, index) => (
               <div key={index} className="relative group">
                 <img
-                  src={image}
+                  src={image.startsWith('http') ? image : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:4001'}${image}`}
                   alt={`Product ${index + 1}`}
                   className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700"
                   onError={(e) => {
@@ -417,7 +445,7 @@ const AdminProductForm = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => handleRemoveImage(index)}
+                  onClick={() => handleRemoveImage(image, index)}
                   className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                 >
                   <X className="w-4 h-4" />
@@ -425,22 +453,48 @@ const AdminProductForm = () => {
               </div>
             ))}
 
+            {/* File Upload Button */}
             {formData.images.length < 5 && (
-              <button
-                type="button"
-                onClick={handleAddImageUrl}
-                className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary-500 transition-colors bg-gray-50 dark:bg-gray-700/50"
-              >
-                <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Add Image URL
-                </span>
-              </button>
+              <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary-500 transition-colors bg-gray-50 dark:bg-gray-700/50">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+                {uploading ? (
+                  <>
+                    <Loader className="w-8 h-8 text-gray-400 mb-2 animate-spin" />
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      Uploading...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      Upload Images
+                    </span>
+                  </>
+                )}
+              </label>
             )}
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Add up to 5 images via URL. Click "Add Image URL" to enter image links.
-          </p>
+          
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Upload up to 5 images (JPEG, PNG, WebP, GIF)
+            </p>
+            <button
+              type="button"
+              onClick={handleAddImageUrl}
+              className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
+            >
+              Or add image URL
+            </button>
+          </div>
         </div>
 
         {/* Options */}

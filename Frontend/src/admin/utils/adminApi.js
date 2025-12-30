@@ -66,7 +66,7 @@ const adminAPI = {
     }
   },
 
-  // Product APIs
+ // Product APIs
   products: {
     getAll: async (params = {}) => {
       const response = await apiClient.get('/admin/products', { params });
@@ -90,6 +90,40 @@ const adminAPI = {
     
     delete: async (id) => {
       const response = await apiClient.delete(`/admin/products/${id}`);
+      return response.data;
+    },
+    
+    // Upload single product image
+    uploadImage: async (imageFile) => {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      
+      const response = await apiClient.post('/admin/products/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    },
+    
+    // Upload multiple product images
+    uploadImages: async (imageFiles) => {
+      const formData = new FormData();
+      imageFiles.forEach(file => {
+        formData.append('images', file);
+      });
+      
+      const response = await apiClient.post('/admin/products/upload-images', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    },
+    
+    // Delete image file from server
+    deleteImageFile: async (filename) => {
+      const response = await apiClient.delete(`/admin/products/delete-image/${filename}`);
       return response.data;
     }
   },

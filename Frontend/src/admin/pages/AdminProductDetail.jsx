@@ -11,6 +11,17 @@ const AdminProductDetail = () => {
   const [product, setProduct] = useState(null)
   const [selectedImage, setSelectedImage] = useState(0)
 
+  // ✅ Helper function to get full image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '/placeholder.png'
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath
+    }
+    // Remove /api from VITE_API_URL for static files
+    const backendUrl = import.meta.env.VITE_API_URL.replace('/api', '')
+    return `${backendUrl}${imagePath}`
+  }
+
   useEffect(() => {
     if (id) {
       fetchProduct()
@@ -81,7 +92,7 @@ const AdminProductDetail = () => {
   }
 
   const hasImages = product.images && product.images.length > 0
-  const currentImage = hasImages ? product.images[selectedImage] : null
+  const currentImage = hasImages ? getImageUrl(product.images[selectedImage]) : null
 
   return (
     <div className="space-y-6">
@@ -139,7 +150,7 @@ const AdminProductDetail = () => {
                     alt={product.name}
                     className="w-full h-full object-contain"
                     onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/500x500?text=Image+Error'
+                      e.target.src = '/placeholder.png'
                     }}
                   />
                 </div>
@@ -156,11 +167,11 @@ const AdminProductDetail = () => {
                         }`}
                       >
                         <img
-                          src={image}
+                          src={getImageUrl(image)}
                           alt={`${product.name} ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.target.src = 'https://via.placeholder.com/150?text=Error'
+                            e.target.src = '/placeholder.png'
                           }}
                         />
                       </button>
