@@ -1,9 +1,10 @@
 // ============================================
-// FIXED: Wishlist.jsx
+// COMPLETE: Wishlist.jsx WITH i18n SUPPORT
 // Path: Frontend/src/pages/Wishlist.jsx
 // ============================================
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Heart, ShoppingCart, Trash2, Package } from 'lucide-react';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCart } from '@/hooks/useCart';
@@ -18,10 +19,10 @@ const getImageUrl = (path) => {
 };
 
 export default function Wishlist() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
-  // ✅ FIXED: Destructure 'items' from useWishlist
   const { 
     items: wishlistItems, 
     loading, 
@@ -35,10 +36,10 @@ export default function Wishlist() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      toast.error('Please login to view your wishlist');
+      toast.error(t('pleaseLogin'));
       navigate('/login');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, t]);
 
   const handleRemove = async (productId) => {
     if (processingItems.has(productId)) return;
@@ -46,10 +47,10 @@ export default function Wishlist() {
     try {
       setProcessingItems(prev => new Set(prev).add(productId));
       await removeFromWishlist(productId);
-      toast.success('Removed from wishlist');
+      toast.success(t('removedFromWishlist'));
     } catch (error) {
       console.error('Error removing from wishlist:', error);
-      toast.error('Failed to remove item');
+      toast.error(t('error'));
     } finally {
       setProcessingItems(prev => {
         const newSet = new Set(prev);
@@ -66,10 +67,10 @@ export default function Wishlist() {
       setProcessingItems(prev => new Set(prev).add(product._id));
       await addToCart(product._id, 1);
       await removeFromWishlist(product._id);
-      toast.success('Moved to cart!');
+      toast.success(t('cart.success.movedToCart'));
     } catch (error) {
       console.error('Error moving to cart:', error);
-      toast.error('Failed to move to cart');
+      toast.error(t('cart.errors.moveToCart'));
     } finally {
       setProcessingItems(prev => {
         const newSet = new Set(prev);
@@ -80,13 +81,13 @@ export default function Wishlist() {
   };
 
   const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to clear your entire wishlist?')) {
+    if (window.confirm(t('cart.confirmClear'))) {
       try {
         await clearWishlist();
-        toast.success('Wishlist cleared');
+        toast.success(t('cart.success.cleared'));
       } catch (error) {
         console.error('Error clearing wishlist:', error);
-        toast.error('Failed to clear wishlist');
+        toast.error(t('cart.errors.clearCart'));
       }
     }
   };
@@ -96,13 +97,12 @@ export default function Wishlist() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading wishlist...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('cart.loading')}</p>
         </div>
       </div>
     );
   }
 
-  // ✅ FIXED: Use wishlistItems instead of undefined 'items'
   if (!wishlistItems || wishlistItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
@@ -112,17 +112,17 @@ export default function Wishlist() {
               <Heart size={48} className="text-red-600 dark:text-red-400" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              Your Wishlist is Empty
+              {t('cart.empty.title')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
-              Start adding products you love to your wishlist. You can save them for later or share with friends!
+              {t('cart.empty.description')}
             </p>
             <Link
               to="/products"
               className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
             >
               <Package size={20} />
-              Browse Products
+              {t('cart.empty.button')}
             </Link>
           </div>
         </div>
@@ -137,10 +137,10 @@ export default function Wishlist() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              My Wishlist
+              {t('nav.wishlist')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'}
+              {wishlistItems.length} {wishlistItems.length === 1 ? t('cart.itemSingular') : t('cart.itemPlural')}
             </p>
           </div>
           
@@ -150,7 +150,7 @@ export default function Wishlist() {
               className="flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             >
               <Trash2 size={18} />
-              Clear All
+              {t('cart.clearCart')}
             </button>
           )}
         </div>
@@ -182,14 +182,14 @@ export default function Wishlist() {
                   {/* Discount Badge */}
                   {product.discount > 0 && (
                     <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      -{product.discount}%
+                      -{product.discount}% {t('productCard.off')}
                     </div>
                   )}
 
                   {/* Stock Badge */}
                   {product.stock === 0 && (
                     <div className="absolute top-3 right-3 bg-gray-900 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      Out of Stock
+                      {t('productCard.outOfStock')}
                     </div>
                   )}
                 </Link>
@@ -204,11 +204,11 @@ export default function Wishlist() {
 
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-2xl font-bold text-red-600 dark:text-red-400">
-                      NPR {product.salePrice || product.price}
+                      {t('currency')} {product.salePrice || product.price}
                     </span>
                     {product.discount > 0 && (
                       <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                        NPR {product.price}
+                        {t('currency')} {product.price}
                       </span>
                     )}
                   </div>
@@ -221,14 +221,14 @@ export default function Wishlist() {
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                       <ShoppingCart size={18} />
-                      {isProcessing ? 'Moving...' : 'Add to Cart'}
+                      {isProcessing ? t('loading') : t('moveToCart')}
                     </button>
 
                     <button
                       onClick={() => handleRemove(product._id)}
                       disabled={isProcessing}
                       className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Remove from wishlist"
+                      title={t('removeFromWishlist')}
                     >
                       <Trash2 size={20} />
                     </button>
@@ -246,7 +246,7 @@ export default function Wishlist() {
             className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors font-medium"
           >
             <Package size={20} />
-            Continue Shopping
+            {t('continueShopping')}
           </Link>
         </div>
       </div>

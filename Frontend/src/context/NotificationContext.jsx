@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback, useContext } from 'react'; // ✅ Added useContext
+import { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { notificationApi } from '../api/notification.api';
 import { useAuth } from '../hooks/useAuth';
@@ -14,8 +14,8 @@ const NotificationProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch notifications
-  const fetchNotifications = useCallback(async (params = {}) => {
+  // ✅ FIXED: Fetch notifications with correct response structure
+  const fetchNotifications = useCallback(async (page = 1, limit = 20, filter = 'all') => {
     if (!isAuthenticated) {
       setNotifications([]);
       setUnreadCount(0);
@@ -27,26 +27,42 @@ const NotificationProvider = ({ children }) => {
       setLoading(true);
       console.log('🔔 Fetching notifications...');
       
-      const response = await notificationApi.getNotifications(
-        params.page || 1,
-        params.limit || 20,
-        params.filter || 'all'
-      );
+      const response = await notificationApi.getNotifications(page, limit, filter);
       
-      const notificationList = response?.data?.notifications || response?.notifications || [];
-      setNotifications(notificationList);
+      console.log('📦 NotificationContext - Raw response:', response);
+      
+      // ✅ FIXED: Backend returns response.data.notifications (not response.data.data.notifications)
+      // Because axios.config already returns response.data, and backend wraps in { success, data: {...} }
+      const apiData = response.data || response;
+      
+      console.log('📦 API Data:', apiData);
+      
+      // Extract notifications array
+      const notificationList = apiData.notifications || [];
+      const unread = apiData.unreadCount || 0;
+      
+      // Ensure it's actually an array
+      const safeNotifications = Array.isArray(notificationList) ? notificationList : [];
+      
+      setNotifications(safeNotifications);
+      setUnreadCount(unread);
       setError(null);
-      console.log('✅ Notifications fetched:', notificationList.length);
+      
+      console.log('✅ Notifications fetched:', {
+        count: safeNotifications.length,
+        unread: unread
+      });
     } catch (err) {
       console.error('❌ Error fetching notifications:', err);
       setError(err.message);
       setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
   }, [isAuthenticated]);
 
-  // Fetch unread count
+  // ✅ FIXED: Fetch unread count with correct response structure
   const fetchUnreadCount = useCallback(async () => {
     if (!isAuthenticated) {
       setUnreadCount(0);
@@ -58,7 +74,12 @@ const NotificationProvider = ({ children }) => {
       
       const response = await notificationApi.getUnreadCount();
       
-      const count = response?.data?.count || response?.count || 0;
+      console.log('📦 Unread count response:', response);
+      
+      // ✅ FIXED: Backend returns response.data.unreadCount
+      const apiData = response.data || response;
+      const count = apiData.unreadCount || 0;
+      
       setUnreadCount(count);
       console.log('✅ Unread count:', count);
     } catch (err) {
@@ -75,11 +96,12 @@ const NotificationProvider = ({ children }) => {
       console.log('✓ Marking as read:', notificationId);
       await notificationApi.markAsRead(notificationId);
       
-      setNotifications(prev =>
-        prev.map(notif =>
+      setNotifications(prev => {
+        if (!Array.isArray(prev)) return [];
+        return prev.map(notif =>
           notif._id === notificationId ? { ...notif, isRead: true } : notif
-        )
-      );
+        );
+      });
       
       setUnreadCount(prev => Math.max(0, prev - 1));
       
@@ -99,9 +121,10 @@ const NotificationProvider = ({ children }) => {
       console.log('✓ Marking all as read...');
       await notificationApi.markAllAsRead();
       
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, isRead: true }))
-      );
+      setNotifications(prev => {
+        if (!Array.isArray(prev)) return [];
+        return prev.map(notif => ({ ...notif, isRead: true }));
+      });
       
       setUnreadCount(0);
       toast.success('All notifications marked as read');
@@ -121,12 +144,17 @@ const NotificationProvider = ({ children }) => {
       console.log('🗑️ Deleting notification:', notificationId);
       await notificationApi.deleteNotification(notificationId);
       
-      const deletedNotif = notifications.find(n => n._id === notificationId);
-      setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
-      
-      if (deletedNotif && !deletedNotif.isRead) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
+      setNotifications(prev => {
+        if (!Array.isArray(prev)) return [];
+        const deletedNotif = prev.find(n => n._id === notificationId);
+        
+        // Update unread count if deleted notification was unread
+        if (deletedNotif && !deletedNotif.isRead) {
+          setUnreadCount(count => Math.max(0, count - 1));
+        }
+        
+        return prev.filter(notif => notif._id !== notificationId);
+      });
       
       toast.success('Notification deleted');
       return true;
@@ -143,7 +171,7 @@ const NotificationProvider = ({ children }) => {
 
     try {
       console.log('🧹 Clearing all notifications...');
-      await notificationApi.deleteAllNotifications();
+      await notificationApi.clearAll();
       
       setNotifications([]);
       setUnreadCount(0);
@@ -161,6 +189,9 @@ const NotificationProvider = ({ children }) => {
     if (isAuthenticated) {
       fetchNotifications();
       fetchUnreadCount();
+    } else {
+      setNotifications([]);
+      setUnreadCount(0);
     }
   }, [isAuthenticated, fetchNotifications, fetchUnreadCount]);
 
@@ -176,7 +207,7 @@ const NotificationProvider = ({ children }) => {
   }, [isAuthenticated, fetchUnreadCount]);
 
   const value = {
-    notifications,
+    notifications: Array.isArray(notifications) ? notifications : [],
     unreadCount,
     loading,
     error,
@@ -195,7 +226,7 @@ const NotificationProvider = ({ children }) => {
   );
 };
 
-// ✅ ADD THIS CUSTOM HOOK
+// Custom hook
 export const useNotification = () => {
   const context = useContext(NotificationContext);
   if (!context) {

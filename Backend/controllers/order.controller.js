@@ -1,4 +1,7 @@
-// Backend/controllers/order.controller.js - WITH NOTIFICATIONS AND PDF INVOICE
+// ============================================
+// Backend/controllers/order.controller.js
+// UPDATED WITH COMPLETE NOTIFICATION SYSTEM
+// ============================================
 const Order = require('../models/order.model');
 const Product = require('../models/product.model');
 const User = require('../models/user.model');
@@ -9,15 +12,24 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/AppError');
 const { successResponse } = require('../utils/response');
 const { generateOrderId } = require('../utils/generateOrderId');
-const { notifyOrderPlaced, notifyOrderCancelled, notifyOrderReturned } = require('../utils/notificationHelper');
-const { generateInvoicePDF } = require('../utils/invoiceGenerator'); // ✅ ADD THIS
+const { generateInvoicePDF } = require('../utils/invoiceGenerator');
+const {
+  notifyOrderPlaced,
+  notifyOrderConfirmed,
+  notifyOrderCancelled,
+  notifyOrderReturned,
+  notifyOrderShipped,
+  notifyOrderOutForDelivery,
+  notifyOrderDelivered,
+  notifyPaymentReceived
+} = require('../utils/notificationHelper');
 const mongoose = require('mongoose');
 
 // Helper to get user ID
 const getUserId = (req) => req.user.id || req.user._id;
 
 // ==========================================
-// CREATE ORDER - WITH NOTIFICATION
+// CREATE ORDER - WITH NOTIFICATIONS
 // ==========================================
 exports.createOrder = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
@@ -30,13 +42,14 @@ exports.createOrder = catchAsync(async (req, res, next) => {
 
   console.log('📦 Creating order for user:', userId);
 
+  // Validate payment method
   const normalizedPaymentMethod = paymentMethod.toUpperCase();
-  
   const validPaymentMethods = ['COD', 'ESEWA', 'KHALTI', 'CARD'];
   if (!validPaymentMethods.includes(normalizedPaymentMethod)) {
     return next(new AppError('Invalid payment method', 400));
   }
 
+  // Validate shipping address
   if (!shippingAddressId) {
     return next(new AppError('Shipping address is required', 400));
   }
@@ -51,6 +64,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     return next(new AppError('Shipping address not found', 404));
   }
 
+  // Get user
   const user = await User.findById(userId);
   if (!user) {
     return next(new AppError('User not found', 404));
@@ -58,6 +72,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
 
   let orderItems = [];
   
+  // Process items (from request or cart)
   if (items && items.length > 0) {
     for (const item of items) {
       const product = await Product.findById(item.product);
@@ -108,14 +123,17 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     }
   }
 
+  // Calculate prices
   const itemsPrice = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const taxPrice = Math.round(itemsPrice * 0.13);
   const shippingPrice = itemsPrice >= 2000 ? 0 : 100;
-  let discountAmount = 0;
+  const discountAmount = 0;
   const totalPrice = itemsPrice + taxPrice + shippingPrice - discountAmount;
 
+  // Generate order ID
   const orderId = await generateOrderId();
 
+  // Create order
   const order = await Order.create({
     orderId,
     user: userId,
@@ -132,7 +150,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
       country: shippingAddress.country || 'Nepal'
     },
     paymentMethod: normalizedPaymentMethod,
-    paymentStatus: 'Pending',
+    paymentStatus: normalizedPaymentMethod === 'COD' ? 'Pending' : 'Pending',
     itemsPrice,
     shippingPrice,
     taxPrice,
@@ -141,6 +159,8 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     couponCode: couponCode || undefined,
     orderStatus: 'Pending'
   });
+
+  console.log('✅ Order created:', order.orderId);
 
   // Update product stock
   for (const item of orderItems) {
@@ -160,9 +180,16 @@ exports.createOrder = catchAsync(async (req, res, next) => {
 
   await shippingAddress.markAsUsed();
 
-  // ✅ CREATE NOTIFICATION
-  await notifyOrderPlaced(userId, order);
+  // ✅ SEND NOTIFICATION WITH EMAIL
+  try {
+    await notifyOrderPlaced(userId, order);
+    console.log('✅ Order placed notification sent');
+  } catch (notifError) {
+    console.error('❌ Notification error:', notifError);
+    // Don't fail the order if notification fails
+  }
 
+  // Generate payment URL if needed
   let paymentUrl = null;
   if (normalizedPaymentMethod === 'ESEWA') {
     paymentUrl = `https://uat.esewa.com.np/epay/main?amt=${totalPrice}&pid=${order.orderId}&scd=EPAYTEST&su=${process.env.FRONTEND_URL}/payment/success&fu=${process.env.FRONTEND_URL}/payment/failure`;
@@ -185,7 +212,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
 });
 
 // ==========================================
-// CANCEL ORDER - WITH NOTIFICATION
+// CANCEL ORDER - WITH NOTIFICATIONS
 // ==========================================
 exports.cancelOrder = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
@@ -205,10 +232,12 @@ exports.cancelOrder = catchAsync(async (req, res, next) => {
     return next(new AppError('Order cannot be cancelled at this stage', 400));
   }
 
+  const cancellationReason = reason || 'Cancelled by customer';
+
   order.orderStatus = 'Cancelled';
   order.cancelledAt = new Date();
-  order.cancellationReason = reason || 'Cancelled by customer';
-  order.addStatusHistory('Cancelled', reason || 'Cancelled by customer', userId);
+  order.cancellationReason = cancellationReason;
+  order.addStatusHistory('Cancelled', cancellationReason, userId);
   await order.save();
 
   // Restore product stock
@@ -224,10 +253,63 @@ exports.cancelOrder = catchAsync(async (req, res, next) => {
     );
   }
 
-  // ✅ CREATE NOTIFICATION
-  await notifyOrderCancelled(userId, order);
+  // ✅ SEND NOTIFICATION WITH EMAIL
+  try {
+    await notifyOrderCancelled(userId, order, cancellationReason);
+    console.log('✅ Order cancelled notification sent');
+  } catch (notifError) {
+    console.error('❌ Notification error:', notifError);
+  }
 
   return successResponse(res, { order }, 'Order cancelled successfully');
+});
+
+// ==========================================
+// REQUEST RETURN - WITH NOTIFICATIONS
+// ==========================================
+exports.requestReturn = catchAsync(async (req, res, next) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!reason) {
+    return next(new AppError('Return reason is required', 400));
+  }
+
+  const order = await Order.findOne({
+    _id: id,
+    user: userId
+  });
+
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+
+  if (order.orderStatus !== 'Delivered') {
+    return next(new AppError('Only delivered orders can be returned', 400));
+  }
+
+  const daysSinceDelivery = Math.floor(
+    (Date.now() - order.deliveredAt) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysSinceDelivery > 7) {
+    return next(new AppError('Return window has expired (7 days)', 400));
+  }
+
+  order.orderStatus = 'Returned';
+  order.addStatusHistory('Returned', reason, userId);
+  await order.save();
+
+  // ✅ SEND NOTIFICATION WITH EMAIL
+  try {
+    await notifyOrderReturned(userId, order);
+    console.log('✅ Order returned notification sent');
+  } catch (notifError) {
+    console.error('❌ Notification error:', notifError);
+  }
+
+  return successResponse(res, { order }, 'Return request submitted successfully');
 });
 
 // ==========================================
@@ -272,7 +354,7 @@ exports.getOrder = catchAsync(async (req, res, next) => {
     user: userId
   })
     .populate('items.product', 'name images price salePrice')
-    .populate('rider', 'firstname lastname email phone profilePhoto vehicleType vehicleNumber rating')
+    .populate('rider', 'firstname lastname email phone riderProfile.vehicleType riderProfile.vehicleNumber riderProfile.rating')
     .lean();
 
   if (!order) {
@@ -339,49 +421,6 @@ exports.trackOrder = catchAsync(async (req, res, next) => {
 });
 
 // ==========================================
-// REQUEST RETURN
-// ==========================================
-exports.requestReturn = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
-  const { id } = req.params;
-  const { reason } = req.body;
-
-  if (!reason) {
-    return next(new AppError('Return reason is required', 400));
-  }
-
-  const order = await Order.findOne({
-    _id: id,
-    user: userId
-  });
-
-  if (!order) {
-    return next(new AppError('Order not found', 404));
-  }
-
-  if (order.orderStatus !== 'Delivered') {
-    return next(new AppError('Only delivered orders can be returned', 400));
-  }
-
-  const daysSinceDelivery = Math.floor(
-    (Date.now() - order.deliveredAt) / (1000 * 60 * 60 * 24)
-  );
-
-  if (daysSinceDelivery > 7) {
-    return next(new AppError('Return window has expired (7 days)', 400));
-  }
-
-  order.orderStatus = 'Returned';
-  order.addStatusHistory('Returned', reason, userId);
-  await order.save();
-
-  // ✅ CREATE NOTIFICATION
-  await notifyOrderReturned(userId, order);
-
-  return successResponse(res, { order }, 'Return request submitted successfully');
-});
-
-// ==========================================
 // REORDER
 // ==========================================
 exports.reorder = catchAsync(async (req, res, next) => {
@@ -419,7 +458,7 @@ exports.reorder = catchAsync(async (req, res, next) => {
 });
 
 // ==========================================
-// ✅ DOWNLOAD INVOICE AS PDF - FIXED
+// DOWNLOAD INVOICE
 // ==========================================
 exports.downloadInvoice = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
@@ -427,7 +466,6 @@ exports.downloadInvoice = catchAsync(async (req, res, next) => {
 
   console.log('📄 Generating invoice for order:', id);
 
-  // Fetch order with all details
   const order = await Order.findOne({
     _id: id,
     user: userId
@@ -440,7 +478,6 @@ exports.downloadInvoice = catchAsync(async (req, res, next) => {
 
   console.log('✅ Order found:', order.orderId);
 
-  // Fetch store settings
   let settings = {};
   try {
     const storeSettings = await Settings.findOne({ isActive: true });
@@ -459,21 +496,16 @@ exports.downloadInvoice = catchAsync(async (req, res, next) => {
     console.log('⚠️ Using default settings:', error.message);
   }
 
-  // Generate PDF
   try {
     const doc = generateInvoicePDF(order, settings);
 
-    // Set response headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
 
-    // Pipe the PDF to the response
     doc.pipe(res);
-
-    // Finalize the PDF and end the stream
     doc.end();
 
     console.log('✅ Invoice PDF generated successfully');

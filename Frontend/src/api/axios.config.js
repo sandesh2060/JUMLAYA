@@ -1,12 +1,13 @@
 // ============================================
-// FIXED: axios.config.js
-// Path: Frontend/src/api/axios.config.js
+// Frontend/src/api/axios.config.js
+// ✅ FIXED: Routes without /api prefix
+// (Because VITE_API_URL = http://localhost:4001/api)
 // ============================================
 import axios from "axios";
 import toast from "react-hot-toast";
 
-// ✅ FIXED: Remove /api from baseURL since routes already include it
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4001";
+// ✅ This already includes /api from .env
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4001/api";
 
 console.log("🔧 API Configuration:", {
   baseURL: API_URL,
@@ -15,10 +16,9 @@ console.log("🔧 API Configuration:", {
 
 // Create axios instance
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_URL, // http://localhost:4001/api
   timeout: 15000,
   withCredentials: true,
-  
 });
 
 // ============================================
@@ -26,16 +26,16 @@ const api = axios.create({
 // ============================================
 api.interceptors.request.use(
   (config) => {
-    // ✅ FIXED: Added password reset routes to public endpoints
+    // ✅ UPDATED: Remove /api/ prefix from public endpoints
     const publicEndpoints = [
       "/users/register",
       "/users/login",
       "/users/verify-otp",
       "/users/resend-otp",
-      "/password/forgot",      // ✅ ADD THIS
-      "/password/reset",       // ✅ ADD THIS
-      "/password/resend-otp",  // ✅ ADD THIS
-      "/password/verify-otp",  // ✅ ADD THIS
+      "/password/forgot",
+      "/password/reset",
+      "/password/resend-otp",
+      "/password/verify-otp",
     ];
     
     const isPublic = publicEndpoints.some((endpoint) =>
@@ -51,9 +51,8 @@ api.interceptors.request.use(
       delete config.headers.Authorization;
     }
     
-    // ✅ Set Content-Type based on data type
+    // Set Content-Type based on data type
     if (config.data instanceof FormData) {
-      // Let browser set Content-Type with boundary for FormData
       delete config.headers["Content-Type"];
     } else {
       config.headers["Content-Type"] = "application/json";
@@ -64,6 +63,7 @@ api.interceptors.request.use(
       console.log("📤 API Request:", {
         method: config.method?.toUpperCase(),
         url: config.url,
+        fullUrl: `${API_URL}${config.url}`, // Show full URL for debugging
         isPublic,
         hasToken: !!config.headers.Authorization,
       });
@@ -82,7 +82,7 @@ api.interceptors.request.use(
 // ============================================
 api.interceptors.response.use(
   (response) => {
-    // ✅ Log successful responses in development
+    // Log successful responses in development
     if (import.meta.env.DEV) {
       console.log("📥 API Response:", {
         status: response.status,
@@ -101,6 +101,7 @@ api.interceptors.response.use(
       status: error.response?.status,
       message: error.response?.data?.message || error.message,
       url: error.config?.url,
+      fullUrl: error.config?.url ? `${API_URL}${error.config.url}` : 'unknown',
     });
 
     // Handle specific error cases
@@ -109,38 +110,32 @@ api.interceptors.response.use(
 
       switch (status) {
         case 401:
-          // ✅ FIXED: Check if this is a password reset route before trying to refresh
+          // ✅ UPDATED: Remove /api/ prefix
           const passwordResetPaths = ['/password/forgot', '/password/reset', '/password/resend-otp', '/password/verify-otp'];
           const isPasswordReset = passwordResetPaths.some(path => originalRequest.url?.includes(path));
           
           if (isPasswordReset) {
-            // Don't try to refresh token for password reset routes
             break;
           }
           
-          // ✅ Unauthorized - Try refresh token once
           if (!originalRequest._retry) {
             originalRequest._retry = true;
 
             const refreshToken = localStorage.getItem("refreshToken");
             if (refreshToken) {
               try {
+                // ✅ UPDATED: Remove /api/ prefix
                 const response = await axios.post(
-                  `${API_URL}/api/users/refresh-token`,
-                  {
-                    refreshToken,
-                  }
+                  `${API_URL}/users/refresh-token`,
+                  { refreshToken }
                 );
 
                 const { authToken } = response.data.data;
-                // ✅ Save with correct key
                 localStorage.setItem("authToken", authToken);
 
-                // Retry original request with new token
                 originalRequest.headers.Authorization = `Bearer ${authToken}`;
                 return api(originalRequest);
               } catch (refreshError) {
-                // Refresh failed - logout user
                 console.warn("🔒 Token refresh failed - Logging out");
                 localStorage.removeItem("authToken");
                 localStorage.removeItem("refreshToken");
@@ -153,11 +148,9 @@ api.interceptors.response.use(
                 }
               }
             } else {
-              // No refresh token - logout
               localStorage.removeItem("authToken");
               localStorage.removeItem("user");
 
-              // ✅ FIX: Don't show toast or redirect on public pages
               const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
               const isPublicPage = publicPaths.some((path) =>
                 window.location.pathname.includes(path)
@@ -172,28 +165,20 @@ api.interceptors.response.use(
           break;
 
         case 403:
-          console.warn(
-            "🚫 Forbidden:",
-            data?.message || "Insufficient permissions"
-          );
+          console.warn("🚫 Forbidden:", data?.message || "Insufficient permissions");
           toast.error("Access denied. You do not have permission.");
           break;
 
         case 404:
           console.warn("🔍 Not Found:", data?.message || "Resource not found");
-          // Don't show toast for 404s as they might be expected
           break;
 
         case 400:
           console.warn("⚠️ Bad Request:", data?.message || "Invalid request");
-          // Let the component handle 400 errors (like invalid OTP)
           break;
 
         case 500:
-          console.error(
-            "💥 Server Error:",
-            data?.message || "Internal server error"
-          );
+          console.error("💥 Server Error:", data?.message || "Internal server error");
           toast.error("Server error. Please try again later.");
           break;
 
@@ -212,5 +197,4 @@ api.interceptors.response.use(
   }
 );
 
-// ✅ CRITICAL: Export as default
 export default api;

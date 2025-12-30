@@ -25,7 +25,7 @@ import { useCart } from "../../hooks/useCart";
 import { useWishlist } from "../../hooks/useWishlist";
 import { useTheme } from "../../hooks/useTheme";
 import { useLanguage } from "../../hooks/useLanguage";
-import NotificationBell from './NotificationBell';
+import NotificationBell from '../notifications/NotificationBell';
 import { productAPI } from "../../api/product.api";
 
 export default function Navbar() {

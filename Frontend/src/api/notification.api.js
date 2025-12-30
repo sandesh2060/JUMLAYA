@@ -1,6 +1,7 @@
 // ============================================
 // Frontend/src/api/notification.api.js
-// ✅ FIXED - Matches backend routes exactly
+// ✅ FIXED - Routes without /api prefix
+// (Because VITE_API_URL already includes /api)
 // ============================================
 import api from './axios.config';
 
@@ -13,25 +14,19 @@ export const notificationApi = {
     return response.data;
   },
 
-  // Get notification by ID
-  getById: async (notificationId) => {
-    const response = await api.get(`/notifications/${notificationId}`);
-    return response.data;
-  },
-
-  // ✅ FIXED: Changed to '/notifications/unread-count' (with DASH, not slash)
+  // Get unread count
   getUnreadCount: async () => {
     const response = await api.get('/notifications/unread-count');
     return response.data;
   },
 
-  // ✅ CORRECT: Mark single notification as read
+  // Mark single notification as read
   markAsRead: async (notificationId) => {
     const response = await api.patch(`/notifications/${notificationId}/read`);
     return response.data;
   },
 
-  // ✅ FIXED: Changed to '/notifications/mark-all-read' (with DASH)
+  // Mark all as read
   markAllAsRead: async () => {
     const response = await api.patch('/notifications/mark-all-read');
     return response.data;
@@ -43,32 +38,29 @@ export const notificationApi = {
     return response.data;
   },
 
-  // ✅ FIXED: Changed to '/notifications/read/all' to match backend route
+  // Delete all read notifications
   deleteAllRead: async () => {
     const response = await api.delete('/notifications/read/all');
     return response.data;
   },
 
-  // Delete all notifications (clear all)
-  deleteAllNotifications: async () => {
-    const response = await api.delete('/notifications/read/all');
+  // Clear all notifications
+  clearAll: async () => {
+    const response = await api.delete('/notifications/clear-all');
     return response.data;
   },
 
   // Legacy methods (for backward compatibility)
   getAll: async (params = {}) => {
-    const response = await api.get('/notifications', { params });
-    return response.data;
+    return notificationApi.getNotifications(
+      params.page || 1, 
+      params.limit || 20, 
+      params.filter || 'all'
+    );
   },
 
   delete: async (notificationId) => {
-    const response = await api.delete(`/notifications/${notificationId}`);
-    return response.data;
-  },
-
-  clearAll: async () => {
-    const response = await api.delete('/notifications/read/all');
-    return response.data;
+    return notificationApi.deleteNotification(notificationId);
   }
 };
 

@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useNotification } from '../../hooks/useNotification';
 import { useLanguage } from "../../hooks/useLanguage"; 
 import { formatDistanceToNow } from 'date-fns';
-import { enUS, ne } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 const NotificationDropdown = ({ isOpen, onClose }) => {
   const { t, i18n } = useTranslation();
@@ -40,13 +40,14 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
   
   const { currentLanguage, changeLanguage, languages } = useLanguage();
 
-  const dateLocale = i18n.language === 'ne' ? ne : enUS;
+  // ✅ FIXED: Use only enUS locale (Nepali locale 'ne' is not available in date-fns)
+  const dateLocale = enUS;
 
   useEffect(() => {
     if (isOpen) {
       fetchNotifications(1, 10, activeTab === 'unread' ? 'unread' : 'all');
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen, activeTab, fetchNotifications]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -96,7 +97,7 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
     return icons[type] || <Bell className="w-5 h-5 text-gray-500" />;
   };
 
-  // ✅ CRITICAL: Function to translate notification content
+  // ✅ Function to translate notification content
   const translateNotification = (notification) => {
     const type = notification.type;
     

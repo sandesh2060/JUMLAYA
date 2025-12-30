@@ -1,11 +1,23 @@
-// Backend/middlewares/upload.middleware.js
+// ============================================
+// upload.middleware.js - File Upload Handler
+// Path: Backend/middlewares/upload.middleware.js
+// ============================================
+
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Create uploads directories if they don't exist
+// ============================================
+// CREATE UPLOAD DIRECTORIES
+// ============================================
 const createUploadDirs = () => {
-  const dirs = ['uploads', 'uploads/avatars', 'uploads/products'];
+  const dirs = [
+    'uploads',
+    'uploads/avatars',
+    'uploads/products',
+    'uploads/logos' // NEW: Logo directory
+  ];
+  
   dirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -14,14 +26,19 @@ const createUploadDirs = () => {
   });
 };
 
+// Create directories on module load
 createUploadDirs();
 
-// Storage configuration
+// ============================================
+// STORAGE CONFIGURATION
+// ============================================
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Determine destination based on fieldname or default to products
+    // Determine destination based on fieldname
     if (file.fieldname === 'avatar') {
       cb(null, 'uploads/avatars/');
+    } else if (file.fieldname === 'logo') {
+      cb(null, 'uploads/logos/'); // NEW: Logo destination
     } else {
       cb(null, 'uploads/products/');
     }
@@ -32,26 +49,32 @@ const storage = multer.diskStorage({
     
     if (file.fieldname === 'avatar') {
       cb(null, `avatar-${uniqueSuffix}${ext}`);
+    } else if (file.fieldname === 'logo') {
+      cb(null, `logo-${uniqueSuffix}${ext}`); // NEW: Logo filename
     } else {
       cb(null, `product-${uniqueSuffix}${ext}`);
     }
   }
 });
 
-// File filter for images
+// ============================================
+// FILE FILTER FOR IMAGES
+// ============================================
 const imageFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp|gif/;
+  const allowedTypes = /jpeg|jpg|png|webp|gif|svg/; // Added SVG support
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+  const mimetype = allowedTypes.test(file.mimetype) || file.mimetype === 'image/svg+xml';
 
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    cb(new Error('Only image files (jpeg, jpg, png, webp, gif) are allowed!'));
+    cb(new Error('Only image files (jpeg, jpg, png, webp, gif, svg) are allowed!'));
   }
 };
 
-// Create multer instance
+// ============================================
+// MULTER INSTANCE
+// ============================================
 const upload = multer({
   storage: storage,
   limits: {
@@ -60,5 +83,4 @@ const upload = multer({
   fileFilter: imageFilter,
 });
 
-// ✅ CORRECT WAY: Export the multer instance directly (no additional exports after this)
 module.exports = upload;

@@ -1,74 +1,138 @@
 // ============================================
-// notification.controller.js
-// Path: Backend/controllers/notification.controller.js
+// Backend/controllers/notification.controller.js
+// ✅ FIXED - Correct user ID handling and isDeleted field
 // ============================================
 
 const Notification = require('../models/notification.model');
 const catchAsync = require('../utils/catchAsync');
 const { successResponse } = require('../utils/response');
 
-// Helper to get user ID
-const getUserId = (req) => req.user.id || req.user._id;
+// ✅ FIXED: Helper to get user ID - prioritize _id and convert to string
+const getUserId = (req) => {
+  const id = req.user._id || req.user.id;
+  return id.toString(); // Convert ObjectId to string for consistent comparison
+};
 
-// @desc    Get all notifications for current user
-// @route   GET /api/notifications
-// @access  Private
+// ==========================================
+// GET ALL NOTIFICATIONS FOR CURRENT USER
+// @route GET /api/notifications
+// @access Private
+// ==========================================
 exports.getNotifications = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
-  const { page = 1, limit = 20, type, isRead } = req.query;
+  const { page = 1, limit = 20, filter = 'all' } = req.query;
 
-  const query = { recipient: userId }; // ✅ Filter by recipient (current user)
+  console.log('📬 Fetching notifications for user:', userId, 'Filter:', filter);
+
+  // Build query - Handle notifications without isDeleted field
+  const query = { 
+    recipient: userId,
+    $or: [
+      { isDeleted: { $exists: false } },  // Old notifications without isDeleted field
+      { isDeleted: false }                // New notifications with isDeleted: false
+    ]
+  };
   
-  // Filter by type if provided
-  if (type) {
-    query.type = type;
-  }
-  
-  // Filter by read status if provided
-  if (isRead !== undefined) {
-    query.isRead = isRead === 'true';
+  // Apply filter
+  if (filter === 'unread') {
+    query.isRead = false;
+  } else if (filter === 'read') {
+    query.isRead = true;
   }
 
+  // Fetch notifications
   const notifications = await Notification.find(query)
     .sort({ createdAt: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit)
-    .populate('relatedUser', 'name email')
-    .populate('relatedOrder', 'orderNumber')
+    .populate('relatedUser', 'firstname lastname email avatar')
+    .populate('relatedOrder', 'orderId orderStatus totalPrice')
+    .populate('relatedProduct', 'name slug images price')
     .lean();
 
-  const count = await Notification.countDocuments(query);
+  // Get counts
+  const total = await Notification.countDocuments(query);
+  const unreadCount = await Notification.countDocuments({ 
+    recipient: userId, 
+    isRead: false,
+    $or: [
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
+    ]
+  });
+
+  console.log(`✅ Found ${notifications.length} notifications (${unreadCount} unread)`);
 
   return successResponse(res, {
-    data: notifications,
-    totalPages: Math.ceil(count / limit),
-    currentPage: parseInt(page),
-    total: count
+    success: true,
+    data: {
+      notifications: notifications,
+      unreadCount: unreadCount,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total,
+        pages: Math.ceil(total / limit)
+      }
+    }
   }, 'Notifications fetched successfully');
 });
 
-// @desc    Get unread notifications count
-// @route   GET /api/notifications/unread-count
-// @access  Private
+// ==========================================
+// GET UNREAD NOTIFICATIONS COUNT
+// @route GET /api/notifications/unread-count
+// @access Private
+// ==========================================
 exports.getUnreadCount = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
+  
+  console.log('🔍 DEBUG - req.user._id:', req.user._id);
+  console.log('🔍 DEBUG - userId being used:', userId);
+  
+  // Handle notifications without isDeleted field
   const count = await Notification.countDocuments({ 
     recipient: userId, 
-    isRead: false 
+    isRead: false,
+    $or: [
+      { isDeleted: { $exists: false } },  // Old notifications
+      { isDeleted: false }                // New notifications
+    ]
   });
 
-  return successResponse(res, { count }, 'Unread count fetched successfully');
+  console.log(`📊 Unread count for user ${userId}:`, count);
+
+  return successResponse(res, { 
+    success: true,
+    data: {
+      unreadCount: count 
+    }
+  }, 'Unread count fetched successfully');
 });
 
-// @desc    Mark notification as read
-// @route   PATCH /api/notifications/:id/read
-// @access  Private
+// ==========================================
+// MARK NOTIFICATION AS READ
+// @route PATCH /api/notifications/:id/read
+// @access Private
+// ==========================================
 exports.markAsRead = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
+  const { id } = req.params;
   
+  console.log('✅ Marking notification as read:', id);
+
   const notification = await Notification.findOneAndUpdate(
-    { _id: req.params.id, recipient: userId }, // ✅ Ensure user owns this notification
-    { isRead: true, readAt: new Date() },
+    { 
+      _id: id, 
+      recipient: userId,
+      $or: [
+        { isDeleted: { $exists: false } },
+        { isDeleted: false }
+      ]
+    },
+    { 
+      isRead: true, 
+      readAt: new Date() 
+    },
     { new: true }
   );
 
@@ -79,33 +143,69 @@ exports.markAsRead = catchAsync(async (req, res, next) => {
     });
   }
 
-  return successResponse(res, notification, 'Notification marked as read');
+  return successResponse(res, {
+    success: true,
+    data: notification
+  }, 'Notification marked as read');
 });
 
-// @desc    Mark all notifications as read
-// @route   PATCH /api/notifications/mark-all-read
-// @access  Private
+// ==========================================
+// MARK ALL NOTIFICATIONS AS READ
+// @route PATCH /api/notifications/mark-all-read
+// @access Private
+// ==========================================
 exports.markAllAsRead = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   
-  await Notification.updateMany(
-    { recipient: userId, isRead: false },
-    { isRead: true, readAt: new Date() }
+  console.log('✅ Marking all notifications as read for user:', userId);
+
+  const result = await Notification.updateMany(
+    { 
+      recipient: userId, 
+      isRead: false,
+      $or: [
+        { isDeleted: { $exists: false } },
+        { isDeleted: false }
+      ]
+    },
+    { 
+      isRead: true, 
+      readAt: new Date() 
+    }
   );
 
-  return successResponse(res, null, 'All notifications marked as read');
+  console.log(`✅ Marked ${result.modifiedCount} notifications as read`);
+
+  return successResponse(res, {
+    success: true,
+    data: {
+      modifiedCount: result.modifiedCount
+    }
+  }, 'All notifications marked as read');
 });
 
-// @desc    Delete notification
-// @route   DELETE /api/notifications/:id
-// @access  Private
+// ==========================================
+// DELETE NOTIFICATION (SOFT DELETE)
+// @route DELETE /api/notifications/:id
+// @access Private
+// ==========================================
 exports.deleteNotification = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
+  const { id } = req.params;
   
-  const notification = await Notification.findOneAndDelete({
-    _id: req.params.id,
-    recipient: userId
-  });
+  console.log('🗑️ Deleting notification:', id);
+
+  const notification = await Notification.findOneAndUpdate(
+    {
+      _id: id,
+      recipient: userId
+    },
+    {
+      isDeleted: true,
+      deletedAt: new Date()
+    },
+    { new: true }
+  );
 
   if (!notification) {
     return res.status(404).json({
@@ -114,48 +214,174 @@ exports.deleteNotification = catchAsync(async (req, res, next) => {
     });
   }
 
-  return successResponse(res, null, 'Notification deleted successfully');
+  return successResponse(res, {
+    success: true,
+    data: null
+  }, 'Notification deleted successfully');
 });
 
-// @desc    Delete all read notifications
-// @route   DELETE /api/notifications/read/all
-// @access  Private
+// ==========================================
+// DELETE ALL READ NOTIFICATIONS
+// @route DELETE /api/notifications/read/all
+// @access Private
+// ==========================================
 exports.deleteAllRead = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   
-  const result = await Notification.deleteMany({ 
-    recipient: userId, 
-    isRead: true 
-  });
+  console.log('🗑️ Deleting all read notifications for user:', userId);
 
-  return successResponse(
-    res, 
-    { deletedCount: result.deletedCount },
-    `${result.deletedCount} read notifications deleted successfully`
+  const result = await Notification.updateMany(
+    { 
+      recipient: userId, 
+      isRead: true,
+      $or: [
+        { isDeleted: { $exists: false } },
+        { isDeleted: false }
+      ]
+    },
+    {
+      isDeleted: true,
+      deletedAt: new Date()
+    }
   );
+
+  console.log(`✅ Deleted ${result.modifiedCount} read notifications`);
+
+  return successResponse(res, {
+    success: true,
+    data: { 
+      deletedCount: result.modifiedCount 
+    }
+  }, `${result.modifiedCount} read notifications deleted successfully`);
 });
 
 // ==========================================
-// HELPER FUNCTION: Create Notification
+// GET NOTIFICATIONS BY TYPE
+// @route GET /api/notifications/type/:type
+// @access Private
 // ==========================================
-exports.createNotification = async (data) => {
-  try {
-    const notification = await Notification.create({
-      recipient: data.recipient,
-      type: data.type,
-      title: data.title,
-      message: data.message,
-      relatedOrder: data.relatedOrder,
-      relatedUser: data.relatedUser,
-      relatedProduct: data.relatedProduct,
-      metadata: data.metadata,
-      priority: data.priority || 'medium'
-    });
-    
-    console.log('✅ Notification created:', notification.title);
-    return notification;
-  } catch (error) {
-    console.error('❌ Error creating notification:', error);
-    throw error;
-  }
-};
+exports.getNotificationsByType = catchAsync(async (req, res, next) => {
+  const userId = getUserId(req);
+  const { type } = req.params;
+  const { page = 1, limit = 20 } = req.query;
+
+  const notifications = await Notification.find({
+    recipient: userId,
+    type: type,
+    $or: [
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
+    ]
+  })
+  .sort({ createdAt: -1 })
+  .limit(limit * 1)
+  .skip((page - 1) * limit)
+  .populate('relatedUser', 'firstname lastname email')
+  .populate('relatedOrder', 'orderId orderStatus totalPrice')
+  .populate('relatedProduct', 'name slug images')
+  .lean();
+
+  const total = await Notification.countDocuments({
+    recipient: userId,
+    type: type,
+    $or: [
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
+    ]
+  });
+
+  return successResponse(res, {
+    success: true,
+    data: {
+      notifications,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total,
+        pages: Math.ceil(total / limit)
+      }
+    }
+  }, 'Notifications fetched successfully');
+});
+
+// ==========================================
+// GET NOTIFICATION PREFERENCES
+// @route GET /api/notifications/preferences
+// @access Private
+// ==========================================
+exports.getPreferences = catchAsync(async (req, res, next) => {
+  const userId = getUserId(req);
+  const User = require('../models/user.model');
+  
+  const user = await User.findById(userId).select('notificationPreferences');
+  
+  const preferences = user?.notificationPreferences || {
+    email: true,
+    push: true,
+    sms: false,
+    orderUpdates: true,
+    promotions: true,
+    newsletter: true
+  };
+
+  return successResponse(res, {
+    success: true,
+    data: preferences
+  }, 'Notification preferences fetched successfully');
+});
+
+// ==========================================
+// UPDATE NOTIFICATION PREFERENCES
+// @route PATCH /api/notifications/preferences
+// @access Private
+// ==========================================
+exports.updatePreferences = catchAsync(async (req, res, next) => {
+  const userId = getUserId(req);
+  const preferences = req.body;
+  const User = require('../models/user.model');
+  
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { notificationPreferences: preferences },
+    { new: true, runValidators: true }
+  ).select('notificationPreferences');
+
+  return successResponse(res, {
+    success: true,
+    data: user.notificationPreferences
+  }, 'Notification preferences updated successfully');
+});
+
+// ==========================================
+// CLEAR ALL NOTIFICATIONS
+// @route DELETE /api/notifications/clear-all
+// @access Private
+// ==========================================
+exports.clearAllNotifications = catchAsync(async (req, res, next) => {
+  const userId = getUserId(req);
+  
+  console.log('🗑️ Clearing all notifications for user:', userId);
+
+  const result = await Notification.updateMany(
+    { 
+      recipient: userId,
+      $or: [
+        { isDeleted: { $exists: false } },
+        { isDeleted: false }
+      ]
+    },
+    {
+      isDeleted: true,
+      deletedAt: new Date()
+    }
+  );
+
+  console.log(`✅ Cleared ${result.modifiedCount} notifications`);
+
+  return successResponse(res, {
+    success: true,
+    data: { 
+      deletedCount: result.modifiedCount 
+    }
+  }, 'All notifications cleared successfully');
+});

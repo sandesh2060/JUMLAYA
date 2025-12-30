@@ -133,6 +133,36 @@ const settingsAPI = {
       console.error('❌ Error updating all settings:', error)
       throw error.response?.data || { message: 'Failed to update settings' }
     }
+  },
+
+  // ============================================
+  // NEW: UPLOAD LOGO
+  // ============================================
+  uploadLogo: async (formData) => {
+    try {
+      const response = await apiClient.post('/admin/settings/logo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ Error uploading logo:', error)
+      throw error.response?.data || { message: 'Failed to upload logo' }
+    }
+  },
+
+  // ============================================
+  // NEW: DELETE LOGO
+  // ============================================
+  deleteLogo: async () => {
+    try {
+      const response = await apiClient.delete('/admin/settings/logo')
+      return response.data
+    } catch (error) {
+      console.error('❌ Error deleting logo:', error)
+      throw error.response?.data || { message: 'Failed to delete logo' }
+    }
   }
 }
 

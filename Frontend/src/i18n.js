@@ -889,6 +889,84 @@ notifications: {
           cleared: "कार्ट खाली गरियो",
         },
       },
+      notifications: {
+    orders: {
+      outForDelivery: {
+        title: "🚚 Order Out for Delivery",
+        message: "Your order #{{orderId}} is out for delivery! It will arrive soon."
+      }
+    }
+  },
+
+  // Add these time-related translations:
+  timeAgo: {
+    justNow: "Just now",
+    minutesAgo_one: "{{count}} minute ago",
+    minutesAgo_other: "{{count}} minutes ago",
+    hoursAgo_one: "{{count}} hour ago",
+    hoursAgo_other: "{{count}} hours ago",
+    daysAgo_one: "{{count}} day ago",
+    daysAgo_other: "{{count}} days ago"
+  },
+
+  // Notification types for display
+  notificationTypes: {
+    order_placed: "Order Placed",
+    order_confirmed: "Order Confirmed",
+    order_processing: "Order Processing",
+    order_shipped: "Order Shipped",
+    order_out_for_delivery: "Out for Delivery",
+    order_delivered: "Order Delivered",
+    order_cancelled: "Order Cancelled",
+    order_returned: "Order Returned",
+    payment_received: "Payment Received",
+    payment_failed: "Payment Failed",
+    wishlist_item_available: "Wishlist Item Available",
+    wishlist_price_drop: "Price Drop",
+    promotion: "Special Offer",
+    welcome: "Welcome",
+    system_notification: "System Notification"
+  },
+
+  // Add under 'notifications' section:
+  notifications: {
+    orders: {
+      outForDelivery: {
+        title: "🚚 अर्डर डेलिभरीको लागि बाहिर",
+        message: "तपाईंको अर्डर #{{orderId}} डेलिभरीको लागि बाहिर छ! यो चाँडै आउनेछ।"
+      }
+    }
+  },
+
+  // Add these time-related translations:
+  timeAgo: {
+    justNow: "अहिले भर्खरै",
+    minutesAgo_one: "{{count}} मिनेट अघि",
+    minutesAgo_other: "{{count}} मिनेट अघि",
+    hoursAgo_one: "{{count}} घण्टा अघि",
+    hoursAgo_other: "{{count}} घण्टा अघि",
+    daysAgo_one: "{{count}} दिन अघि",
+    daysAgo_other: "{{count}} दिन अघि"
+  },
+
+  // Notification types for display
+  notificationTypes: {
+    order_placed: "अर्डर राखियो",
+    order_confirmed: "अर्डर पुष्टि भयो",
+    order_processing: "अर्डर प्रक्रियामा",
+    order_shipped: "अर्डर पठाइयो",
+    order_out_for_delivery: "डेलिभरीको लागि बाहिर",
+    order_delivered: "अर्डर डेलिभर भयो",
+    order_cancelled: "अर्डर रद्द गरियो",
+    order_returned: "अर्डर फिर्ता गरियो",
+    payment_received: "भुक्तानी प्राप्त भयो",
+    payment_failed: "भुक्तानी असफल भयो",
+    wishlist_item_available: "इच्छा सूची वस्तु उपलब्ध",
+    wishlist_price_drop: "मूल्य घट्यो",
+    promotion: "विशेष प्रस्ताव",
+    welcome: "स्वागत",
+    system_notification: "प्रणाली सूचना"
+  },
 
       // ============ ABOUT PAGE (नेपाली) ============
       about: {

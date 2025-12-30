@@ -16,26 +16,68 @@ const Notifications = () => {
   const { t, currentLanguage, changeLanguage, languages } = useLanguage();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all"); // all, unread, read
+  const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState({ total: 0, unread: 0 });
 
-  // Fetch notifications
+  // ✅ FIXED: Correct response parsing to match backend structure
   const fetchNotifications = async () => {
     setLoading(true);
     try {
+      console.log('🔍 Fetching notifications with:', { page, filter });
+      
       const response = await notificationApi.getNotifications(page, 20, filter);
+      
+      console.log('📦 RAW API Response:', response);
+      
       if (response.success && response.data) {
-        setNotifications(response.data.data || []);
-        setTotalPages(response.data.totalPages || 1);
-        setStats({
-          total: response.data.total || 0,
-          unread: response.data.data?.filter((n) => !n.isRead).length || 0,
+        // ✅ Backend returns: { success: true, data: { notifications: [], unreadCount: 2, pagination: {} } }
+        const apiData = response.data;
+        
+        console.log('📋 API Data structure:', apiData);
+        
+        // Extract data
+        const notificationsList = apiData.notifications || [];
+        const unreadCount = apiData.unreadCount || 0;
+        const pagination = apiData.pagination || {};
+        
+        console.log('📊 Extracted:', {
+          notifications: notificationsList.length,
+          unreadCount,
+          pagination
         });
+        
+        // Ensure it's an array
+        const safeNotifications = Array.isArray(notificationsList) ? notificationsList : [];
+        
+        setNotifications(safeNotifications);
+        setTotalPages(pagination.pages || 1);
+        
+        setStats({
+          total: pagination.total || safeNotifications.length,
+          unread: unreadCount,
+        });
+        
+        console.log('✅ State updated:', {
+          notificationsCount: safeNotifications.length,
+          total: pagination.total || safeNotifications.length,
+          unread: unreadCount
+        });
+      } else {
+        console.warn('⚠️ Response not successful or no data');
+        setNotifications([]);
+        setStats({ total: 0, unread: 0 });
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      console.error("❌ Error fetching notifications:", error);
+      console.error("❌ Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setNotifications([]);
+      setStats({ total: 0, unread: 0 });
     } finally {
       setLoading(false);
     }
@@ -49,9 +91,12 @@ const Notifications = () => {
   const markAsRead = async (id) => {
     try {
       await notificationApi.markAsRead(id);
-      setNotifications(
-        notifications.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-      );
+      
+      setNotifications((prev) => {
+        if (!Array.isArray(prev)) return [];
+        return prev.map((n) => (n._id === id ? { ...n, isRead: true } : n));
+      });
+      
       setStats((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }));
     } catch (error) {
       console.error("Error marking as read:", error);
@@ -62,7 +107,12 @@ const Notifications = () => {
   const markAllAsRead = async () => {
     try {
       await notificationApi.markAllAsRead();
-      setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+      
+      setNotifications((prev) => {
+        if (!Array.isArray(prev)) return [];
+        return prev.map((n) => ({ ...n, isRead: true }));
+      });
+      
       setStats((prev) => ({ ...prev, unread: 0 }));
     } catch (error) {
       console.error("Error marking all as read:", error);
@@ -73,6 +123,7 @@ const Notifications = () => {
   const getNotificationIcon = (type) => {
     const icons = {
       new_order: ShoppingCart,
+      order_placed: ShoppingCart,
       order_cancelled: AlertCircle,
       order_delivered: CheckCircle,
       order_returned: Package,
@@ -88,6 +139,11 @@ const Notifications = () => {
   const getNotificationStyle = (type) => {
     const styles = {
       new_order: {
+        color: "text-blue-600 dark:text-blue-400",
+        bg: "bg-blue-100 dark:bg-blue-900/30",
+        borderColor: "border-blue-200 dark:border-blue-800",
+      },
+      order_placed: {
         color: "text-blue-600 dark:text-blue-400",
         bg: "bg-blue-100 dark:bg-blue-900/30",
         borderColor: "border-blue-200 dark:border-blue-800",
@@ -150,6 +206,7 @@ const Notifications = () => {
           ))}
         </select>
       </div>
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -233,7 +290,7 @@ const Notifications = () => {
               {t("loading", "Loading notifications...")}
             </p>
           </div>
-        ) : notifications.length === 0 ? (
+        ) : !Array.isArray(notifications) || notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
             <Bell size={64} className="text-gray-300 dark:text-gray-600 mb-4" />
             <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
