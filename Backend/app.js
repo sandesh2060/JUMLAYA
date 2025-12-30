@@ -40,6 +40,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       "http://localhost:3000",
       "http://127.0.0.1:5173",
       "http://127.0.0.1:5174",
+      "http://192.168.1.75:5173",
     ];
 
 app.use(
@@ -57,6 +58,7 @@ app.use(
     exposedHeaders: ["Content-Range", "X-Content-Range"],
   })
 );
+app.options("*", cors());
 
 // CORS error handler
 app.use((err, req, res, next) => {

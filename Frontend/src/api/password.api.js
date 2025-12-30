@@ -5,7 +5,6 @@
 
 import axios from './axios.config';
 
-// ✅ FIXED: Removed /api prefix since axios baseURL doesn't include it
 const API_URL = '/password';
 
 // =====================================================
@@ -13,7 +12,6 @@ const API_URL = '/password';
 // =====================================================
 export const forgotPassword = async (email) => {
   try {
-    // This now becomes: http://localhost:4001/password/forgot
     const response = await axios.post(`${API_URL}/forgot`, { email });
     return response.data;
   } catch (error) {
@@ -23,14 +21,11 @@ export const forgotPassword = async (email) => {
 
 // =====================================================
 // Reset Password with OTP
+// ✅ FIXED: Changed to accept object parameter
 // =====================================================
-export const resetPassword = async (email, otp, newPassword) => {
+export const resetPassword = async (data) => {
   try {
-    const response = await axios.post(`${API_URL}/reset`, {
-      email,
-      otp,
-      newPassword,
-    });
+    const response = await axios.post(`${API_URL}/reset`, data);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to reset password' };

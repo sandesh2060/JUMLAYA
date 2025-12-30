@@ -233,10 +233,10 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center space-x-3">
-              <button onClick={toggleTheme} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors" aria-label={t('navbar.toggleTheme')}>
+              {/* <button onClick={toggleTheme} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors" aria-label={t('navbar.toggleTheme')}>
                 {theme === 'dark' ? <Sun size={20} className="text-gray-700 dark:text-gray-300" /> : <Moon size={20} className="text-gray-700 dark:text-gray-300" />}
               </button>
-              
+               */}
               <NotificationBell />
 
               <div className="relative" ref={languageMenuRef}>

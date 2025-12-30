@@ -306,7 +306,10 @@ export const getReturnPolicy = async () => {
     throw error;
   }
 };
-
+export const getSettings = async () => {
+  const response = await axios.get(`${BASE_URL}/settings`);
+  return response.data
+}
 /**
  * Submit contact form
  * @param {Object} formData - Contact form data

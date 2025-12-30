@@ -1,130 +1,123 @@
 // ============================================
 // Frontend/src/pages/ResetPassword.jsx
-// Reset Password - Verify OTP & Set New Password
+// Reset Password with OTP Page
 // ============================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Lock, Eye, EyeOff, Shield, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowLeft, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { resetPassword, resendOTP } from '@/api/password.api';
 import { toast } from 'react-hot-toast';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email;
+  const emailFromState = location.state?.email || '';
 
   const [formData, setFormData] = useState({
-    otp: ['', '', '', '', '', ''],
+    email: emailFromState,
+    otp: '',
     newPassword: '',
-    confirmPassword: '',
+    confirmPassword: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resendLoading, setResendLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
+  const [otpTimer, setOtpTimer] = useState(0);
 
-  // OTP input refs
-  const otpRefs = useRef([]);
-
-  // =====================================================
-  // Redirect if no email
-  // =====================================================
+  // Redirect if no email provided
   useEffect(() => {
-    if (!email) {
-      navigate('/forgot-password', { replace: true });
+    if (!emailFromState) {
+      toast.error('Please request OTP first');
+      navigate('/forgot-password');
     }
-  }, [email, navigate]);
+  }, [emailFromState, navigate]);
 
-  // =====================================================
-  // Countdown Timer for Resend
-  // =====================================================
+  // OTP Timer countdown
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
+    if (otpTimer > 0) {
+      const interval = setInterval(() => {
+        setOtpTimer(prev => prev - 1);
+      }, 1000);
+      return () => clearInterval(interval);
     }
-  }, [countdown]);
+  }, [otpTimer]);
 
-  // =====================================================
-  // Handle OTP Input Change
-  // =====================================================
-  const handleOTPChange = (index, value) => {
-    // Only allow numbers
-    if (!/^\d*$/.test(value)) return;
-
-    const newOTP = [...formData.otp];
-    newOTP[index] = value;
-    setFormData({ ...formData, otp: newOTP });
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
+  // Format timer display
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // =====================================================
-  // Handle OTP Input Keydown
+  // Handle Input Change
   // =====================================================
-  const handleOTPKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !formData.otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setError('');
   };
-
-  // =====================================================
-  // Handle Paste OTP
-  // =====================================================
-  const handleOTPPaste = (e) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').trim();
-    
-    if (/^\d{6}$/.test(pastedData)) {
-      const newOTP = pastedData.split('');
-      setFormData({ ...formData, otp: newOTP });
-      otpRefs.current[5]?.focus();
-    }
-  };
-
-  // =====================================================
-  // Password Strength Checker
-  // =====================================================
-  const getPasswordStrength = (password) => {
-    if (!password) return { strength: 0, label: '', color: '' };
-    
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (password.length >= 12) strength++;
-    if (/[a-z]/.test(password)) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/\d/.test(password)) strength++;
-    if (/[^a-zA-Z0-9]/.test(password)) strength++;
-
-    if (strength <= 2) return { strength: 1, label: 'Weak', color: 'bg-red-500' };
-    if (strength <= 4) return { strength: 2, label: 'Medium', color: 'bg-yellow-500' };
-    return { strength: 3, label: 'Strong', color: 'bg-green-500' };
-  };
-
-  const passwordStrength = getPasswordStrength(formData.newPassword);
 
   // =====================================================
   // Handle Resend OTP
   // =====================================================
   const handleResendOTP = async () => {
-    if (countdown > 0) return;
-    
+    if (otpTimer > 0) return;
+
     setResendLoading(true);
     try {
-      await resendOTP(email);
+      await resendOTP(formData.email);
       toast.success('New OTP sent to your email!');
-      setCountdown(60); // 60 seconds cooldown
+      setOtpTimer(600); // 10 minutes
+      setFormData(prev => ({ ...prev, otp: '' }));
     } catch (err) {
       toast.error(err.message || 'Failed to resend OTP');
     } finally {
       setResendLoading(false);
     }
+  };
+
+  // =====================================================
+  // Validate Form
+  // =====================================================
+  const validateForm = () => {
+    if (!formData.email) {
+      setError('Email is required');
+      return false;
+    }
+
+    if (!formData.otp || formData.otp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP');
+      return false;
+    }
+
+    if (!formData.newPassword) {
+      setError('New password is required');
+      return false;
+    }
+
+    if (formData.newPassword.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return false;
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.newPassword)) {
+      setError('Password must contain uppercase, lowercase, and number');
+      return false;
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+
+    return true;
   };
 
   // =====================================================
@@ -134,57 +127,62 @@ const ResetPassword = () => {
     e.preventDefault();
     setError('');
 
-    const otp = formData.otp.join('');
-
-    // Validation
-    if (otp.length !== 6) {
-      setError('Please enter the complete 6-digit OTP');
-      return;
-    }
-
-    if (!formData.newPassword) {
-      setError('Please enter a new password');
-      return;
-    }
-
-    if (formData.newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.newPassword)) {
-      setError('Password must contain uppercase, lowercase, and numbers');
-      return;
-    }
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
 
     try {
-      const response = await resetPassword(email, otp, formData.newPassword);
-      
-      toast.success(response.message || 'Password reset successful!', {
-        duration: 4000,
-        icon: '🎉',
+      const response = await resetPassword({
+        email: formData.email,
+        otp: formData.otp,
+        newPassword: formData.newPassword
       });
 
-      // Navigate to login
+      toast.success(response.message || 'Password reset successful!', {
+        duration: 4000,
+        icon: '✅',
+      });
+
+      // Redirect to login after 2 seconds
       setTimeout(() => {
         navigate('/login', { replace: true });
-      }, 1500);
+      }, 2000);
 
     } catch (err) {
       console.error('Reset password error:', err);
-      setError(err.message || 'Failed to reset password. Please try again.');
+      setError(err.message || 'Failed to reset password');
       toast.error(err.message || 'Failed to reset password');
     } finally {
       setLoading(false);
     }
   };
+
+  // =====================================================
+  // Password Strength Indicator
+  // =====================================================
+  const getPasswordStrength = (password) => {
+    if (!password) return { strength: 0, label: '', color: '' };
+    
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (password.length >= 12) strength++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+    if (/\d/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+    const levels = [
+      { strength: 0, label: 'Very Weak', color: 'bg-red-500' },
+      { strength: 1, label: 'Weak', color: 'bg-orange-500' },
+      { strength: 2, label: 'Fair', color: 'bg-yellow-500' },
+      { strength: 3, label: 'Good', color: 'bg-blue-500' },
+      { strength: 4, label: 'Strong', color: 'bg-green-500' },
+      { strength: 5, label: 'Very Strong', color: 'bg-green-600' },
+    ];
+
+    return levels[strength];
+  };
+
+  const passwordStrength = getPasswordStrength(formData.newPassword);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -192,13 +190,13 @@ const ResetPassword = () => {
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center mb-4">
-            <Shield className="h-8 w-8 text-white" />
+            <Lock className="h-8 w-8 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Reset Password
+            Reset Your Password
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            We sent a code to <strong>{email}</strong>
+            Enter the OTP sent to <span className="font-semibold">{formData.email}</span>
           </p>
         </div>
 
@@ -214,150 +212,176 @@ const ResetPassword = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* OTP Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Enter 6-Digit Code
+              <label 
+                htmlFor="otp" 
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                6-Digit OTP
               </label>
-              <div className="flex space-x-2 justify-center" onPaste={handleOTPPaste}>
-                {formData.otp.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={(el) => (otpRefs.current[index] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOTPChange(index, e.target.value)}
-                    onKeyDown={(e) => handleOTPKeyDown(index, e)}
-                    className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 dark:border-gray-600 
-                             rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                             focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                             transition-all duration-200"
-                    disabled={loading}
-                  />
-                ))}
-              </div>
-
+              <input
+                id="otp"
+                name="otp"
+                type="text"
+                maxLength="6"
+                value={formData.otp}
+                onChange={handleChange}
+                placeholder="000000"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-center text-2xl tracking-widest
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         placeholder-gray-400 dark:placeholder-gray-500
+                         transition-all duration-200"
+                disabled={loading}
+              />
+              
               {/* Resend OTP */}
-              <div className="mt-3 text-center">
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  {otpTimer > 0 ? `Resend in ${formatTime(otpTimer)}` : 'Didn\'t receive code?'}
+                </span>
                 <button
                   type="button"
                   onClick={handleResendOTP}
-                  disabled={countdown > 0 || resendLoading}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
-                           disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-1"
+                  disabled={otpTimer > 0 || resendLoading}
+                  className="inline-flex items-center space-x-1 text-blue-600 dark:text-blue-400 
+                           hover:text-blue-700 dark:hover:text-blue-300 font-medium
+                           disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {resendLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
-                      <span>Sending...</span>
-                    </>
-                  ) : countdown > 0 ? (
-                    <span>Resend in {countdown}s</span>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4" />
-                      <span>Resend Code</span>
-                    </>
-                  )}
+                  <RefreshCw className={`h-4 w-4 ${resendLoading ? 'animate-spin' : ''}`} />
+                  <span>Resend OTP</span>
                 </button>
               </div>
             </div>
 
             {/* New Password */}
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label 
+                htmlFor="newPassword" 
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 New Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   id="newPassword"
+                  name="newPassword"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.newPassword}
-                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                  onChange={handleChange}
                   placeholder="Enter new password"
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                            focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           placeholder-gray-400 dark:placeholder-gray-500"
+                           placeholder-gray-400 dark:placeholder-gray-500
+                           transition-all duration-200"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
 
-              {/* Password Strength */}
+              {/* Password Strength Indicator */}
               {formData.newPassword && (
                 <div className="mt-2">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${passwordStrength.color} transition-all duration-300`}
-                        style={{ width: `${(passwordStrength.strength / 3) * 100}%` }}
-                      />
-                    </div>
-                    <span className={`text-xs font-medium ${
-                      passwordStrength.strength === 1 ? 'text-red-600' :
-                      passwordStrength.strength === 2 ? 'text-yellow-600' : 'text-green-600'
-                    }`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Password Strength:</span>
+                    <span className={`text-xs font-medium ${passwordStrength.color.replace('bg-', 'text-')}`}>
                       {passwordStrength.label}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Must be 8+ characters with uppercase, lowercase, and numbers
-                  </p>
+                  <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${passwordStrength.color} transition-all duration-300`}
+                      style={{ width: `${(passwordStrength.strength / 5) * 100}%` }}
+                    />
+                  </div>
                 </div>
               )}
+
+              {/* Password Requirements */}
+              <div className="mt-3 space-y-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400">Password must contain:</p>
+                <div className="flex items-center space-x-2 text-xs">
+                  <CheckCircle className={`h-3 w-3 ${formData.newPassword.length >= 8 ? 'text-green-500' : 'text-gray-400'}`} />
+                  <span className={formData.newPassword.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}>
+                    At least 8 characters
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <CheckCircle className={`h-3 w-3 ${/[A-Z]/.test(formData.newPassword) ? 'text-green-500' : 'text-gray-400'}`} />
+                  <span className={/[A-Z]/.test(formData.newPassword) ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}>
+                    One uppercase letter
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <CheckCircle className={`h-3 w-3 ${/[a-z]/.test(formData.newPassword) ? 'text-green-500' : 'text-gray-400'}`} />
+                  <span className={/[a-z]/.test(formData.newPassword) ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}>
+                    One lowercase letter
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <CheckCircle className={`h-3 w-3 ${/\d/.test(formData.newPassword) ? 'text-green-500' : 'text-gray-400'}`} />
+                  <span className={/\d/.test(formData.newPassword) ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}>
+                    One number
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label 
+                htmlFor="confirmPassword" 
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 Confirm Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   id="confirmPassword"
+                  name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  onChange={handleChange}
                   placeholder="Confirm new password"
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                            focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           placeholder-gray-400 dark:placeholder-gray-500"
+                           placeholder-gray-400 dark:placeholder-gray-500
+                           transition-all duration-200"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
-
+              
               {/* Password Match Indicator */}
               {formData.confirmPassword && (
-                <div className="mt-2 flex items-center space-x-1">
+                <div className="mt-2 flex items-center space-x-2">
                   {formData.newPassword === formData.confirmPassword ? (
                     <>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-xs text-green-600">Passwords match</span>
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="text-xs text-green-600 dark:text-green-400">Passwords match</span>
                     </>
                   ) : (
                     <>
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                      <span className="text-xs text-red-600">Passwords don't match</span>
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <span className="text-xs text-red-600 dark:text-red-400">Passwords do not match</span>
                     </>
                   )}
                 </div>
@@ -383,7 +407,7 @@ const ResetPassword = () => {
                 </>
               ) : (
                 <>
-                  <Shield className="h-5 w-5" />
+                  <CheckCircle className="h-5 w-5" />
                   <span>Reset Password</span>
                 </>
               )}
@@ -394,9 +418,11 @@ const ResetPassword = () => {
           <div className="text-center pt-4">
             <Link
               to="/login"
-              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+              className="inline-flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 
+                       hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-200"
             >
-              Back to Login
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Login</span>
             </Link>
           </div>
         </div>

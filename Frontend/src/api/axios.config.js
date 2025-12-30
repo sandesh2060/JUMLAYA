@@ -18,6 +18,7 @@ const api = axios.create({
   baseURL: API_URL,
   timeout: 15000,
   withCredentials: true,
+  
 });
 
 // ============================================
@@ -25,16 +26,22 @@ const api = axios.create({
 // ============================================
 api.interceptors.request.use(
   (config) => {
-    // Do not send token for public auth endpoints
+    // ✅ FIXED: Added password reset routes to public endpoints
     const publicEndpoints = [
       "/users/register",
       "/users/login",
       "/users/verify-otp",
       "/users/resend-otp",
+      "/password/forgot",      // ✅ ADD THIS
+      "/password/reset",       // ✅ ADD THIS
+      "/password/resend-otp",  // ✅ ADD THIS
+      "/password/verify-otp",  // ✅ ADD THIS
     ];
+    
     const isPublic = publicEndpoints.some((endpoint) =>
       config.url?.includes(endpoint)
     );
+    
     if (!isPublic) {
       const token = localStorage.getItem("authToken");
       if (token) {
@@ -43,6 +50,7 @@ api.interceptors.request.use(
     } else {
       delete config.headers.Authorization;
     }
+    
     // ✅ Set Content-Type based on data type
     if (config.data instanceof FormData) {
       // Let browser set Content-Type with boundary for FormData
@@ -50,15 +58,17 @@ api.interceptors.request.use(
     } else {
       config.headers["Content-Type"] = "application/json";
     }
+    
     // Log requests in development
     if (import.meta.env.DEV) {
       console.log("📤 API Request:", {
         method: config.method?.toUpperCase(),
         url: config.url,
         isPublic,
-        isFormData: config.data instanceof FormData,
+        hasToken: !!config.headers.Authorization,
       });
     }
+    
     return config;
   },
   (error) => {
@@ -99,6 +109,15 @@ api.interceptors.response.use(
 
       switch (status) {
         case 401:
+          // ✅ FIXED: Check if this is a password reset route before trying to refresh
+          const passwordResetPaths = ['/password/forgot', '/password/reset', '/password/resend-otp', '/password/verify-otp'];
+          const isPasswordReset = passwordResetPaths.some(path => originalRequest.url?.includes(path));
+          
+          if (isPasswordReset) {
+            // Don't try to refresh token for password reset routes
+            break;
+          }
+          
           // ✅ Unauthorized - Try refresh token once
           if (!originalRequest._retry) {
             originalRequest._retry = true;
@@ -139,7 +158,7 @@ api.interceptors.response.use(
               localStorage.removeItem("user");
 
               // ✅ FIX: Don't show toast or redirect on public pages
-              const publicPaths = ["/login", "/register", "/forgot-password"];
+              const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
               const isPublicPage = publicPaths.some((path) =>
                 window.location.pathname.includes(path)
               );
@@ -167,7 +186,7 @@ api.interceptors.response.use(
 
         case 400:
           console.warn("⚠️ Bad Request:", data?.message || "Invalid request");
-          toast.error(data?.message || "Invalid request");
+          // Let the component handle 400 errors (like invalid OTP)
           break;
 
         case 500:

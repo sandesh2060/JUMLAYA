@@ -1,6 +1,6 @@
 // ============================================
-// Frontend/src/App.jsx - WITH NOTIFICATIONS
-// Complete Application with Proper Route Separation
+// Frontend/src/App.jsx
+// Complete Application with All Routes
 // ============================================
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -23,6 +23,7 @@ import Contact from "@/pages/Contact";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import Products from "@/pages/Products";
 import ProductDetails from "@/pages/ProductDetails";
 import Cart from "@/pages/Cart";
@@ -32,7 +33,7 @@ import OrderDetailsPage from "@/pages/OrderDetailsPage";
 import Profile from "@/pages/Profile";
 import ProfileSettings from "@/pages/ProfileSettings";
 import Wishlist from "@/pages/Wishlist";
-import Notifications from "@/pages/Notifications"; // ✅ ADD THIS
+import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/NotFound";
 
 // ============ ADMIN PAGES ============
@@ -71,26 +72,77 @@ const CustomerLayout = () => {
 };
 
 // ============================================
+// ALREADY LOGGED IN PAGE
+// ============================================
+const AlreadyLoggedIn = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
+      <div className="text-center max-w-md px-4">
+        <div className="mb-6">
+          <div className="mx-auto h-20 w-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        </div>
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+          You're Already Logged In
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-8">
+          Please log out before creating a new account or accessing the login page.
+        </p>
+        <div className="space-y-3">
+          <a
+            href="/"
+            className="block w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105"
+          >
+            Go to Home
+          </a>
+          <a
+            href="/profile"
+            className="block w-full px-6 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+          >
+            View Profile
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// LOADING COMPONENT
+// ============================================
+const LoadingScreen = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
+      <div className="text-center">
+        <div className="inline-block">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-500"></div>
+        </div>
+        <p className="mt-6 text-lg font-medium text-gray-600 dark:text-gray-400">
+          Loading JUMLAYA...
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
 // MAIN APP COMPONENT
 // ============================================
 function App() {
   const { user, loading } = useAuth();
 
+  // Show loading screen while checking auth
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <Routes>
       {/* ============================================ */}
-      {/* ADMIN ROUTES - Separate Layout (No Navbar/Footer) */}
+      {/* ADMIN ROUTES - Separate Layout */}
       {/* ============================================ */}
       <Route
         path="/admin"
@@ -103,17 +155,17 @@ function App() {
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
 
-        {/* Product Routes */}
+        {/* Product Management */}
         <Route path="products" element={<AdminProducts />} />
         <Route path="products/create" element={<AdminProductForm />} />
         <Route path="products/:id" element={<AdminProductDetail />} />
         <Route path="products/:id/edit" element={<AdminProductForm />} />
 
-        {/* Order Routes */}
+        {/* Order Management */}
         <Route path="orders" element={<AdminOrders />} />
         <Route path="orders/:id" element={<OrderDetail />} />
 
-        {/* Customer Routes */}
+        {/* Customer Management */}
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="customers/:id" element={<CustomerDetail />} />
 
@@ -125,7 +177,7 @@ function App() {
       </Route>
 
       {/* ============================================ */}
-      {/* RIDER ROUTES - Separate Layout (No Navbar/Footer) */}
+      {/* RIDER ROUTES - Separate Layout */}
       {/* ============================================ */}
       <Route
         path="/rider"
@@ -148,59 +200,50 @@ function App() {
       {/* CUSTOMER ROUTES - WITH Navbar/Footer */}
       {/* ============================================ */}
       <Route element={<CustomerLayout />}>
-        {/* Public Routes */}
+        {/* ========== PUBLIC ROUTES ========== */}
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/products" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetails />} />
 
-        {/* Auth Routes */}
+        {/* ========== AUTH ROUTES ========== */}
+        {/* Login - Redirect if already logged in */}
         <Route
           path="/login"
-          element={!user ? <Login /> : <Navigate to="/" replace />}
+          element={!user ? <Login /> : <AlreadyLoggedIn />}
         />
+
+        {/* Register - Redirect if already logged in */}
         <Route
           path="/register"
-          element={
-            !user ? (
-              <Register />
-            ) : (
-              <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                    You are already logged in
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Please log out before creating a new account.
-                  </p>
-                  <a
-                    href="/"
-                    className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold shadow hover:bg-primary-700 transition"
-                  >
-                    Go to Home
-                  </a>
-                </div>
-              </div>
-            )
-          }
+          element={!user ? <Register /> : <AlreadyLoggedIn />}
         />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Protected Customer Routes */}
+        {/* Password Reset Routes - Public */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* ========== PROTECTED CUSTOMER ROUTES ========== */}
         <Route element={<ProtectedRoute />}>
+          {/* Shopping */}
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+
+          {/* Orders */}
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetailsPage />} />
+
+          {/* Profile */}
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/settings" element={<ProfileSettings />} />
-          <Route path="/wishlist" element={<Wishlist />} />
-          <Route path="/notifications" element={<Notifications />} />{" "}
-          {/* ✅ ADD THIS */}
+
+          {/* Notifications */}
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
 
-        {/* 404 */}
+        {/* ========== 404 NOT FOUND ========== */}
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

@@ -330,26 +330,37 @@ const Home = () => {
               </Link>
             </div>
 
-            <div className="relative">
-              <img
-                src="https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800"
-                alt="Organic farming"
-                className="rounded-2xl shadow-2xl"
-              />
-              <div className="absolute -bottom-6 -right-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-xs">
-                <div className="flex items-center space-x-4">
-                  <Clock className="w-8 h-8 text-green-600 dark:text-green-400" />
-                  <div>
-                    <div className="font-bold text-gray-900 dark:text-white">
-                      {t("home.delivery.sameDay")}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("home.delivery.available")}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+           <div className="relative flex justify-center px-4 sm:px-6 lg:px-0">
+  {/* Main Image Container */}
+  <div className="relative w-full max-w-2xl">
+    <img
+      src="https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800"
+      alt="Organic farming"
+      className="w-full h-auto rounded-2xl shadow-2xl object-cover"
+      loading="lazy"
+    />
+    
+    {/* Floating Badge */}
+    <div className="absolute -bottom-4 -right-4 sm:-bottom-6 sm:-right-6 
+                    bg-white dark:bg-gray-800 rounded-xl shadow-xl 
+                    p-4 sm:p-6 max-w-[200px] sm:max-w-xs
+                    transform transition-transform hover:scale-105 duration-300">
+      <div className="flex items-center space-x-3 sm:space-x-4">
+        <div className="flex-shrink-0">
+          <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-bold text-sm sm:text-base text-gray-900 dark:text-white leading-tight">
+            {t("home.delivery.sameDay")}
+          </div>
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-tight mt-0.5">
+            {t("home.delivery.available")}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
           </div>
         </div>
       </section>

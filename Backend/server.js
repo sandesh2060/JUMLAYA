@@ -9,7 +9,8 @@ connectToDB()
   .then(() => {
     const server = http.createServer(app);
 
-    server.listen(PORT, () => {
+    server.listen(PORT, "0.0.0.0", () => {
+
       console.clear();
 
       console.log("\n============================================");
