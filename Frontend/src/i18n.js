@@ -1,5 +1,6 @@
+
 // ============================================
-// FILE: i18n.js - Complete English & Nepali Translations
+// COMPLETE i18n.js WITH PERFECT WISHLIST TRANSLATIONS
 // Path: Frontend/src/i18n/i18n.js
 // ============================================
 import i18n from "i18next";
@@ -62,10 +63,56 @@ const resources = {
       quantity: "Quantity",
       price: "Price",
 
-      // ============ WISHLIST ============
-      emptyWishlist: "Your wishlist is empty",
-      moveToCart: "Move to Cart",
-      removeFromWishlist: "Remove from Wishlist",
+      // ============ WISHLIST - COMPLETE ============
+      wishlist: {
+        // Header & Title
+        title: "My Wishlist",
+        
+        // Items Count
+        itemSingular: "item",
+        itemPlural: "items",
+        
+        // Actions
+        removeFromWishlist: "Remove from Wishlist",
+        moveToCart: "Move to Cart",
+        clearWishlist: "Clear Wishlist",
+        continueShopping: "Continue Shopping",
+        
+        // Loading & Processing States
+        loading: "Loading wishlist...",
+        moving: "Moving...",
+        
+        // Empty State
+        empty: {
+          title: "Your Wishlist is Empty",
+          description: "Start adding products you love to your wishlist and shop them later!",
+          button: "Browse Products",
+        },
+        
+        // Product Details
+        currency: "Rs.",
+        off: "OFF",
+        outOfStock: "Out of Stock",
+        
+        // Success Messages
+        success: {
+          movedToCart: "Item moved to cart successfully!",
+          cleared: "Wishlist cleared successfully!",
+        },
+        
+        // Error Messages
+        errors: {
+          removeError: "Failed to remove item from wishlist",
+          moveToCartError: "Failed to move item to cart",
+          clearError: "Failed to clear wishlist",
+        },
+        
+        // Notifications
+        addedToWishlist: "Added to wishlist",
+        removedFromWishlist: "Removed from wishlist",
+        pleaseLogin: "Please login to view your wishlist",
+        confirmClear: "Are you sure you want to clear your entire wishlist?",
+      },
 
       // ============ PRODUCTS ============
       allProducts: "All Products",
@@ -179,7 +226,7 @@ const resources = {
       paymentFailed: "Payment Failed",
 
       // ============ CURRENCY ============
-      currency: "रु",
+      currency: "Rs.",
       currencyName: "NPR",
 
       // ============ ERROR MESSAGES ============
@@ -301,50 +348,58 @@ const resources = {
           cleared: "Cart cleared",
         },
       },
-     // ============ ENGLISH (en) ============
-notifications: {
-  title: "Notifications",
-  markAllRead: "Mark all as read",
-  markAsRead: "Mark as read",
-  viewAll: "View all notifications",
-  empty: {
-    title: "No notifications yet",
-    message: "You're all caught up!"
-  },
-  aria: {
-    label: "Notifications dropdown"
-  },
-  orders: {
-    placed: {
-      title: "🎉 Order Placed Successfully!",
-      message: "Your order #{{orderId}} has been placed successfully. Total: NPR {{total}}. We'll notify you once it's confirmed."
-    },
-    confirmed: {
-      title: "✅ Order Confirmed",
-      message: "Your order #{{orderId}} has been confirmed and is being prepared for shipping."
-    },
-    shipped: {
-      title: "📦 Order Shipped",
-      message: "Your order #{{orderId}} has been shipped! Track your package for delivery updates."
-    },
-    delivered: {
-      title: "🎊 Order Delivered",
-      message: "Your order #{{orderId}} has been delivered! Thank you for shopping with us."
-    },
-    cancelled: {
-      title: "❌ Order Cancelled",
-      message: "Your order #{{orderId}} has been cancelled. {{reason}}"
-    },
-    returned: {
-      title: "↩️ Return Request Received",
-      message: "Your return request for order #{{orderId}} has been received. We'll process it within 2-3 business days."
-    },
-    payment: {
-      title: "💳 Payment Received",
-      message: "Payment of NPR {{amount}} for order #{{orderId}} has been successfully received."
-    }
-  }
-},
+
+      // ============ NOTIFICATIONS ============
+      notifications: {
+        title: "Notifications",
+        markAllRead: "Mark all as read",
+        markAsRead: "Mark as read",
+        viewAll: "View all notifications",
+        empty: {
+          title: "No notifications yet",
+          message: "You're all caught up!",
+        },
+        aria: {
+          label: "Notifications dropdown",
+        },
+        orders: {
+          placed: {
+            title: "🎉 Order Placed Successfully!",
+            message:
+              "Your order #{{orderId}} has been placed successfully. Total: NPR {{total}}. We'll notify you once it's confirmed.",
+          },
+          confirmed: {
+            title: "✅ Order Confirmed",
+            message:
+              "Your order #{{orderId}} has been confirmed and is being prepared for shipping.",
+          },
+          shipped: {
+            title: "📦 Order Shipped",
+            message:
+              "Your order #{{orderId}} has been shipped! Track your package for delivery updates.",
+          },
+          delivered: {
+            title: "🎊 Order Delivered",
+            message:
+              "Your order #{{orderId}} has been delivered! Thank you for shopping with us.",
+          },
+          cancelled: {
+            title: "❌ Order Cancelled",
+            message: "Your order #{{orderId}} has been cancelled. {{reason}}",
+          },
+          returned: {
+            title: "↩️ Return Request Received",
+            message:
+              "Your return request for order #{{orderId}} has been received. We'll process it within 2-3 business days.",
+          },
+          payment: {
+            title: "💳 Payment Received",
+            message:
+              "Payment of NPR {{amount}} for order #{{orderId}} has been successfully received.",
+          },
+        },
+      },
+
       // ============ ABOUT PAGE ============
       about: {
         hero: {
@@ -512,23 +567,6 @@ notifications: {
         },
       },
 
-      // ============ NOTIFICATIONS ============
-      notifications: {
-        title: "Notifications",
-        markAllRead: "Mark all as read",
-        markAsRead: "Mark as read",
-        clearAll: "Clear all",
-        confirmClearAll: "Are you sure you want to clear all notifications?",
-        viewAll: "View all notifications",
-        empty: {
-          title: "No notifications yet",
-          message: "We'll notify you when something important happens",
-        },
-        aria: {
-          label: "Notifications",
-        },
-      },
-
       // ============ NAVBAR ============
       navbar: {
         brandName: "JUMLAYA",
@@ -607,10 +645,56 @@ notifications: {
       quantity: "परिमाण",
       price: "मूल्य",
 
-      // ============ WISHLIST ============
-      emptyWishlist: "तपाईंको इच्छा सूची खाली छ",
-      moveToCart: "कार्टमा सार्नुहोस्",
-      removeFromWishlist: "इच्छा सूचीबाट हटाउनुहोस्",
+      // ============ WISHLIST - COMPLETE (नेपाली) ============
+      wishlist: {
+        // Header & Title
+        title: "मेरो इच्छा सूची",
+        
+        // Items Count
+        itemSingular: "वस्तु",
+        itemPlural: "वस्तुहरू",
+        
+        // Actions
+        removeFromWishlist: "इच्छा सूचीबाट हटाउनुहोस्",
+        moveToCart: "कार्टमा सार्नुहोस्",
+        clearWishlist: "इच्छा सूची खाली गर्नुहोस्",
+        continueShopping: "किनमेल जारी राख्नुहोस्",
+        
+        // Loading & Processing States
+        loading: "इच्छा सूची लोड हुँदैछ...",
+        moving: "सार्दै...",
+        
+        // Empty State
+        empty: {
+          title: "तपाईंको इच्छा सूची खाली छ",
+          description: "तपाईंलाई मनपर्ने उत्पादनहरू आफ्नो इच्छा सूचीमा थप्न सुरु गर्नुहोस् र पछि किन्नुहोस्!",
+          button: "उत्पादनहरू हेर्नुहोस्",
+        },
+        
+        // Product Details
+        currency: "रू.",
+        off: "छुट",
+        outOfStock: "स्टकमा छैन",
+        
+        // Success Messages
+        success: {
+          movedToCart: "वस्तु सफलतापूर्वक कार्टमा सारियो!",
+          cleared: "इच्छा सूची सफलतापूर्वक खाली गरियो!",
+        },
+        
+        // Error Messages
+        errors: {
+          removeError: "इच्छा सूचीबाट वस्तु हटाउन असफल",
+          moveToCartError: "वस्तु कार्टमा सार्न असफल",
+          clearError: "इच्छा सूची खाली गर्न असफल",
+        },
+        
+        // Notifications
+        addedToWishlist: "इच्छा सूचीमा थपियो",
+        removedFromWishlist: "इच्छा सूचीबाट हटाइयो",
+        pleaseLogin: "कृपया आफ्नो इच्छा सूची हेर्न लगइन गर्नुहोस्",
+        confirmClear: "के तपाईं आफ्नो सम्पूर्ण इच्छा सूची खाली गर्न निश्चित हुनुहुन्छ?",
+      },
 
       // ============ PRODUCTS ============
       allProducts: "सबै उत्पादनहरू",
@@ -804,50 +888,56 @@ notifications: {
           button: "अहिले किनमेल सुरु गर्नुहोस्",
         },
       },
-     // ============ NEPALI (ne) ============
-notifications: {
-  title: "सूचनाहरू",
-  markAllRead: "सबै पढिएको चिन्ह लगाउनुहोस्",
-  markAsRead: "पढिएको चिन्ह लगाउनुहोस्",
-  viewAll: "सबै सूचनाहरू हेर्नुहोस्",
-  empty: {
-    title: "अझै कुनै सूचना छैन",
-    message: "तपाईं सबै अद्यावधिक हुनुहुन्छ!"
-  },
-  aria: {
-    label: "सूचना ड्रपडाउन"
-  },
-  orders: {
-    placed: {
-      title: "🎉 अर्डर सफलतापूर्वक राखियो!",
-      message: "तपाईंको अर्डर #{{orderId}} सफलतापूर्वक राखिएको छ। कुल: रु {{total}}। यो पुष्टि भएपछि हामी तपाईंलाई सूचित गर्नेछौं।"
-    },
-    confirmed: {
-      title: "✅ अर्डर पुष्टि भयो",
-      message: "तपाईंको अर्डर #{{orderId}} पुष्टि भएको छ र ढुवानीको लागि तयार भइरहेको छ।"
-    },
-    shipped: {
-      title: "📦 अर्डर पठाइयो",
-      message: "तपाईंको अर्डर #{{orderId}} पठाइएको छ! डेलिभरी अपडेटको लागि आफ्नो प्याकेज ट्र्याक गर्नुहोस्।"
-    },
-    delivered: {
-      title: "🎊 अर्डर डेलिभर भयो",
-      message: "तपाईंको अर्डर #{{orderId}} डेलिभर भएको छ! हामीसँग किनमेल गर्नुभएकोमा धन्यवाद।"
-    },
-    cancelled: {
-      title: "❌ अर्डर रद्द गरियो",
-      message: "तपाईंको अर्डर #{{orderId}} रद्द गरिएको छ। {{reason}}"
-    },
-    returned: {
-      title: "↩️ फिर्ता अनुरोध प्राप्त भयो",
-      message: "अर्डर #{{orderId}} को लागि तपाईंको फिर्ता अनुरोध प्राप्त भएको छ। हामी यसलाई २-३ कार्य दिन भित्र प्रशोधन गर्नेछौं।"
-    },
-    payment: {
-      title: "💳 भुक्तानी प्राप्त भयो",
-      message: "अर्डर #{{orderId}} को लागि रु {{amount}} को भुक्तानी सफलतापूर्वक प्राप्त भएको छ।"
-    }
-  }
-},
+      // ============ NEPALI (ne) ============
+      notifications: {
+        title: "सूचनाहरू",
+        markAllRead: "सबै पढिएको चिन्ह लगाउनुहोस्",
+        markAsRead: "पढिएको चिन्ह लगाउनुहोस्",
+        viewAll: "सबै सूचनाहरू हेर्नुहोस्",
+        empty: {
+          title: "अझै कुनै सूचना छैन",
+          message: "तपाईं सबै अद्यावधिक हुनुहुन्छ!",
+        },
+        aria: {
+          label: "सूचना ड्रपडाउन",
+        },
+        orders: {
+          placed: {
+            title: "🎉 अर्डर सफलतापूर्वक राखियो!",
+            message:
+              "तपाईंको अर्डर #{{orderId}} सफलतापूर्वक राखिएको छ। कुल: रु {{total}}। यो पुष्टि भएपछि हामी तपाईंलाई सूचित गर्नेछौं।",
+          },
+          confirmed: {
+            title: "✅ अर्डर पुष्टि भयो",
+            message:
+              "तपाईंको अर्डर #{{orderId}} पुष्टि भएको छ र ढुवानीको लागि तयार भइरहेको छ।",
+          },
+          shipped: {
+            title: "📦 अर्डर पठाइयो",
+            message:
+              "तपाईंको अर्डर #{{orderId}} पठाइएको छ! डेलिभरी अपडेटको लागि आफ्नो प्याकेज ट्र्याक गर्नुहोस्।",
+          },
+          delivered: {
+            title: "🎊 अर्डर डेलिभर भयो",
+            message:
+              "तपाईंको अर्डर #{{orderId}} डेलिभर भएको छ! हामीसँग किनमेल गर्नुभएकोमा धन्यवाद।",
+          },
+          cancelled: {
+            title: "❌ अर्डर रद्द गरियो",
+            message: "तपाईंको अर्डर #{{orderId}} रद्द गरिएको छ। {{reason}}",
+          },
+          returned: {
+            title: "↩️ फिर्ता अनुरोध प्राप्त भयो",
+            message:
+              "अर्डर #{{orderId}} को लागि तपाईंको फिर्ता अनुरोध प्राप्त भएको छ। हामी यसलाई २-३ कार्य दिन भित्र प्रशोधन गर्नेछौं।",
+          },
+          payment: {
+            title: "💳 भुक्तानी प्राप्त भयो",
+            message:
+              "अर्डर #{{orderId}} को लागि रु {{amount}} को भुक्तानी सफलतापूर्वक प्राप्त भएको छ।",
+          },
+        },
+      },
       // ============ CART PAGE - DETAILED (नेपाली) ============
       cart: {
         title: "किनमेल कार्ट",
@@ -890,83 +980,85 @@ notifications: {
         },
       },
       notifications: {
-    orders: {
-      outForDelivery: {
-        title: "🚚 Order Out for Delivery",
-        message: "Your order #{{orderId}} is out for delivery! It will arrive soon."
-      }
-    }
-  },
+        orders: {
+          outForDelivery: {
+            title: "🚚 Order Out for Delivery",
+            message:
+              "Your order #{{orderId}} is out for delivery! It will arrive soon.",
+          },
+        },
+      },
 
-  // Add these time-related translations:
-  timeAgo: {
-    justNow: "Just now",
-    minutesAgo_one: "{{count}} minute ago",
-    minutesAgo_other: "{{count}} minutes ago",
-    hoursAgo_one: "{{count}} hour ago",
-    hoursAgo_other: "{{count}} hours ago",
-    daysAgo_one: "{{count}} day ago",
-    daysAgo_other: "{{count}} days ago"
-  },
+      // Add these time-related translations:
+      timeAgo: {
+        justNow: "Just now",
+        minutesAgo_one: "{{count}} minute ago",
+        minutesAgo_other: "{{count}} minutes ago",
+        hoursAgo_one: "{{count}} hour ago",
+        hoursAgo_other: "{{count}} hours ago",
+        daysAgo_one: "{{count}} day ago",
+        daysAgo_other: "{{count}} days ago",
+      },
 
-  // Notification types for display
-  notificationTypes: {
-    order_placed: "Order Placed",
-    order_confirmed: "Order Confirmed",
-    order_processing: "Order Processing",
-    order_shipped: "Order Shipped",
-    order_out_for_delivery: "Out for Delivery",
-    order_delivered: "Order Delivered",
-    order_cancelled: "Order Cancelled",
-    order_returned: "Order Returned",
-    payment_received: "Payment Received",
-    payment_failed: "Payment Failed",
-    wishlist_item_available: "Wishlist Item Available",
-    wishlist_price_drop: "Price Drop",
-    promotion: "Special Offer",
-    welcome: "Welcome",
-    system_notification: "System Notification"
-  },
+      // Notification types for display
+      notificationTypes: {
+        order_placed: "Order Placed",
+        order_confirmed: "Order Confirmed",
+        order_processing: "Order Processing",
+        order_shipped: "Order Shipped",
+        order_out_for_delivery: "Out for Delivery",
+        order_delivered: "Order Delivered",
+        order_cancelled: "Order Cancelled",
+        order_returned: "Order Returned",
+        payment_received: "Payment Received",
+        payment_failed: "Payment Failed",
+        wishlist_item_available: "Wishlist Item Available",
+        wishlist_price_drop: "Price Drop",
+        promotion: "Special Offer",
+        welcome: "Welcome",
+        system_notification: "System Notification",
+      },
 
-  // Add under 'notifications' section:
-  notifications: {
-    orders: {
-      outForDelivery: {
-        title: "🚚 अर्डर डेलिभरीको लागि बाहिर",
-        message: "तपाईंको अर्डर #{{orderId}} डेलिभरीको लागि बाहिर छ! यो चाँडै आउनेछ।"
-      }
-    }
-  },
+      // Add under 'notifications' section:
+      notifications: {
+        orders: {
+          outForDelivery: {
+            title: "🚚 अर्डर डेलिभरीको लागि बाहिर",
+            message:
+              "तपाईंको अर्डर #{{orderId}} डेलिभरीको लागि बाहिर छ! यो चाँडै आउनेछ।",
+          },
+        },
+      },
 
-  // Add these time-related translations:
-  timeAgo: {
-    justNow: "अहिले भर्खरै",
-    minutesAgo_one: "{{count}} मिनेट अघि",
-    minutesAgo_other: "{{count}} मिनेट अघि",
-    hoursAgo_one: "{{count}} घण्टा अघि",
-    hoursAgo_other: "{{count}} घण्टा अघि",
-    daysAgo_one: "{{count}} दिन अघि",
-    daysAgo_other: "{{count}} दिन अघि"
-  },
+      // Add these time-related translations:
+      timeAgo: {
+        justNow: "अहिले भर्खरै",
+        minutesAgo_one: "{{count}} मिनेट अघि",
+        minutesAgo_other: "{{count}} मिनेट अघि",
+        hoursAgo_one: "{{count}} घण्टा अघि",
+        hoursAgo_other: "{{count}} घण्टा अघि",
+        daysAgo_one: "{{count}} दिन अघि",
+        daysAgo_other: "{{count}} दिन अघि",
+      },
 
-  // Notification types for display
-  notificationTypes: {
-    order_placed: "अर्डर राखियो",
-    order_confirmed: "अर्डर पुष्टि भयो",
-    order_processing: "अर्डर प्रक्रियामा",
-    order_shipped: "अर्डर पठाइयो",
-    order_out_for_delivery: "डेलिभरीको लागि बाहिर",
-    order_delivered: "अर्डर डेलिभर भयो",
-    order_cancelled: "अर्डर रद्द गरियो",
-    order_returned: "अर्डर फिर्ता गरियो",
-    payment_received: "भुक्तानी प्राप्त भयो",
-    payment_failed: "भुक्तानी असफल भयो",
-    wishlist_item_available: "इच्छा सूची वस्तु उपलब्ध",
-    wishlist_price_drop: "मूल्य घट्यो",
-    promotion: "विशेष प्रस्ताव",
-    welcome: "स्वागत",
-    system_notification: "प्रणाली सूचना"
-  },
+      // Notification types for display
+      notificationTypes: {
+        order_placed: "अर्डर राखियो",
+        order_confirmed: "अर्डर पुष्टि भयो",
+        order_processing: "अर्डर प्रक्रियामा",
+        order_shipped: "अर्डर पठाइयो",
+        order_out_for_delivery: "डेलिभरीको लागि बाहिर",
+        order_delivered: "अर्डर डेलिभर भयो",
+        order_cancelled: "अर्डर रद्द गरियो",
+        order_returned: "अर्डर फिर्ता गरियो",
+        payment_received: "भुक्तानी प्राप्त भयो",
+        payment_failed: "भुक्तानी असफल भयो",
+        wishlist_item_available: "इच्छा सूची वस्तु उपलब्ध",
+        wishlist_price_drop: "मूल्य घट्यो",
+        promotion: "विशेष प्रस्ताव",
+        welcome: "स्वागत",
+        system_notification: "प्रणाली सूचना",
+      },
 
       // ============ ABOUT PAGE (नेपाली) ============
       about: {

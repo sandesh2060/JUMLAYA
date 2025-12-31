@@ -78,11 +78,6 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
     fetchNotifications(1, 10, activeTab === 'unread' ? 'unread' : 'all');
   };
 
-  const handleDelete = async (notificationId) => {
-    await deleteNotification(notificationId);
-    fetchNotifications(1, 10, activeTab === 'unread' ? 'unread' : 'all');
-  };
-
   const getNotificationIcon = (type) => {
     const icons = {
       order_placed: <ShoppingBag className="w-5 h-5 text-blue-500" />,
@@ -323,13 +318,7 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
                               <Check className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
                             </button>
                           )}
-                          <button
-                            onClick={() => handleDelete(notification._id)}
-                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors"
-                            title={t('delete')}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                          </button>
+                        
                         </div>
                       </div>
                     </div>

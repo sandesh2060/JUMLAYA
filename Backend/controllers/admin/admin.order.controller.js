@@ -1,9 +1,23 @@
+// ============================================
+// Backend/controllers/admin/admin.order.controller.js
+// ✅ FIXED: Added notifications for ALL order status changes
+// ============================================
 const Order = require('../../models/order.model');
 const User = require('../../models/user.model');
 const Product = require('../../models/product.model');
 const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/AppError');
 const { successResponse } = require('../../utils/response');
+
+// ✅ IMPORT NOTIFICATION HELPERS
+const {
+  notifyOrderConfirmed,
+  notifyOrderCancelled,
+  notifyOrderShipped,
+  notifyOrderOutForDelivery,
+  notifyOrderDelivered,
+  notifyPaymentReceived
+} = require('../../utils/notificationHelper');
 
 // Get all orders with filtering, sorting, and pagination
 exports.getAllOrders = catchAsync(async (req, res, next) => {
@@ -68,7 +82,6 @@ exports.getAllOrders = catchAsync(async (req, res, next) => {
     Order.countDocuments(filter)
   ]);
 
-  // ✅ FIXED: Changed parameter order
   return successResponse(res, {
     orders,
     pagination: {
@@ -91,11 +104,10 @@ exports.getOrderById = catchAsync(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
-  // ✅ FIXED: Changed parameter order
   return successResponse(res, { order }, 'Order retrieved successfully');
 });
 
-// Update order status
+// ✅ FIXED: Update order status WITH NOTIFICATIONS
 exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   const { status, comment, trackingNumber, carrier, estimatedDelivery } = req.body;
 
@@ -110,10 +122,13 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   }
 
   // Validate status transition
-  const validStatuses = ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
+  const validStatuses = ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'];
   if (!validStatuses.includes(status)) {
     return next(new AppError('Invalid order status', 400));
   }
+
+  // Store old status for comparison
+  const oldStatus = order.orderStatus;
 
   // Update order status
   order.orderStatus = status;
@@ -140,17 +155,62 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
 
   await order.save();
 
+  // ✅ SEND NOTIFICATIONS BASED ON STATUS CHANGE
+  try {
+    const userId = order.user._id || order.user;
+
+    // Only send notification if status actually changed
+    if (oldStatus !== status) {
+      console.log(`📧 Sending notification for status change: ${oldStatus} → ${status}`);
+
+      switch (status) {
+        case 'Confirmed':
+        case 'Processing':
+          await notifyOrderConfirmed(userId, order);
+          console.log('✅ Order confirmed notification sent');
+          break;
+
+        case 'Shipped':
+          await notifyOrderShipped(userId, order);
+          console.log('✅ Order shipped notification sent');
+          break;
+
+        case 'Out for Delivery':
+          await notifyOrderOutForDelivery(userId, order);
+          console.log('✅ Out for delivery notification sent');
+          break;
+
+        case 'Delivered':
+          await notifyOrderDelivered(userId, order);
+          console.log('✅ Order delivered notification sent');
+          break;
+
+        case 'Cancelled':
+          await notifyOrderCancelled(userId, order, comment || 'Order cancelled by admin');
+          console.log('✅ Order cancelled notification sent');
+          break;
+
+        default:
+          console.log(`ℹ️ No notification handler for status: ${status}`);
+      }
+    } else {
+      console.log('ℹ️ Status unchanged, no notification sent');
+    }
+  } catch (notifError) {
+    console.error('❌ Notification error:', notifError);
+    // Don't fail the status update if notification fails
+  }
+
   // Populate for response
   await order.populate([
     { path: 'user', select: 'name email phone' },
     { path: 'statusHistory.updatedBy', select: 'name email' }
   ]);
 
-  // ✅ FIXED: Changed parameter order
   return successResponse(res, { order }, 'Order status updated successfully');
 });
 
-// Update payment status
+// ✅ FIXED: Update payment status WITH NOTIFICATIONS
 exports.updatePaymentStatus = catchAsync(async (req, res, next) => {
   const { paymentStatus, transactionId } = req.body;
 
@@ -164,6 +224,7 @@ exports.updatePaymentStatus = catchAsync(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
+  const oldPaymentStatus = order.paymentStatus;
   order.paymentStatus = paymentStatus;
 
   if (paymentStatus === 'Paid' && !order.paymentDetails.paidAt) {
@@ -180,7 +241,18 @@ exports.updatePaymentStatus = catchAsync(async (req, res, next) => {
 
   await order.save();
 
-  // ✅ FIXED: Changed parameter order
+  // ✅ SEND PAYMENT NOTIFICATION
+  try {
+    const userId = order.user._id || order.user;
+    
+    if (oldPaymentStatus !== paymentStatus && paymentStatus === 'Paid') {
+      await notifyPaymentReceived(userId, order);
+      console.log('✅ Payment received notification sent');
+    }
+  } catch (notifError) {
+    console.error('❌ Notification error:', notifError);
+  }
+
   return successResponse(res, { order }, 'Payment status updated successfully');
 });
 
@@ -198,7 +270,6 @@ exports.updateAdminNotes = catchAsync(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
-  // ✅ FIXED: Changed parameter order
   return successResponse(res, { order }, 'Admin notes updated successfully');
 });
 
@@ -217,7 +288,6 @@ exports.deleteOrder = catchAsync(async (req, res, next) => {
 
   await Order.findByIdAndDelete(req.params.id);
 
-  // ✅ FIXED: Changed parameter order (null data is fine)
   return successResponse(res, null, 'Order deleted successfully');
 });
 
@@ -243,7 +313,7 @@ exports.getOrderStats = catchAsync(async (req, res, next) => {
     ordersByStatus,
     ordersByPaymentMethod,
     recentOrders,
-    totalCustomers  // ✅ ADD THIS LINE
+    totalCustomers
   ] = await Promise.all([
     Order.countDocuments(dateFilter),
     Order.countDocuments({ ...dateFilter, orderStatus: 'Pending' }),
@@ -268,7 +338,6 @@ exports.getOrderStats = catchAsync(async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(5)
       .lean(),
-    // ✅ ADD THIS QUERY - Count unique customers who placed orders
     Order.aggregate([
       { $match: dateFilter },
       { $group: { _id: '$user' } },
@@ -284,16 +353,16 @@ exports.getOrderStats = catchAsync(async (req, res, next) => {
     deliveredOrders,
     cancelledOrders,
     totalRevenue: totalRevenue[0]?.total || 0,
-    totalCustomers: totalCustomers[0]?.total || 0,  // ✅ ADD THIS LINE
+    totalCustomers: totalCustomers[0]?.total || 0,
     ordersByStatus,
     ordersByPaymentMethod,
     recentOrders
   };
 
-  // ✅ Change parameter order: (res, data, message)
   return successResponse(res, stats, 'Order statistics retrieved successfully');
 });
-// Bulk update order status
+
+// ✅ FIXED: Bulk update with notifications
 exports.bulkUpdateStatus = catchAsync(async (req, res, next) => {
   const { orderIds, status, comment } = req.body;
 
@@ -308,15 +377,45 @@ exports.bulkUpdateStatus = catchAsync(async (req, res, next) => {
   const updatePromises = orderIds.map(async (orderId) => {
     const order = await Order.findById(orderId);
     if (order) {
+      const oldStatus = order.orderStatus;
       order.orderStatus = status;
       order.addStatusHistory(status, comment || 'Bulk update', req.user._id);
-      return order.save();
+      await order.save();
+
+      // ✅ Send notification for each order
+      try {
+        const userId = order.user._id || order.user;
+        
+        if (oldStatus !== status) {
+          switch (status) {
+            case 'Confirmed':
+            case 'Processing':
+              await notifyOrderConfirmed(userId, order);
+              break;
+            case 'Shipped':
+              await notifyOrderShipped(userId, order);
+              break;
+            case 'Out for Delivery':
+              await notifyOrderOutForDelivery(userId, order);
+              break;
+            case 'Delivered':
+              await notifyOrderDelivered(userId, order);
+              break;
+            case 'Cancelled':
+              await notifyOrderCancelled(userId, order, comment || 'Bulk cancellation');
+              break;
+          }
+        }
+      } catch (notifError) {
+        console.error('❌ Bulk notification error:', notifError);
+      }
+
+      return order;
     }
   });
 
   await Promise.all(updatePromises);
 
-  // ✅ FIXED: Changed parameter order
   return successResponse(res, {
     updatedCount: orderIds.length
   }, 'Orders updated successfully');
@@ -338,6 +437,5 @@ exports.exportOrders = catchAsync(async (req, res, next) => {
     .populate('user', 'name email phone')
     .lean();
 
-  // ✅ FIXED: Changed parameter order
   return successResponse(res, { orders }, 'Orders exported successfully');
 });

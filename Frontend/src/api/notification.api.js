@@ -1,7 +1,6 @@
 // ============================================
 // Frontend/src/api/notification.api.js
 // ✅ FIXED - Routes without /api prefix
-// (Because VITE_API_URL already includes /api)
 // ============================================
 import api from './axios.config';
 

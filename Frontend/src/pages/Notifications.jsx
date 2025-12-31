@@ -22,66 +22,66 @@ const Notifications = () => {
   const [stats, setStats] = useState({ total: 0, unread: 0 });
 
   // ✅ FIXED: Correct response parsing to match backend structure
-  const fetchNotifications = async () => {
-    setLoading(true);
-    try {
-      console.log('🔍 Fetching notifications with:', { page, filter });
+const fetchNotifications = async () => {
+  setLoading(true);
+  try {
+    console.log('🔍 Fetching notifications with:', { page, filter });
+    
+    const response = await notificationApi.getNotifications(page, 20, filter);
+    
+    console.log('📦 RAW API Response:', response);
+    
+    if (response.success && response.data) {
+      // ✅ FIXED: Handle double nesting
+      const apiData = response.data;
       
-      const response = await notificationApi.getNotifications(page, 20, filter);
+      console.log('📋 API Data structure:', apiData);
       
-      console.log('📦 RAW API Response:', response);
+      // ✅ Extract data - handle both nested and flat structures
+      const notificationsList = apiData.data?.notifications || apiData.notifications || [];
+      const unreadCount = apiData.data?.unreadCount || apiData.unreadCount || 0;
+      const pagination = apiData.data?.pagination || apiData.pagination || {};
       
-      if (response.success && response.data) {
-        // ✅ Backend returns: { success: true, data: { notifications: [], unreadCount: 2, pagination: {} } }
-        const apiData = response.data;
-        
-        console.log('📋 API Data structure:', apiData);
-        
-        // Extract data
-        const notificationsList = apiData.notifications || [];
-        const unreadCount = apiData.unreadCount || 0;
-        const pagination = apiData.pagination || {};
-        
-        console.log('📊 Extracted:', {
-          notifications: notificationsList.length,
-          unreadCount,
-          pagination
-        });
-        
-        // Ensure it's an array
-        const safeNotifications = Array.isArray(notificationsList) ? notificationsList : [];
-        
-        setNotifications(safeNotifications);
-        setTotalPages(pagination.pages || 1);
-        
-        setStats({
-          total: pagination.total || safeNotifications.length,
-          unread: unreadCount,
-        });
-        
-        console.log('✅ State updated:', {
-          notificationsCount: safeNotifications.length,
-          total: pagination.total || safeNotifications.length,
-          unread: unreadCount
-        });
-      } else {
-        console.warn('⚠️ Response not successful or no data');
-        setNotifications([]);
-        setStats({ total: 0, unread: 0 });
-      }
-    } catch (error) {
-      console.error("❌ Error fetching notifications:", error);
-      console.error("❌ Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
+      console.log('📊 Extracted:', {
+        notifications: notificationsList.length,
+        unreadCount,
+        pagination
       });
+      
+      // Ensure it's an array
+      const safeNotifications = Array.isArray(notificationsList) ? notificationsList : [];
+      
+      setNotifications(safeNotifications);
+      setTotalPages(pagination.pages || 1);
+      
+      setStats({
+        total: pagination.total || safeNotifications.length,
+        unread: unreadCount,
+      });
+      
+      console.log('✅ State updated:', {
+        notificationsCount: safeNotifications.length,
+        total: pagination.total || safeNotifications.length,
+        unread: unreadCount
+      });
+    } else {
+      console.warn('⚠️ Response not successful or no data');
       setNotifications([]);
       setStats({ total: 0, unread: 0 });
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("❌ Error fetching notifications:", error);
+    console.error("❌ Error details:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    setNotifications([]);
+    setStats({ total: 0, unread: 0 });
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchNotifications();

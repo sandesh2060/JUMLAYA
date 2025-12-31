@@ -42,24 +42,29 @@ const NotificationProvider = ({ children }) => {
   }, [isAuthenticated]);
 
   // Fetch unread count
-  const fetchUnreadCount = useCallback(async () => {
-    if (!isAuthenticated) {
-      setUnreadCount(0);
-      return;
-    }
+// Fetch unread count
+const fetchUnreadCount = useCallback(async () => {
+  if (!isAuthenticated) {
+    setUnreadCount(0);
+    return;
+  }
 
-    try {
-      console.log('🔢 Fetching unread count...');
-      const response = await notificationAPI.getUnreadCount();
-      
-      const count = response?.data?.count || response?.count || 0;
-      setUnreadCount(count);
-      console.log('✅ Unread count:', count);
-    } catch (err) {
-      console.error('❌ Error fetching unread count:', err);
-      setUnreadCount(0);
-    }
-  }, [isAuthenticated]);
+  try {
+    console.log("🔢 Fetching unread count...");
+
+    const response = await notificationApi.getUnreadCount();
+    console.log("FULL RESPONSE:", response);
+
+    // ✅ FIXED: Use "unreadCount" instead of "count"
+    const count = response?.data?.unreadCount || response?.unreadCount || 0;
+
+    setUnreadCount(count);
+    console.log("✅ Unread count:", count);
+  } catch (err) {
+    console.error("❌ Error fetching unread count:", err);
+    setUnreadCount(0);
+  }
+}, [isAuthenticated]);
 
   // Mark notification as read
   const markAsRead = async (notificationId) => {

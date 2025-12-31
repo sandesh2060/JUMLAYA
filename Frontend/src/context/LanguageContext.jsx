@@ -6,25 +6,32 @@ const LanguageContext = createContext(null);
 
 const LanguageProvider = ({ children }) => {
   const { i18n, t } = useTranslation();
-  const [currentLanguage, setCurrentLanguage] = useState(
-    localStorage.getItem('language') || 'en'
-  );
+  
+  // ✅ FIX: Use i18n.language (which reads from i18nextLng in localStorage)
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language || 'en');
 
-  // ✅ ONLY English and Nepali
   const languages = [
     { code: "en", name: "English", flag: "🇬🇧" },
     { code: "ne", name: "नेपाली", flag: "🇳🇵" },
   ];
 
-  // Set initial language on mount
+  // ✅ FIX: Sync state when i18n language changes
   useEffect(() => {
-    i18n.changeLanguage(currentLanguage);
-  }, [currentLanguage, i18n]);
+    const handleLanguageChange = (lng) => {
+      setCurrentLanguage(lng);
+    };
 
+    i18n.on('languageChanged', handleLanguageChange);
+    setCurrentLanguage(i18n.language);
+
+    return () => {
+      i18n.off('languageChanged', handleLanguageChange);
+    };
+  }, [i18n]);
+
+  // ✅ FIX: Simplified changeLanguage function
   const changeLanguage = (langCode) => {
-    setCurrentLanguage(langCode);
     i18n.changeLanguage(langCode);
-    localStorage.setItem('language', langCode);
   };
 
   const value = {
@@ -41,5 +48,4 @@ const LanguageProvider = ({ children }) => {
   );
 };
 
-// Export Context and Provider separately at the end
 export { LanguageContext, LanguageProvider };

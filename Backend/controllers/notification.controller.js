@@ -1,16 +1,18 @@
 // ============================================
 // Backend/controllers/notification.controller.js
-// ✅ FIXED - Correct user ID handling and isDeleted field
+// ✅ FIXED - Proper ObjectId handling
 // ============================================
 
+const mongoose = require('mongoose');
 const Notification = require('../models/notification.model');
 const catchAsync = require('../utils/catchAsync');
 const { successResponse } = require('../utils/response');
 
-// ✅ FIXED: Helper to get user ID - prioritize _id and convert to string
+// ✅ FIXED: Keep as ObjectId, don't convert to string
 const getUserId = (req) => {
   const id = req.user._id || req.user.id;
-  return id.toString(); // Convert ObjectId to string for consistent comparison
+  // Return as-is (ObjectId) for proper MongoDB queries
+  return mongoose.Types.ObjectId.isValid(id) ? id : mongoose.Types.ObjectId(id);
 };
 
 // ==========================================
@@ -22,14 +24,14 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   const { page = 1, limit = 20, filter = 'all' } = req.query;
 
-  console.log('📬 Fetching notifications for user:', userId, 'Filter:', filter);
+  console.log('📬 Fetching notifications for user:', userId.toString(), 'Filter:', filter);
 
   // Build query - Handle notifications without isDeleted field
   const query = { 
-    recipient: userId,
+    recipient: userId, // ✅ Use ObjectId directly
     $or: [
-      { isDeleted: { $exists: false } },  // Old notifications without isDeleted field
-      { isDeleted: false }                // New notifications with isDeleted: false
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
     ]
   };
   
@@ -39,6 +41,8 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
   } else if (filter === 'read') {
     query.isRead = true;
   }
+
+  console.log('🔍 Query:', JSON.stringify(query, null, 2));
 
   // Fetch notifications
   const notifications = await Notification.find(query)
@@ -53,7 +57,7 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
   // Get counts
   const total = await Notification.countDocuments(query);
   const unreadCount = await Notification.countDocuments({ 
-    recipient: userId, 
+    recipient: userId,
     isRead: false,
     $or: [
       { isDeleted: { $exists: false } },
@@ -61,7 +65,7 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
     ]
   });
 
-  console.log(`✅ Found ${notifications.length} notifications (${unreadCount} unread)`);
+  console.log(`✅ Found ${notifications.length} notifications (${unreadCount} unread, ${total} total)`);
 
   return successResponse(res, {
     success: true,
@@ -87,19 +91,20 @@ exports.getUnreadCount = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   
   console.log('🔍 DEBUG - req.user._id:', req.user._id);
-  console.log('🔍 DEBUG - userId being used:', userId);
+  console.log('🔍 DEBUG - userId (ObjectId):', userId);
+  console.log('🔍 DEBUG - userId type:', typeof userId);
   
   // Handle notifications without isDeleted field
   const count = await Notification.countDocuments({ 
-    recipient: userId, 
+    recipient: userId,
     isRead: false,
     $or: [
-      { isDeleted: { $exists: false } },  // Old notifications
-      { isDeleted: false }                // New notifications
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
     ]
   });
 
-  console.log(`📊 Unread count for user ${userId}:`, count);
+  console.log(`📊 Unread count for user ${userId.toString()}:`, count);
 
   return successResponse(res, { 
     success: true,
@@ -157,11 +162,11 @@ exports.markAsRead = catchAsync(async (req, res, next) => {
 exports.markAllAsRead = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   
-  console.log('✅ Marking all notifications as read for user:', userId);
+  console.log('✅ Marking all notifications as read for user:', userId.toString());
 
   const result = await Notification.updateMany(
     { 
-      recipient: userId, 
+      recipient: userId,
       isRead: false,
       $or: [
         { isDeleted: { $exists: false } },
@@ -228,11 +233,11 @@ exports.deleteNotification = catchAsync(async (req, res, next) => {
 exports.deleteAllRead = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   
-  console.log('🗑️ Deleting all read notifications for user:', userId);
+  console.log('🗑️ Deleting all read notifications for user:', userId.toString());
 
   const result = await Notification.updateMany(
     { 
-      recipient: userId, 
+      recipient: userId,
       isRead: true,
       $or: [
         { isDeleted: { $exists: false } },
@@ -360,7 +365,7 @@ exports.updatePreferences = catchAsync(async (req, res, next) => {
 exports.clearAllNotifications = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
   
-  console.log('🗑️ Clearing all notifications for user:', userId);
+  console.log('🗑️ Clearing all notifications for user:', userId.toString());
 
   const result = await Notification.updateMany(
     { 
