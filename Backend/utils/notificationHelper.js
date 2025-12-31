@@ -1,9 +1,11 @@
 // ============================================
 // Backend/utils/notificationHelper.js
-// ✅ FIXED - Email sending with proper error handling
+// ✅ COMPLETE & PRODUCTION READY
+// Handles notifications for customers, admins, and riders
 // ============================================
 
 const Notification = require('../models/notification.model');
+const User = require('../models/user.model');
 const sendEmail = require('./sendEmail');
 
 /**
@@ -46,20 +48,57 @@ const createNotification = async (data, sendEmailNotification = true) => {
         console.log('✅ Email sent successfully for notification:', data.titleKey || data.title);
       } catch (emailError) {
         console.error('❌ Email send failed:', emailError.message);
-        console.error('Email error details:', emailError);
         // Don't fail the notification if email fails
-        // Notification is still created in the database
-      }
-    } else {
-      if (!data.email) {
-        console.log('⚠️ No email provided for notification:', data.titleKey || data.title);
       }
     }
     
     return notification;
   } catch (error) {
     console.error('❌ Error creating notification:', error);
-    throw error; // Re-throw to let caller handle
+    throw error;
+  }
+};
+
+/**
+ * ✅ Notify all admins about an event
+ */
+const notifyAllAdmins = async (type, title, message, metadata = {}) => {
+  try {
+    // Find all active admin users
+    const admins = await User.find({ 
+      role: 'admin', 
+      isActive: true 
+    }).select('_id email firstname lastname');
+
+    if (!admins || admins.length === 0) {
+      console.log('⚠️ No admin users found to notify');
+      return [];
+    }
+
+    console.log(`📢 Notifying ${admins.length} admin(s) about: ${title}`);
+
+    // Create notification for each admin
+    const notifications = await Promise.all(
+      admins.map(admin => 
+        createNotification({
+          recipient: admin._id,
+          recipientType: 'admin',
+          type: type,
+          title: title,
+          message: message,
+          ...metadata,
+          email: admin.email,
+          emailSubject: `[ADMIN] ${title}`,
+          priority: metadata.priority || 'high'
+        }, true) // Enable email for admins
+      )
+    );
+
+    console.log(`✅ Admin notifications created: ${notifications.length}`);
+    return notifications;
+  } catch (error) {
+    console.error('❌ Error notifying admins:', error);
+    return [];
   }
 };
 
@@ -150,11 +189,6 @@ const generateDefaultEmailTemplate = (data) => {
           color: #6b7280;
           font-size: 14px;
         }
-        .divider {
-          height: 1px;
-          background: #e5e7eb;
-          margin: 24px 0;
-        }
       </style>
     </head>
     <body>
@@ -175,9 +209,6 @@ const generateDefaultEmailTemplate = (data) => {
         <div class="footer">
           <p><strong>© ${new Date().getFullYear()} JUMLAYA</strong></p>
           <p>Fresh & Organic Products Delivered to Your Doorstep</p>
-          <p style="margin-top: 16px; font-size: 12px;">
-            You received this email because you have an account with JUMLAYA.
-          </p>
         </div>
       </div>
     </body>
@@ -186,14 +217,13 @@ const generateDefaultEmailTemplate = (data) => {
 };
 
 // ============================================
-// ORDER NOTIFICATIONS
+// ORDER NOTIFICATIONS (CUSTOMER + ADMIN)
 // ============================================
 
 /**
- * Notify user when order is placed
+ * ✅ Notify user AND admins when order is placed
  */
 const notifyOrderPlaced = async (userId, order) => {
-  const User = require('../models/user.model');
   const user = await User.findById(userId);
   
   if (!user) {
@@ -201,18 +231,13 @@ const notifyOrderPlaced = async (userId, order) => {
     return null;
   }
   
-  console.log('📧 Creating order placed notification for:', user.email);
+  console.log('📧 Creating order placed notification for customer:', user.email);
   
-  return createNotification({
+  // Notify customer
+  const customerNotification = await createNotification({
     recipient: userId,
     recipientType: 'customer',
     type: 'order_placed',
-    titleKey: 'notifications.orders.placed.title',
-    messageKey: 'notifications.orders.placed.message',
-    messageParams: {
-      orderId: order.orderId,
-      total: order.totalPrice
-    },
     title: '🎉 Order Placed Successfully!',
     message: `Your order #${order.orderId} has been placed successfully. Total: NPR ${order.totalPrice}. We'll notify you once it's confirmed.`,
     relatedOrder: order._id,
@@ -221,27 +246,42 @@ const notifyOrderPlaced = async (userId, order) => {
     email: user.email,
     emailSubject: `Order Confirmation - ${order.orderId}`,
     emailHtml: generateOrderPlacedEmail(order, user)
-  }, true); // Enable email sending
+  }, true);
+
+  // ✅ Notify all admins
+  await notifyAllAdmins(
+    'order_placed',
+    '🛒 New Order Received!',
+    `New order #${order.orderId} placed by ${user.firstname || user.name}. Total: NPR ${order.totalPrice}`,
+    {
+      relatedOrder: order._id,
+      relatedUser: userId,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: {
+        orderId: order.orderId,
+        customerName: user.firstname || user.name,
+        totalAmount: order.totalPrice,
+        itemsCount: order.items.length
+      },
+      priority: 'high'
+    }
+  );
+
+  return customerNotification;
 };
 
 /**
- * Notify user when order is confirmed
+ * ✅ Notify user AND admins when order is confirmed
  */
 const notifyOrderConfirmed = async (userId, order) => {
-  const User = require('../models/user.model');
   const user = await User.findById(userId);
-  
   if (!user) return null;
   
-  return createNotification({
+  // Notify customer
+  const customerNotification = await createNotification({
     recipient: userId,
     recipientType: 'customer',
     type: 'order_confirmed',
-    titleKey: 'notifications.orders.confirmed.title',
-    messageKey: 'notifications.orders.confirmed.message',
-    messageParams: {
-      orderId: order.orderId
-    },
     title: '✅ Order Confirmed',
     message: `Your order #${order.orderId} has been confirmed and is being prepared for shipping.`,
     relatedOrder: order._id,
@@ -251,26 +291,34 @@ const notifyOrderConfirmed = async (userId, order) => {
     emailSubject: `Order Confirmed - ${order.orderId}`,
     emailHtml: generateOrderConfirmedEmail(order, user)
   }, true);
+
+  // Notify admins
+  await notifyAllAdmins(
+    'order_confirmed',
+    '✅ Order Confirmed',
+    `Order #${order.orderId} has been confirmed.`,
+    {
+      relatedOrder: order._id,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: { orderId: order.orderId, status: 'Confirmed' }
+    }
+  );
+
+  return customerNotification;
 };
 
 /**
- * Notify user when order is shipped
+ * ✅ Notify user AND admins when order is shipped
  */
 const notifyOrderShipped = async (userId, order) => {
-  const User = require('../models/user.model');
   const user = await User.findById(userId);
-  
   if (!user) return null;
   
-  return createNotification({
+  // Notify customer
+  const customerNotification = await createNotification({
     recipient: userId,
     recipientType: 'customer',
     type: 'order_shipped',
-    titleKey: 'notifications.orders.shipped.title',
-    messageKey: 'notifications.orders.shipped.message',
-    messageParams: {
-      orderId: order.orderId
-    },
     title: '📦 Order Shipped',
     message: `Your order #${order.orderId} has been shipped! Track your package for delivery updates.`,
     relatedOrder: order._id,
@@ -280,26 +328,74 @@ const notifyOrderShipped = async (userId, order) => {
     emailSubject: `Order Shipped - ${order.orderId}`,
     emailHtml: generateOrderShippedEmail(order, user)
   }, true);
+
+  // Notify admins
+  await notifyAllAdmins(
+    'order_shipped',
+    '📦 Order Shipped',
+    `Order #${order.orderId} has been shipped. ${order.trackingNumber ? `Tracking: ${order.trackingNumber}` : ''}`,
+    {
+      relatedOrder: order._id,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: { 
+        orderId: order.orderId, 
+        status: 'Shipped',
+        trackingNumber: order.trackingNumber 
+      }
+    }
+  );
+
+  return customerNotification;
 };
 
 /**
- * Notify user when order is delivered
+ * ✅ Notify when order is out for delivery
  */
-const notifyOrderDelivered = async (userId, order) => {
-  const User = require('../models/user.model');
+const notifyOrderOutForDelivery = async (userId, order) => {
   const user = await User.findById(userId);
-  
   if (!user) return null;
   
-  return createNotification({
+  // Notify customer
+  const customerNotification = await createNotification({
+    recipient: userId,
+    recipientType: 'customer',
+    type: 'order_out_for_delivery',
+    title: '🚚 Out for Delivery',
+    message: `Your order #${order.orderId} is out for delivery! It will arrive soon.`,
+    relatedOrder: order._id,
+    priority: 'high',
+    actionUrl: `/orders/${order._id}`,
+    email: user.email,
+    emailSubject: `Out for Delivery - ${order.orderId}`
+  }, true);
+
+  // Notify admins
+  await notifyAllAdmins(
+    'order_out_for_delivery',
+    '🚚 Order Out for Delivery',
+    `Order #${order.orderId} is out for delivery.`,
+    {
+      relatedOrder: order._id,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: { orderId: order.orderId, status: 'Out for Delivery' }
+    }
+  );
+
+  return customerNotification;
+};
+
+/**
+ * ✅ Notify user AND admins when order is delivered
+ */
+const notifyOrderDelivered = async (userId, order) => {
+  const user = await User.findById(userId);
+  if (!user) return null;
+  
+  // Notify customer
+  const customerNotification = await createNotification({
     recipient: userId,
     recipientType: 'customer',
     type: 'order_delivered',
-    titleKey: 'notifications.orders.delivered.title',
-    messageKey: 'notifications.orders.delivered.message',
-    messageParams: {
-      orderId: order.orderId
-    },
     title: '🎊 Order Delivered',
     message: `Your order #${order.orderId} has been delivered! Thank you for shopping with us.`,
     relatedOrder: order._id,
@@ -309,27 +405,34 @@ const notifyOrderDelivered = async (userId, order) => {
     emailSubject: `Order Delivered - ${order.orderId}`,
     emailHtml: generateOrderDeliveredEmail(order, user)
   }, true);
+
+  // Notify admins
+  await notifyAllAdmins(
+    'order_delivered',
+    '🎊 Order Delivered Successfully',
+    `Order #${order.orderId} has been delivered to customer.`,
+    {
+      relatedOrder: order._id,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: { orderId: order.orderId, status: 'Delivered' }
+    }
+  );
+
+  return customerNotification;
 };
 
 /**
- * Notify user when order is cancelled
+ * ✅ Notify user AND admins when order is cancelled
  */
 const notifyOrderCancelled = async (userId, order, reason = '') => {
-  const User = require('../models/user.model');
   const user = await User.findById(userId);
-  
   if (!user) return null;
   
-  return createNotification({
+  // Notify customer
+  const customerNotification = await createNotification({
     recipient: userId,
     recipientType: 'customer',
     type: 'order_cancelled',
-    titleKey: 'notifications.orders.cancelled.title',
-    messageKey: 'notifications.orders.cancelled.message',
-    messageParams: {
-      orderId: order.orderId,
-      reason: reason || 'If you have any questions, please contact support.'
-    },
     title: '❌ Order Cancelled',
     message: `Your order #${order.orderId} has been cancelled. ${reason || 'If you have any questions, please contact support.'}`,
     relatedOrder: order._id,
@@ -339,6 +442,124 @@ const notifyOrderCancelled = async (userId, order, reason = '') => {
     emailSubject: `Order Cancelled - ${order.orderId}`,
     emailHtml: generateOrderCancelledEmail(order, user, reason)
   }, true);
+
+  // Notify admins
+  await notifyAllAdmins(
+    'order_cancelled',
+    '❌ Order Cancelled',
+    `Order #${order.orderId} was cancelled. ${reason ? `Reason: ${reason}` : ''}`,
+    {
+      relatedOrder: order._id,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: { 
+        orderId: order.orderId, 
+        status: 'Cancelled',
+        reason: reason 
+      },
+      priority: 'high'
+    }
+  );
+
+  return customerNotification;
+};
+
+/**
+ * ✅ Notify when order is returned
+ */
+const notifyOrderReturned = async (userId, order) => {
+  const user = await User.findById(userId);
+  if (!user) return null;
+  
+  // Notify customer
+  const customerNotification = await createNotification({
+    recipient: userId,
+    recipientType: 'customer',
+    type: 'order_returned',
+    title: '🔄 Order Return Initiated',
+    message: `Your return request for order #${order.orderId} has been received. We'll process it shortly.`,
+    relatedOrder: order._id,
+    priority: 'medium',
+    actionUrl: `/orders/${order._id}`,
+    email: user.email,
+    emailSubject: `Return Request - ${order.orderId}`
+  }, true);
+
+  // Notify admins
+  await notifyAllAdmins(
+    'order_returned',
+    '🔄 Order Return Request',
+    `Return requested for order #${order.orderId}. Please review.`,
+    {
+      relatedOrder: order._id,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: { orderId: order.orderId, status: 'Returned' },
+      priority: 'high'
+    }
+  );
+
+  return customerNotification;
+};
+
+/**
+ * ✅ Notify when payment is received
+ */
+const notifyPaymentReceived = async (userId, order) => {
+  const user = await User.findById(userId);
+  if (!user) return null;
+  
+  // Notify customer
+  const customerNotification = await createNotification({
+    recipient: userId,
+    recipientType: 'customer',
+    type: 'payment_received',
+    title: '💳 Payment Confirmed',
+    message: `Your payment of NPR ${order.totalPrice} for order #${order.orderId} has been confirmed.`,
+    relatedOrder: order._id,
+    priority: 'high',
+    actionUrl: `/orders/${order._id}`,
+    email: user.email,
+    emailSubject: `Payment Confirmed - ${order.orderId}`
+  }, true);
+
+  // Notify admins
+  await notifyAllAdmins(
+    'payment_received',
+    '💰 Payment Received',
+    `Payment of NPR ${order.totalPrice} received for order #${order.orderId} via ${order.paymentMethod}.`,
+    {
+      relatedOrder: order._id,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: { 
+        orderId: order.orderId,
+        amount: order.totalPrice,
+        paymentMethod: order.paymentMethod
+      }
+    }
+  );
+
+  return customerNotification;
+};
+
+/**
+ * ✅ Notify admins when rider accepts order
+ */
+const notifyRiderAcceptedOrder = async (order, rider) => {
+  await notifyAllAdmins(
+    'rider_assigned',
+    '🏍️ Rider Accepted Order',
+    `Rider ${rider.firstname || rider.name} ${rider.lastname || ''} accepted order #${order.orderId} for delivery.`,
+    {
+      relatedOrder: order._id,
+      relatedUser: rider._id,
+      actionUrl: `/admin/orders/${order._id}`,
+      metadata: { 
+        orderId: order.orderId,
+        riderName: `${rider.firstname || rider.name} ${rider.lastname || ''}`,
+        riderCode: rider.riderProfile?.riderCode
+      },
+      priority: 'medium'
+    }
+  );
 };
 
 // ============================================
@@ -431,7 +652,7 @@ const generateOrderPlacedEmail = (order, user) => {
           <p style="margin: 10px 0 0; opacity: 0.9;">Order Confirmation</p>
         </div>
         <div class="content">
-          <h2 style="color: #111827; margin-top: 0;">Thank you for your order, ${user.fullName || user.firstname}!</h2>
+          <h2 style="color: #111827; margin-top: 0;">Thank you for your order, ${user.fullName || user.firstname || user.name}!</h2>
           <p style="color: #4b5563;">Your order has been received and is being processed.</p>
           
           <div class="order-details">
@@ -512,9 +733,14 @@ const generateOrderCancelledEmail = (order, user, reason) => {
 
 module.exports = {
   createNotification,
+  notifyAllAdmins,
   notifyOrderPlaced,
   notifyOrderConfirmed,
   notifyOrderShipped,
+  notifyOrderOutForDelivery,
   notifyOrderDelivered,
-  notifyOrderCancelled
+  notifyOrderCancelled,
+  notifyOrderReturned,
+  notifyPaymentReceived,
+  notifyRiderAcceptedOrder
 };

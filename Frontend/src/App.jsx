@@ -1,6 +1,6 @@
 // ============================================
 // Frontend/src/App.jsx
-// Complete Application with All Routes
+// SECURED VERSION - Auto Role-Based Redirect
 // ============================================
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -56,6 +56,41 @@ import RiderOrderDetails from "@/rider/pages/RiderOrderDetails";
 import RiderEarnings from "@/rider/pages/RiderEarnings";
 import RiderProfile from "@/rider/pages/RiderProfile";
 import RiderNavigation from "@/rider/pages/RiderNavigation";
+import RiderNotifications from '@/rider/pages/RiderNotifications';
+
+// ============================================
+// 🔒 HOME PAGE SECURITY - Auto Role Redirect
+// ============================================
+const SecureHome = () => {
+  const { user } = useAuth();
+
+  if (user) {
+    const userRole = user.role?.toLowerCase();
+
+    // 🚫 Redirect ADMIN to admin dashboard
+    if (
+      userRole === "admin" ||
+      userRole === "superadmin" ||
+      user.isAdmin === true
+    ) {
+      console.log(
+        "🔒 Admin detected on home page, redirecting to /admin/dashboard"
+      );
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+
+    // 🚫 Redirect RIDER to rider dashboard
+    if (userRole === "rider") {
+      console.log(
+        "🔒 Rider detected on home page, redirecting to /rider/dashboard"
+      );
+      return <Navigate to="/rider/dashboard" replace />;
+    }
+  }
+
+  // ✅ Customer or guest - allow access to home
+  return <Home />;
+};
 
 // ============================================
 // CUSTOMER LAYOUT (Navbar + Content + Footer)
@@ -76,6 +111,25 @@ const CustomerLayout = () => {
 // ALREADY LOGGED IN PAGE
 // ============================================
 const AlreadyLoggedIn = () => {
+  const { user } = useAuth();
+
+  // 🔒 Auto-redirect based on role
+  if (user) {
+    const userRole = user.role?.toLowerCase();
+
+    if (
+      userRole === "admin" ||
+      userRole === "superadmin" ||
+      user.isAdmin === true
+    ) {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+
+    if (userRole === "rider") {
+      return <Navigate to="/rider/dashboard" replace />;
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
       <div className="text-center max-w-md px-4">
@@ -208,6 +262,7 @@ function App() {
         <Route path="earnings" element={<RiderEarnings />} />
         <Route path="profile" element={<RiderProfile />} />
         <Route path="navigation" element={<RiderNavigation />} />
+        <Route path="notifications" element={<RiderNotifications />} />
       </Route>
 
       {/* ============================================ */}
@@ -215,7 +270,8 @@ function App() {
       {/* ============================================ */}
       <Route element={<CustomerLayout />}>
         {/* ========== PUBLIC ROUTES ========== */}
-        <Route path="/" element={<Home />} />
+        {/* 🔒 SECURED HOME - Auto-redirects based on role */}
+        <Route path="/" element={<SecureHome />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/products" element={<Products />} />

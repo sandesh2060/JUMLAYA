@@ -24,7 +24,27 @@ import toast from "react-hot-toast";
 import MapPicker from "../components/map/MapPicker";
 
 const formatPrice = (price) => `Rs. ${price?.toLocaleString() || 0}`;
-const getImageUrl = (url) => url || "https://via.placeholder.com/100";
+// Replace this line in your Checkout.jsx:
+// const getImageUrl = (url) => url || "https://via.placeholder.com/100";
+
+// With this:
+const getImageUrl = (path) => {
+  if (!path) return "/placeholder.png";
+  
+  // If it's already a full URL, return as is
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+  
+  // Get base URL without /api suffix
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4001/api";
+  const baseUrl = apiUrl.replace(/\/api$/, '');
+  
+  // Ensure path starts with /
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  
+  return `${baseUrl}${cleanPath}`;
+};
 
 const Checkout = () => {
   const navigate = useNavigate();

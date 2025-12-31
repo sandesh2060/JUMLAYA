@@ -1,3 +1,4 @@
+// path: Backend/controllers/rider/rider.notification.controller.js
 const Notification = require('../../models/notification.model');
 const notificationService = require('../../services/notification.service');
 const catchAsync = require('../../utils/catchAsync');

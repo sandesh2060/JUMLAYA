@@ -1,6 +1,6 @@
 // ============================================
 // Backend/routes/rider.routes.js
-// ✅ FIXED - Correct route order (specific before dynamic)
+// ✅ PRODUCTION READY
 // ============================================
 const express = require('express');
 const router = express.Router();
@@ -13,7 +13,7 @@ const {
   getOrders,
   getPendingOrders,
   getActiveOrders,
-  getOrderHistory,  // ✅ ADDED - Import the function
+  getOrderHistory,
   getOrderDetails,
   acceptOrder,
   updateOrderStatus,
@@ -54,14 +54,14 @@ router.patch('/location', updateLocation);
 // ============================================
 
 // ✅ SPECIFIC ROUTES FIRST (before :orderId)
-router.get('/orders/pending', getPendingOrders);   // Must be before /orders/:orderId
-router.get('/orders/active', getActiveOrders);     // Must be before /orders/:orderId
-router.get('/orders/history', getOrderHistory);    // ✅ MOVED - Must be before /orders/:orderId
+router.get('/orders/pending', getPendingOrders);
+router.get('/orders/active', getActiveOrders);
+router.get('/orders/history', getOrderHistory);
 
 // ✅ GENERAL LIST ROUTE
 router.get('/orders', getOrders);
 
-// ✅ DYNAMIC ROUTES LAST (catches anything not matched above)
+// ✅ DYNAMIC ROUTES LAST
 router.get('/orders/:orderId', getOrderDetails);
 router.post('/orders/:orderId/accept', acceptOrder);
 router.patch('/orders/:orderId/status', updateOrderStatus);
@@ -69,10 +69,10 @@ router.post('/orders/:orderId/pickup', pickupOrder);
 router.post('/orders/:orderId/deliver', deliverOrder);
 
 // ============================================
-// PROFILE
+// PROFILE - ✅ FIXED: Both GET and PUT
 // ============================================
 router.get('/profile', getProfile);
-router.patch('/profile', updateProfile);
+router.put('/profile', updateProfile);  // ✅ Changed from PATCH to PUT
 
 // ============================================
 // EARNINGS

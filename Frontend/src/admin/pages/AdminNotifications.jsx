@@ -1,3 +1,4 @@
+// file: Frontend/src/admin/pages/AdminNotifications.jsx
 import { Bell } from 'lucide-react';
 import AdminNotificationList from '../components/notifications/AdminNotificationList';
 

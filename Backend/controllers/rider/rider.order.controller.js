@@ -1,3 +1,9 @@
+// ============================================
+// Backend/controllers/rider/rider.order.controller.js
+// ✅ COMPLETE & PRODUCTION READY
+// Handles all rider order operations with admin notifications
+// ============================================
+
 const Order = require('../../models/order.model');
 const riderService = require('../../services/rider.service');
 const notificationService = require('../../services/notification.service');
@@ -5,7 +11,12 @@ const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/AppError');
 const { successResponse } = require('../../utils/response');
 
-// Get rider active orders
+// ✅ IMPORT NOTIFICATION HELPER
+const { notifyRiderAcceptedOrder } = require('../../utils/notificationHelper');
+
+// ==========================================
+// GET ACTIVE ORDERS
+// ==========================================
 exports.getActiveOrders = catchAsync(async (req, res, next) => {
   const rider = await riderService.getRiderByUserId(req.user._id);
   
@@ -18,7 +29,9 @@ exports.getActiveOrders = catchAsync(async (req, res, next) => {
   successResponse(res, activeOrders, 'Active orders fetched successfully');
 });
 
-// Get order history
+// ==========================================
+// GET ORDER HISTORY
+// ==========================================
 exports.getOrderHistory = catchAsync(async (req, res, next) => {
   const { page = 1, limit = 20 } = req.query;
 
@@ -33,7 +46,9 @@ exports.getOrderHistory = catchAsync(async (req, res, next) => {
   successResponse(res, result, 'Order history fetched successfully');
 });
 
-// Get order details
+// ==========================================
+// GET ORDER DETAILS
+// ==========================================
 exports.getOrderDetails = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
 
@@ -58,9 +73,13 @@ exports.getOrderDetails = catchAsync(async (req, res, next) => {
   successResponse(res, order, 'Order details fetched successfully');
 });
 
-// Accept order
+// ==========================================
+// ACCEPT ORDER - WITH ADMIN NOTIFICATION
+// ==========================================
 exports.acceptOrder = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
+
+  console.log('🏍️ Rider attempting to accept order:', orderId);
 
   const rider = await riderService.getRiderByUserId(req.user._id);
   
@@ -95,18 +114,37 @@ exports.acceptOrder = catchAsync(async (req, res, next) => {
   await order.save();
   await rider.acceptOrder(orderId);
 
-  // Send notifications
-  await notificationService.notifyOrderStatus(
-    order._id,
-    order.user,
-    'confirmed',
-    order.orderNumber
-  );
+  console.log('✅ Order assigned to rider successfully');
+
+  // ✅ CRITICAL: Notify admins about rider accepting order
+  try {
+    console.log('📧 Sending admin notification for rider acceptance...');
+    await notifyRiderAcceptedOrder(order, req.user);
+    console.log('✅ Admin notified about rider accepting order');
+  } catch (notifError) {
+    console.error('❌ Admin notification error:', notifError);
+    // Don't fail the acceptance if notification fails
+  }
+
+  // Send notification to customer
+  try {
+    await notificationService.notifyOrderStatus(
+      order._id,
+      order.user,
+      'confirmed',
+      order.orderNumber
+    );
+    console.log('✅ Customer notified about order confirmation');
+  } catch (notifError) {
+    console.error('❌ Customer notification error:', notifError);
+  }
 
   successResponse(res, order, 'Order accepted successfully');
 });
 
-// Update order status (picked up, out for delivery, etc.)
+// ==========================================
+// UPDATE ORDER STATUS
+// ==========================================
 exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
   const { status, note } = req.body;
@@ -143,7 +181,7 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   if (status === 'delivered') {
     order.deliveredAt = new Date();
     
-    // Calculate delivery earnings (you can adjust this logic)
+    // Calculate delivery earnings
     const deliveryEarnings = order.deliveryFee || 50;
     
     await riderService.completeDelivery(rider._id, orderId, deliveryEarnings);
@@ -152,17 +190,23 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   await order.save();
 
   // Send notification to user
-  await notificationService.notifyOrderStatus(
-    order._id,
-    order.user,
-    status,
-    order.orderNumber
-  );
+  try {
+    await notificationService.notifyOrderStatus(
+      order._id,
+      order.user,
+      status,
+      order.orderNumber
+    );
+  } catch (notifError) {
+    console.error('❌ Notification error:', notifError);
+  }
 
   successResponse(res, order, 'Order status updated successfully');
 });
 
-// Mark order as picked up
+// ==========================================
+// MARK ORDER AS PICKED UP
+// ==========================================
 exports.pickupOrder = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
 
@@ -192,18 +236,24 @@ exports.pickupOrder = catchAsync(async (req, res, next) => {
   await order.save();
 
   // Notify user
-  await notificationService.createUserNotification(
-    order.user,
-    'order_picked_up',
-    'Order Picked Up',
-    `Your order #${order.orderNumber} has been picked up by ${req.user.name}`,
-    { orderId: order._id, riderName: req.user.name }
-  );
+  try {
+    await notificationService.createUserNotification(
+      order.user,
+      'order_picked_up',
+      'Order Picked Up',
+      `Your order #${order.orderNumber} has been picked up by ${req.user.name}`,
+      { orderId: order._id, riderName: req.user.name }
+    );
+  } catch (notifError) {
+    console.error('❌ Notification error:', notifError);
+  }
 
   successResponse(res, order, 'Order marked as picked up');
 });
 
-// Mark order as out for delivery
+// ==========================================
+// START DELIVERY (OUT FOR DELIVERY)
+// ==========================================
 exports.startDelivery = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
 
@@ -232,17 +282,23 @@ exports.startDelivery = catchAsync(async (req, res, next) => {
   await order.save();
 
   // Notify user
-  await notificationService.notifyOrderStatus(
-    order._id,
-    order.user,
-    'out_for_delivery',
-    order.orderNumber
-  );
+  try {
+    await notificationService.notifyOrderStatus(
+      order._id,
+      order.user,
+      'out_for_delivery',
+      order.orderNumber
+    );
+  } catch (notifError) {
+    console.error('❌ Notification error:', notifError);
+  }
 
   successResponse(res, order, 'Delivery started');
 });
 
-// Complete delivery
+// ==========================================
+// COMPLETE DELIVERY
+// ==========================================
 exports.completeDelivery = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
   const { deliveryProof, customerSignature } = req.body;
@@ -279,25 +335,35 @@ exports.completeDelivery = catchAsync(async (req, res, next) => {
   await riderService.completeDelivery(rider._id, orderId, deliveryEarnings);
 
   // Notify user
-  await notificationService.notifyOrderStatus(
-    order._id,
-    order.user,
-    'delivered',
-    order.orderNumber
-  );
+  try {
+    await notificationService.notifyOrderStatus(
+      order._id,
+      order.user,
+      'delivered',
+      order.orderNumber
+    );
+  } catch (notifError) {
+    console.error('❌ Customer notification error:', notifError);
+  }
 
   // Notify admin
-  await notificationService.notifyAllAdmins(
-    'delivery_completed',
-    'Delivery Completed',
-    `Order #${order.orderNumber} delivered by ${req.user.name}`,
-    { orderId: order._id, riderId: rider._id }
-  );
+  try {
+    await notificationService.notifyAllAdmins(
+      'order_delivered',
+      'Delivery Completed',
+      `Order #${order.orderNumber} delivered by ${req.user.name}`,
+      { orderId: order._id, riderId: rider._id }
+    );
+  } catch (notifError) {
+    console.error('❌ Admin notification error:', notifError);
+  }
 
   successResponse(res, order, 'Delivery completed successfully');
 });
 
-// Report issue with order
+// ==========================================
+// REPORT ISSUE WITH ORDER
+// ==========================================
 exports.reportIssue = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
   const { issueType, description } = req.body;
@@ -329,12 +395,16 @@ exports.reportIssue = catchAsync(async (req, res, next) => {
   await rider.save();
 
   // Notify admins
-  await notificationService.notifyAllAdmins(
-    'system_alert',
-    'Order Issue Reported',
-    `Rider ${req.user.name} reported an issue with order #${order.orderNumber}: ${issueType}`,
-    { orderId: order._id, riderId: rider._id, issueType, description }
-  );
+  try {
+    await notificationService.notifyAllAdmins(
+      'system_notification',
+      'Order Issue Reported',
+      `Rider ${req.user.name} reported an issue with order #${order.orderNumber}: ${issueType}`,
+      { orderId: order._id, riderId: rider._id, issueType, description }
+    );
+  } catch (notifError) {
+    console.error('❌ Admin notification error:', notifError);
+  }
 
   successResponse(res, null, 'Issue reported successfully');
 });

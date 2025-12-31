@@ -12,19 +12,26 @@ export const useNotification = () => {
       setLoading(true);
       const response = await notificationApi.getNotifications(page, limit, filter);
       
-      // ✅ FIXED: Handle double nesting
-      const data = response.data?.data || response.data || {};
+      console.log('🔍 Full API Response:', response);
       
-      setNotifications(data.notifications || []);
-      setPagination(data.pagination);
-      setUnreadCount(data.unreadCount || 0);
+      // ✅ FIXED: Correct path based on your backend structure
+      // Backend returns: { success: true, data: { notifications, unreadCount, pagination } }
+      // axios returns: { data: { success: true, data: { notifications, unreadCount, pagination } } }
+      const responseData = response.data || response;
+      const actualData = responseData.data || responseData;
+      
+      setNotifications(actualData.notifications || []);
+      setPagination(actualData.pagination);
+      setUnreadCount(actualData.unreadCount || 0);
       
       console.log('✅ useNotification - Fetched:', {
-        notifications: data.notifications?.length || 0,
-        unreadCount: data.unreadCount || 0
+        notifications: actualData.notifications?.length || 0,
+        unreadCount: actualData.unreadCount || 0,
+        pagination: actualData.pagination
       });
     } catch (error) {
       console.error('❌ Error fetching notifications:', error);
+      console.error('❌ Error response:', error.response?.data);
       setNotifications([]);
       setUnreadCount(0);
     } finally {
@@ -34,15 +41,23 @@ export const useNotification = () => {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
+      console.log('🔔 Fetching unread count...');
       const response = await notificationApi.getUnreadCount();
       
-      // ✅ FIXED: Handle double nesting
-      const count = response.data?.unreadCount || response.unreadCount || 0;
+      console.log('🔍 Unread Count - Full Response:', response);
+      
+      // ✅ FIXED: Correct path based on your backend structure
+      // Backend returns: { success: true, data: { unreadCount: 5 } }
+      // axios returns: { data: { success: true, data: { unreadCount: 5 } } }
+      const responseData = response.data || response;
+      const actualData = responseData.data || responseData;
+      const count = actualData.unreadCount ?? responseData.unreadCount ?? 0;
       
       setUnreadCount(count);
-      console.log('✅ useNotification - Unread count:', count);
+      console.log('✅ useNotification - Unread count set to:', count);
     } catch (error) {
       console.error('❌ Error fetching unread count:', error);
+      console.error('❌ Error response:', error.response?.data);
       setUnreadCount(0);
     }
   }, []);
@@ -100,7 +115,7 @@ export const useNotification = () => {
 
   const deleteAllNotifications = useCallback(async () => {
     try {
-      await notificationApi.deleteAllNotifications();
+      await notificationApi.clearAll();
       
       setNotifications([]);
       setUnreadCount(0);

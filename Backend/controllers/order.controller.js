@@ -1,6 +1,6 @@
 // ============================================
 // Backend/controllers/order.controller.js
-// UPDATED WITH COMPLETE NOTIFICATION SYSTEM
+// ✅ FIXED: Orders start as "Pending", riders notified when "Processing"
 // ============================================
 const Order = require('../models/order.model');
 const Product = require('../models/product.model');
@@ -23,13 +23,19 @@ const {
   notifyOrderDelivered,
   notifyPaymentReceived
 } = require('../utils/notificationHelper');
+
+// ✅ IMPORT RIDER NOTIFICATION HELPER
+const {
+  notifyRidersNewDelivery
+} = require('../utils/riderNotificationHelper');
+
 const mongoose = require('mongoose');
 
 // Helper to get user ID
 const getUserId = (req) => req.user.id || req.user._id;
 
 // ==========================================
-// CREATE ORDER - WITH NOTIFICATIONS
+// CREATE ORDER - ✅ FIXED: Starts as "Pending"
 // ==========================================
 exports.createOrder = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
@@ -133,7 +139,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
   // Generate order ID
   const orderId = await generateOrderId();
 
-  // Create order
+  // ✅ FIXED: Create order with "Pending" status
   const order = await Order.create({
     orderId,
     user: userId,
@@ -157,7 +163,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     discountAmount,
     totalPrice,
     couponCode: couponCode || undefined,
-    orderStatus: 'Pending'
+    orderStatus: 'Pending' // ✅ FIXED: Start as Pending
   });
 
   console.log('✅ Order created:', order.orderId);
@@ -180,14 +186,15 @@ exports.createOrder = catchAsync(async (req, res, next) => {
 
   await shippingAddress.markAsUsed();
 
-  // ✅ SEND NOTIFICATION WITH EMAIL
+  // ✅ SEND CUSTOMER NOTIFICATION WITH EMAIL
   try {
     await notifyOrderPlaced(userId, order);
-    console.log('✅ Order placed notification sent');
+    console.log('✅ Customer order placed notification sent');
   } catch (notifError) {
-    console.error('❌ Notification error:', notifError);
-    // Don't fail the order if notification fails
+    console.error('❌ Customer notification error:', notifError);
   }
+
+  // ✅ REMOVED: Don't notify riders yet - wait until admin confirms
 
   // Generate payment URL if needed
   let paymentUrl = null;
@@ -212,6 +219,100 @@ exports.createOrder = catchAsync(async (req, res, next) => {
 });
 
 // ==========================================
+// ✅ NEW: CONFIRM ORDER - Admin/System confirms and notifies riders
+// ==========================================
+exports.confirmOrder = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const adminId = getUserId(req);
+
+  const order = await Order.findById(id);
+
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+
+  if (order.orderStatus !== 'Pending') {
+    return next(new AppError('Only pending orders can be confirmed', 400));
+  }
+
+  // Update order status to Processing
+  order.orderStatus = 'Processing';
+  order.addStatusHistory('Processing', 'Order confirmed and ready for delivery', adminId);
+  await order.save();
+
+  // ✅ NOTIFY ALL ACTIVE RIDERS ABOUT NEW DELIVERY
+  try {
+    await notifyRidersNewDelivery(order);
+    console.log('✅ All active riders notified about order:', order.orderId);
+  } catch (riderNotifError) {
+    console.error('❌ Rider notification error:', riderNotifError);
+  }
+
+  // ✅ NOTIFY CUSTOMER
+  try {
+    await notifyOrderConfirmed(order.user, order);
+    console.log('✅ Customer notified about order confirmation');
+  } catch (notifError) {
+    console.error('❌ Customer notification error:', notifError);
+  }
+
+  return successResponse(res, { order }, 'Order confirmed successfully');
+});
+
+// ==========================================
+// ✅ NEW: ASSIGN ORDER TO RIDER
+// ==========================================
+exports.assignOrderToRider = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { riderId } = req.body;
+  const adminId = getUserId(req);
+
+  if (!riderId) {
+    return next(new AppError('Rider ID is required', 400));
+  }
+
+  const order = await Order.findById(id);
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+
+  const rider = await User.findOne({ _id: riderId, role: 'rider' });
+  if (!rider) {
+    return next(new AppError('Rider not found', 404));
+  }
+
+  if (!['Pending', 'Processing'].includes(order.orderStatus)) {
+    return next(new AppError('Order cannot be assigned at this stage', 400));
+  }
+
+  // Assign rider using model method
+  order.assignRider(riderId, adminId);
+  await order.save();
+
+  // ✅ NOTIFY RIDER
+  try {
+    const Notification = require('../models/notification.model');
+    await Notification.create({
+      user: riderId,
+      type: 'new_order_assignment',
+      title: 'New Delivery Assignment',
+      message: `You have been assigned order #${order.orderId}`,
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderId,
+        deliveryAddress: `${order.shippingAddress.addressLine1}, ${order.shippingAddress.city}`,
+        amount: order.totalPrice
+      }
+    });
+    console.log('✅ Rider notified about assignment');
+  } catch (notifError) {
+    console.error('❌ Rider notification error:', notifError);
+  }
+
+  return successResponse(res, { order }, 'Order assigned to rider successfully');
+});
+
+// ==========================================
 // CANCEL ORDER - WITH NOTIFICATIONS
 // ==========================================
 exports.cancelOrder = catchAsync(async (req, res, next) => {
@@ -228,7 +329,7 @@ exports.cancelOrder = catchAsync(async (req, res, next) => {
     return next(new AppError('Order not found', 404));
   }
 
-  if (!['Pending', 'Confirmed'].includes(order.orderStatus)) {
+  if (!['Pending', 'Confirmed', 'Processing'].includes(order.orderStatus)) {
     return next(new AppError('Order cannot be cancelled at this stage', 400));
   }
 

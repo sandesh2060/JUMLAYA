@@ -1,6 +1,11 @@
+
+// ============================================
+// FILE 1: Frontend/src/admin/context/NotificationContext.jsx
+// ✅ FIXED - Correct API import
+// ============================================
 import { createContext, useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import notificationAPI from '../api/notification.api';
+import notificationAPI from '../api/notification.api'; // ✅ Default import
 import { useAuth } from "@/hooks/useAuth";
 import toast from 'react-hot-toast';
 
@@ -25,46 +30,59 @@ const NotificationProvider = ({ children }) => {
 
     try {
       setLoading(true);
-      console.log('🔔 Fetching notifications...');
-      const response = await notificationAPI.getAll(params);
+      console.log('🔔 Fetching notifications for role:', user?.role);
       
-      const notificationList = response?.data?.notifications || response?.data || [];
+      // ✅ Use correct API method
+      const response = await notificationAPI.getNotifications(
+        params.page || 1,
+        params.limit || 20,
+        params.filter || 'all'
+      );
+      
+      console.log('📬 API Response:', response);
+      
+      const notificationList = response?.data?.notifications || [];
+      const count = response?.data?.unreadCount || 0;
+      
       setNotifications(notificationList);
+      setUnreadCount(count);
       setError(null);
-      console.log('✅ Notifications fetched:', notificationList.length);
+      
+      console.log(`✅ Notifications fetched: ${notificationList.length} (${count} unread)`);
     } catch (err) {
       console.error('❌ Error fetching notifications:', err);
       setError(err.message);
       setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.role]);
 
   // Fetch unread count
-// Fetch unread count
-const fetchUnreadCount = useCallback(async () => {
-  if (!isAuthenticated) {
-    setUnreadCount(0);
-    return;
-  }
+  const fetchUnreadCount = useCallback(async () => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      return;
+    }
 
-  try {
-    console.log("🔢 Fetching unread count...");
-
-    const response = await notificationApi.getUnreadCount();
-    console.log("FULL RESPONSE:", response);
-
-    // ✅ FIXED: Use "unreadCount" instead of "count"
-    const count = response?.data?.unreadCount || response?.unreadCount || 0;
-
-    setUnreadCount(count);
-    console.log("✅ Unread count:", count);
-  } catch (err) {
-    console.error("❌ Error fetching unread count:", err);
-    setUnreadCount(0);
-  }
-}, [isAuthenticated]);
+    try {
+      console.log('🔢 Fetching unread count for role:', user?.role);
+      
+      // ✅ Use correct API method
+      const response = await notificationAPI.getUnreadCount();
+      
+      console.log('📊 Unread Count Response:', response);
+      
+      const count = response?.data?.unreadCount || 0;
+      setUnreadCount(count);
+      
+      console.log(`✅ Unread count: ${count}`);
+    } catch (err) {
+      console.error('❌ Error fetching unread count:', err);
+      setUnreadCount(0);
+    }
+  }, [isAuthenticated, user?.role]);
 
   // Mark notification as read
   const markAsRead = async (notificationId) => {
@@ -118,7 +136,7 @@ const fetchUnreadCount = useCallback(async () => {
 
     try {
       console.log('🗑️ Deleting notification:', notificationId);
-      await notificationAPI.delete(notificationId);
+      await notificationAPI.deleteNotification(notificationId);
       
       const deletedNotif = notifications.find(n => n._id === notificationId);
       setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
@@ -157,21 +175,27 @@ const fetchUnreadCount = useCallback(async () => {
 
   // Auto-fetch on mount and auth changes
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
+      console.log('🔄 Auth changed - fetching notifications');
       fetchNotifications();
       fetchUnreadCount();
     }
-  }, [isAuthenticated, fetchNotifications, fetchUnreadCount]);
+  }, [isAuthenticated, user, fetchNotifications, fetchUnreadCount]);
 
   // Poll for new notifications every 30 seconds
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    console.log('⏰ Starting notification polling');
     const interval = setInterval(() => {
+      console.log('🔄 Polling for new notifications...');
       fetchUnreadCount();
-    }, 30000);
+    }, 30000); // 30 seconds
 
-    return () => clearInterval(interval);
+    return () => {
+      console.log('⏰ Stopping notification polling');
+      clearInterval(interval);
+    };
   }, [isAuthenticated, fetchUnreadCount]);
 
   const value = {

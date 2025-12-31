@@ -1,8 +1,10 @@
+// path: Backend/routes/admin.order.routes.js
 const express = require('express');
 const router = express.Router();
 const adminOrderController = require('../controllers/admin/admin.order.controller');
 const { protect } = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/authorize.middleware');
+const { path } = require('pdfkit');
 
 // All routes require authentication and admin role
 router.use(protect);

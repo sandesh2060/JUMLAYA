@@ -1,6 +1,6 @@
 // ============================================
 // Backend/controllers/notification.controller.js
-// ✅ FIXED - Proper ObjectId handling
+// ✅ FIXED - Admin notifications support
 // ============================================
 
 const mongoose = require('mongoose');
@@ -8,11 +8,13 @@ const Notification = require('../models/notification.model');
 const catchAsync = require('../utils/catchAsync');
 const { successResponse } = require('../utils/response');
 
-// ✅ FIXED: Keep as ObjectId, don't convert to string
-const getUserId = (req) => {
+// ✅ Get user ID and role
+const getUserInfo = (req) => {
   const id = req.user._id || req.user.id;
-  // Return as-is (ObjectId) for proper MongoDB queries
-  return mongoose.Types.ObjectId.isValid(id) ? id : mongoose.Types.ObjectId(id);
+  const role = req.user.role;
+  const userId = mongoose.Types.ObjectId.isValid(id) ? id : mongoose.Types.ObjectId(id);
+  
+  return { userId, role };
 };
 
 // ==========================================
@@ -21,19 +23,29 @@ const getUserId = (req) => {
 // @access Private
 // ==========================================
 exports.getNotifications = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId, role } = getUserInfo(req);
   const { page = 1, limit = 20, filter = 'all' } = req.query;
 
-  console.log('📬 Fetching notifications for user:', userId.toString(), 'Filter:', filter);
+  console.log('📬 Fetching notifications for user:', userId.toString(), 'Role:', role, 'Filter:', filter);
 
-  // Build query - Handle notifications without isDeleted field
+  // ✅ Build query based on user role
   const query = { 
-    recipient: userId, // ✅ Use ObjectId directly
+    recipient: userId,
     $or: [
       { isDeleted: { $exists: false } },
       { isDeleted: false }
     ]
   };
+
+  // ✅ If admin, fetch admin-type notifications
+  if (role === 'admin') {
+    query.recipientType = 'admin';
+    console.log('👨‍💼 Admin user - fetching admin notifications');
+  } else {
+    // For customers, fetch customer notifications
+    query.recipientType = { $in: ['customer', 'user'] };
+    console.log('👤 Customer user - fetching customer notifications');
+  }
   
   // Apply filter
   if (filter === 'unread') {
@@ -56,16 +68,26 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
 
   // Get counts
   const total = await Notification.countDocuments(query);
-  const unreadCount = await Notification.countDocuments({ 
+  
+  const unreadQuery = { 
     recipient: userId,
     isRead: false,
     $or: [
       { isDeleted: { $exists: false } },
       { isDeleted: false }
     ]
-  });
+  };
+  
+  // ✅ Add recipientType filter for unread count too
+  if (role === 'admin') {
+    unreadQuery.recipientType = 'admin';
+  } else {
+    unreadQuery.recipientType = { $in: ['customer', 'user'] };
+  }
+  
+  const unreadCount = await Notification.countDocuments(unreadQuery);
 
-  console.log(`✅ Found ${notifications.length} notifications (${unreadCount} unread, ${total} total)`);
+  console.log(`✅ Found ${notifications.length} notifications (${unreadCount} unread, ${total} total) for ${role}`);
 
   return successResponse(res, {
     success: true,
@@ -88,23 +110,32 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.getUnreadCount = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId, role } = getUserInfo(req);
   
-  console.log('🔍 DEBUG - req.user._id:', req.user._id);
-  console.log('🔍 DEBUG - userId (ObjectId):', userId);
-  console.log('🔍 DEBUG - userId type:', typeof userId);
+  console.log('🔍 Fetching unread count for user:', userId.toString(), 'Role:', role);
   
-  // Handle notifications without isDeleted field
-  const count = await Notification.countDocuments({ 
+  // ✅ Build query based on role
+  const query = { 
     recipient: userId,
     isRead: false,
     $or: [
       { isDeleted: { $exists: false } },
       { isDeleted: false }
     ]
-  });
+  };
 
-  console.log(`📊 Unread count for user ${userId.toString()}:`, count);
+  // ✅ Filter by recipientType based on role
+  if (role === 'admin') {
+    query.recipientType = 'admin';
+    console.log('👨‍💼 Admin - counting admin notifications');
+  } else {
+    query.recipientType = { $in: ['customer', 'user'] };
+    console.log('👤 Customer - counting customer notifications');
+  }
+
+  const count = await Notification.countDocuments(query);
+
+  console.log(`📊 Unread count for ${role} ${userId.toString()}:`, count);
 
   return successResponse(res, { 
     success: true,
@@ -120,7 +151,7 @@ exports.getUnreadCount = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.markAsRead = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId } = getUserInfo(req);
   const { id } = req.params;
   
   console.log('✅ Marking notification as read:', id);
@@ -160,26 +191,35 @@ exports.markAsRead = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.markAllAsRead = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId, role } = getUserInfo(req);
   
-  console.log('✅ Marking all notifications as read for user:', userId.toString());
+  console.log('✅ Marking all notifications as read for user:', userId.toString(), 'Role:', role);
+
+  // ✅ Build query based on role
+  const query = { 
+    recipient: userId,
+    isRead: false,
+    $or: [
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
+    ]
+  };
+
+  if (role === 'admin') {
+    query.recipientType = 'admin';
+  } else {
+    query.recipientType = { $in: ['customer', 'user'] };
+  }
 
   const result = await Notification.updateMany(
-    { 
-      recipient: userId,
-      isRead: false,
-      $or: [
-        { isDeleted: { $exists: false } },
-        { isDeleted: false }
-      ]
-    },
+    query,
     { 
       isRead: true, 
       readAt: new Date() 
     }
   );
 
-  console.log(`✅ Marked ${result.modifiedCount} notifications as read`);
+  console.log(`✅ Marked ${result.modifiedCount} notifications as read for ${role}`);
 
   return successResponse(res, {
     success: true,
@@ -195,7 +235,7 @@ exports.markAllAsRead = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.deleteNotification = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId } = getUserInfo(req);
   const { id } = req.params;
   
   console.log('🗑️ Deleting notification:', id);
@@ -231,26 +271,35 @@ exports.deleteNotification = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.deleteAllRead = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId, role } = getUserInfo(req);
   
   console.log('🗑️ Deleting all read notifications for user:', userId.toString());
 
+  // ✅ Build query based on role
+  const query = { 
+    recipient: userId,
+    isRead: true,
+    $or: [
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
+    ]
+  };
+
+  if (role === 'admin') {
+    query.recipientType = 'admin';
+  } else {
+    query.recipientType = { $in: ['customer', 'user'] };
+  }
+
   const result = await Notification.updateMany(
-    { 
-      recipient: userId,
-      isRead: true,
-      $or: [
-        { isDeleted: { $exists: false } },
-        { isDeleted: false }
-      ]
-    },
+    query,
     {
       isDeleted: true,
       deletedAt: new Date()
     }
   );
 
-  console.log(`✅ Deleted ${result.modifiedCount} read notifications`);
+  console.log(`✅ Deleted ${result.modifiedCount} read notifications for ${role}`);
 
   return successResponse(res, {
     success: true,
@@ -266,34 +315,36 @@ exports.deleteAllRead = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.getNotificationsByType = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId, role } = getUserInfo(req);
   const { type } = req.params;
   const { page = 1, limit = 20 } = req.query;
 
-  const notifications = await Notification.find({
+  // ✅ Build query based on role
+  const query = {
     recipient: userId,
     type: type,
     $or: [
       { isDeleted: { $exists: false } },
       { isDeleted: false }
     ]
-  })
-  .sort({ createdAt: -1 })
-  .limit(limit * 1)
-  .skip((page - 1) * limit)
-  .populate('relatedUser', 'firstname lastname email')
-  .populate('relatedOrder', 'orderId orderStatus totalPrice')
-  .populate('relatedProduct', 'name slug images')
-  .lean();
+  };
 
-  const total = await Notification.countDocuments({
-    recipient: userId,
-    type: type,
-    $or: [
-      { isDeleted: { $exists: false } },
-      { isDeleted: false }
-    ]
-  });
+  if (role === 'admin') {
+    query.recipientType = 'admin';
+  } else {
+    query.recipientType = { $in: ['customer', 'user'] };
+  }
+
+  const notifications = await Notification.find(query)
+    .sort({ createdAt: -1 })
+    .limit(limit * 1)
+    .skip((page - 1) * limit)
+    .populate('relatedUser', 'firstname lastname email')
+    .populate('relatedOrder', 'orderId orderStatus totalPrice')
+    .populate('relatedProduct', 'name slug images')
+    .lean();
+
+  const total = await Notification.countDocuments(query);
 
   return successResponse(res, {
     success: true,
@@ -315,7 +366,7 @@ exports.getNotificationsByType = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.getPreferences = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId } = getUserInfo(req);
   const User = require('../models/user.model');
   
   const user = await User.findById(userId).select('notificationPreferences');
@@ -341,7 +392,7 @@ exports.getPreferences = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.updatePreferences = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId } = getUserInfo(req);
   const preferences = req.body;
   const User = require('../models/user.model');
   
@@ -363,25 +414,34 @@ exports.updatePreferences = catchAsync(async (req, res, next) => {
 // @access Private
 // ==========================================
 exports.clearAllNotifications = catchAsync(async (req, res, next) => {
-  const userId = getUserId(req);
+  const { userId, role } = getUserInfo(req);
   
-  console.log('🗑️ Clearing all notifications for user:', userId.toString());
+  console.log('🗑️ Clearing all notifications for user:', userId.toString(), 'Role:', role);
+
+  // ✅ Build query based on role
+  const query = { 
+    recipient: userId,
+    $or: [
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
+    ]
+  };
+
+  if (role === 'admin') {
+    query.recipientType = 'admin';
+  } else {
+    query.recipientType = { $in: ['customer', 'user'] };
+  }
 
   const result = await Notification.updateMany(
-    { 
-      recipient: userId,
-      $or: [
-        { isDeleted: { $exists: false } },
-        { isDeleted: false }
-      ]
-    },
+    query,
     {
       isDeleted: true,
       deletedAt: new Date()
     }
   );
 
-  console.log(`✅ Cleared ${result.modifiedCount} notifications`);
+  console.log(`✅ Cleared ${result.modifiedCount} notifications for ${role}`);
 
   return successResponse(res, {
     success: true,

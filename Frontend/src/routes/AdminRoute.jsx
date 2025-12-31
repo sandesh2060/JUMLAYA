@@ -1,6 +1,6 @@
 // ============================================
 // FILE 2: Frontend/src/routes/AdminRoute.jsx
-// REPLACE COMPLETELY
+// SECURED VERSION - Enhanced Admin Protection
 // ============================================
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import { useEffect, useState } from 'react'
 
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth()
+  const { isAuthenticated, isAdmin, loading, user } = useAuth()
   const location = useLocation()
   const [hasShownToast, setHasShownToast] = useState(false)
 
@@ -30,16 +30,48 @@ const AdminRoute = ({ children }) => {
     )
   }
 
-  if (!isAuthenticated) {
+  // ❌ Not authenticated at all
+  if (!isAuthenticated || !user) {
     toast.error('Please login to access admin panel')
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/" replace />
+  // ✅ ENHANCED: Double-check admin role explicitly
+  const userRole = user.role?.toLowerCase()
+  const isActuallyAdmin = 
+    userRole === "admin" || 
+    userRole === "superadmin" || 
+    user.isAdmin === true
+
+  // 🚫 SECURITY: Not an admin - log and redirect
+  if (!isAdmin || !isActuallyAdmin) {
+    // Log security breach attempt
+    console.error('🚨 UNAUTHORIZED ADMIN ACCESS ATTEMPT:', {
+      userId: user._id,
+      email: user.email,
+      role: userRole,
+      attemptedPath: location.pathname,
+      timestamp: new Date().toISOString(),
+      ipAddress: 'client-side' // You can add real IP from backend
+    })
+
+    toast.error('Access Denied: You do not have admin privileges')
+
+    // Redirect based on their actual role
+    if (userRole === 'rider') {
+      return <Navigate to="/rider/dashboard" replace />
+    } else {
+      return <Navigate to="/" replace />
+    }
   }
 
-  // ✅ Render children (AdminLayout) or Outlet
+  // ✅ SECURITY CHECK: Verify user is actually accessing admin routes
+  if (!location.pathname.startsWith('/admin')) {
+    console.warn('⚠️ Admin accessing non-admin route, redirecting...')
+    return <Navigate to="/admin/dashboard" replace />
+  }
+
+  // ✅ All checks passed - render admin content
   return children || <Outlet />
 }
 

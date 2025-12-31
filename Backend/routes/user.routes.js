@@ -1,5 +1,5 @@
 // ============================================
-// Backend/routes/user.routes.js (WITH LOGOUT)
+// Backend/routes/user.routes.js (WITH DEBUG LOGGING)
 // ============================================
 const express = require("express");
 const router = express.Router();
@@ -44,6 +44,15 @@ const upload = multer({
   fileFilter,
 });
 
+// ============================================
+// 🔍 DEBUG MIDDLEWARE - Add logging
+// ============================================
+router.use((req, res, next) => {
+  console.log("🌐 [USER ROUTES]", req.method, req.path);
+  console.log("📦 [USER ROUTES] Body:", req.body);
+  next();
+});
+
 // PUBLIC ROUTES - WITH VALIDATORS
 router.post("/register", 
   userValidator.registerValidator, 
@@ -51,7 +60,12 @@ router.post("/register",
   userController.register
 );
 
+// ✅ CRITICAL FIX: Add debug logging for verify-otp
 router.post("/verify-otp", 
+  (req, res, next) => {
+    console.log("🔵 [VERIFY-OTP ROUTE] Hit! Email:", req.body.email, "OTP:", req.body.otp);
+    next();
+  },
   userValidator.verifyOTPValidator,
   validate,
   userController.verifyOTP
@@ -69,7 +83,7 @@ router.post("/login",
   userController.login
 );
 
-// ✅ ADDED: Logout route (can be public or protected)
+// ✅ Logout route (can be public or protected)
 router.post("/logout", authenticate, userController.logout);
 
 // ============================================

@@ -12,6 +12,31 @@ const OrderDetailModal = ({ isOpen, onClose, orderId }) => {
   const [order, setOrder] = useState(null)
   const [updating, setUpdating] = useState(false)
 
+  // ✅ Helper function to get full image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) {
+      console.log('⚠️ No image path provided')
+      return '/placeholder.png'
+    }
+    
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      console.log('✅ Using external URL:', imagePath)
+      return imagePath
+    }
+    
+    // Remove /api from VITE_API_URL for static files
+    const backendUrl = import.meta.env.VITE_API_URL.replace('/api', '')
+    const fullUrl = `${backendUrl}${imagePath}`
+    
+    console.log('🔧 Constructed URL:', {
+      originalPath: imagePath,
+      backendUrl,
+      fullUrl
+    })
+    
+    return fullUrl
+  }
+
   useEffect(() => {
     if (isOpen && orderId) {
       fetchOrderDetails()
@@ -31,6 +56,13 @@ const OrderDetailModal = ({ isOpen, onClose, orderId }) => {
       const orderData = response.order || response.data || response
       
       console.log('✅ Order data extracted:', orderData)
+      console.log('🖼️ Order items check:', {
+        itemsCount: orderData?.items?.length,
+        firstItem: orderData?.items?.[0],
+        firstItemImage: orderData?.items?.[0]?.image,
+        firstItemProduct: orderData?.items?.[0]?.product
+      })
+      
       setOrder(orderData)
       
     } catch (error) {
@@ -227,38 +259,54 @@ const OrderDetailModal = ({ isOpen, onClose, orderId }) => {
                               Order Items ({order.items?.length || 0})
                             </h3>
                             <div className="space-y-4">
-                              {order.items?.map((item, index) => (
-                                <div key={index} className="flex gap-4 pb-4 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                                  <div className="w-20 h-20 rounded-lg bg-gray-100 dark:bg-gray-700 flex-shrink-0 overflow-hidden">
-                                    {item.productImage || item.product?.images?.[0] ? (
+                              {order.items?.map((item, index) => {
+                                // ✅ Get the correct image path from order item
+                                // Order model stores it as 'image', fallback to product.images[0]
+                                const imagePath = item.image || item.product?.images?.[0]
+                                const imageUrl = getImageUrl(imagePath)
+                                
+                                console.log('🖼️ Item image debug:', {
+                                  itemImage: item.image,
+                                  productImages: item.product?.images,
+                                  finalUrl: imageUrl
+                                })
+                                
+                                return (
+                                  <div key={index} className="flex gap-4 pb-4 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                                    <div className="w-20 h-20 rounded-lg bg-gray-100 dark:bg-gray-700 flex-shrink-0 overflow-hidden border border-gray-200 dark:border-gray-600">
                                       <img
-                                        src={item.productImage || item.product?.images?.[0]}
-                                        alt={item.productName || item.product?.name}
+                                        src={imageUrl}
+                                        alt={item.name || item.product?.name || 'Product'}
                                         className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          console.error('❌ Image failed to load:', imageUrl)
+                                          e.target.src = '/placeholder.png'
+                                        }}
                                       />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center">
-                                        <Package className="w-8 h-8 text-gray-400" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-medium text-gray-900 dark:text-white mb-1 truncate">
+                                        {item.name || item.product?.name || 'Product'}
+                                      </h4>
+                                      <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                        <span>Qty: {item.quantity}</span>
+                                        <span>•</span>
+                                        <span>Rs. {(item.price || 0).toLocaleString()}</span>
                                       </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-gray-900 dark:text-white mb-1 truncate">
-                                      {item.productName || item.product?.name || 'Product'}
-                                    </h4>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-                                      <span>Qty: {item.quantity}</span>
-                                      <span>•</span>
-                                      <span>Rs. {(item.price || 0).toLocaleString()}</span>
+                                      {item.sku && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                          SKU: {item.sku}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                      <p className="font-semibold text-gray-900 dark:text-white">
+                                        Rs. {((item.price * item.quantity) || 0).toLocaleString()}
+                                      </p>
                                     </div>
                                   </div>
-                                  <div className="text-right flex-shrink-0">
-                                    <p className="font-semibold text-gray-900 dark:text-white">
-                                      Rs. {((item.subtotal || item.price * item.quantity) || 0).toLocaleString()}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                             </div>
 
                             {/* Order Summary */}

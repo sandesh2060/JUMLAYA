@@ -1,6 +1,6 @@
 // ============================================
 // Backend/controllers/admin/admin.order.controller.js
-// ✅ FIXED: Added notifications for ALL order status changes
+// ✅ COMPLETE: Added rider notifications for Processing status
 // ============================================
 const Order = require('../../models/order.model');
 const User = require('../../models/user.model');
@@ -18,6 +18,11 @@ const {
   notifyOrderDelivered,
   notifyPaymentReceived
 } = require('../../utils/notificationHelper');
+
+// ✅ IMPORT RIDER NOTIFICATION HELPER
+const {
+  notifyRidersNewDelivery
+} = require('../../utils/riderNotificationHelper');
 
 // Get all orders with filtering, sorting, and pagination
 exports.getAllOrders = catchAsync(async (req, res, next) => {
@@ -107,7 +112,7 @@ exports.getOrderById = catchAsync(async (req, res, next) => {
   return successResponse(res, { order }, 'Order retrieved successfully');
 });
 
-// ✅ FIXED: Update order status WITH NOTIFICATIONS
+// ✅ COMPLETE: Update order status WITH CUSTOMER & RIDER NOTIFICATIONS
 exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   const { status, comment, trackingNumber, carrier, estimatedDelivery } = req.body;
 
@@ -165,9 +170,23 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
 
       switch (status) {
         case 'Confirmed':
-        case 'Processing':
           await notifyOrderConfirmed(userId, order);
           console.log('✅ Order confirmed notification sent');
+          break;
+
+        case 'Processing':
+          // ✅ CRITICAL: Notify customer
+          await notifyOrderConfirmed(userId, order);
+          console.log('✅ Order processing notification sent to customer');
+          
+          // ✅ CRITICAL: Notify ALL active riders about new delivery
+          try {
+            await notifyRidersNewDelivery(order);
+            console.log('✅ All active riders notified about new delivery');
+          } catch (riderNotifError) {
+            console.error('❌ Rider notification failed:', riderNotifError);
+            // Don't fail the status update if rider notification fails
+          }
           break;
 
         case 'Shipped':
@@ -362,7 +381,7 @@ exports.getOrderStats = catchAsync(async (req, res, next) => {
   return successResponse(res, stats, 'Order statistics retrieved successfully');
 });
 
-// ✅ FIXED: Bulk update with notifications
+// ✅ COMPLETE: Bulk update with customer & rider notifications
 exports.bulkUpdateStatus = catchAsync(async (req, res, next) => {
   const { orderIds, status, comment } = req.body;
 
@@ -382,25 +401,38 @@ exports.bulkUpdateStatus = catchAsync(async (req, res, next) => {
       order.addStatusHistory(status, comment || 'Bulk update', req.user._id);
       await order.save();
 
-      // ✅ Send notification for each order
+      // ✅ Send notifications for each order
       try {
         const userId = order.user._id || order.user;
         
         if (oldStatus !== status) {
           switch (status) {
             case 'Confirmed':
-            case 'Processing':
               await notifyOrderConfirmed(userId, order);
               break;
+              
+            case 'Processing':
+              await notifyOrderConfirmed(userId, order);
+              // ✅ Notify riders about new delivery
+              try {
+                await notifyRidersNewDelivery(order);
+              } catch (riderError) {
+                console.error('❌ Rider notification failed for order:', order.orderId);
+              }
+              break;
+              
             case 'Shipped':
               await notifyOrderShipped(userId, order);
               break;
+              
             case 'Out for Delivery':
               await notifyOrderOutForDelivery(userId, order);
               break;
+              
             case 'Delivered':
               await notifyOrderDelivered(userId, order);
               break;
+              
             case 'Cancelled':
               await notifyOrderCancelled(userId, order, comment || 'Bulk cancellation');
               break;
