@@ -1,4 +1,3 @@
-
 // ============================================
 // COMPLETE i18n.js WITH PERFECT WISHLIST TRANSLATIONS
 // Path: Frontend/src/i18n/i18n.js
@@ -65,49 +64,33 @@ const resources = {
 
       // ============ WISHLIST - COMPLETE ============
       wishlist: {
-        // Header & Title
         title: "My Wishlist",
-        
-        // Items Count
         itemSingular: "item",
         itemPlural: "items",
-        
-        // Actions
         removeFromWishlist: "Remove from Wishlist",
         moveToCart: "Move to Cart",
         clearWishlist: "Clear Wishlist",
         continueShopping: "Continue Shopping",
-        
-        // Loading & Processing States
         loading: "Loading wishlist...",
         moving: "Moving...",
-        
-        // Empty State
         empty: {
           title: "Your Wishlist is Empty",
-          description: "Start adding products you love to your wishlist and shop them later!",
+          description:
+            "Start adding products you love to your wishlist and shop them later!",
           button: "Browse Products",
         },
-        
-        // Product Details
         currency: "Rs.",
         off: "OFF",
         outOfStock: "Out of Stock",
-        
-        // Success Messages
         success: {
           movedToCart: "Item moved to cart successfully!",
           cleared: "Wishlist cleared successfully!",
         },
-        
-        // Error Messages
         errors: {
           removeError: "Failed to remove item from wishlist",
           moveToCartError: "Failed to move item to cart",
           clearError: "Failed to clear wishlist",
         },
-        
-        // Notifications
         addedToWishlist: "Added to wishlist",
         removedFromWishlist: "Removed from wishlist",
         pleaseLogin: "Please login to view your wishlist",
@@ -399,6 +382,61 @@ const resources = {
           },
         },
       },
+      // ADD TO ENGLISH (en) SECTION:
+      contact: {
+        // Page Header
+        title: "Get In Touch",
+        subtitle:
+          "Have a question or feedback? We'd love to hear from you. Send us a message and we'll respond as soon as possible.",
+
+        // Contact Info Cards
+        phone: "Phone",
+        email: "Email",
+        address: "Address",
+        businessHours: "Business Hours",
+
+        // Quick Response Card
+        quickResponse: {
+          title: "Quick Response",
+          description: "We typically respond within 24 hours on business days.",
+        },
+
+        // Form Labels
+        form: {
+          title: "Contact Form",
+          nameLabel: "Your Name",
+          namePlaceholder: "John Doe",
+          emailLabel: "Email Address",
+          emailPlaceholder: "john@example.com",
+          phoneLabel: "Phone Number",
+          phonePlaceholder: "+977 9812345678",
+          subjectLabel: "Subject",
+          subjectPlaceholder: "How can we help?",
+          messageLabel: "Message",
+          messagePlaceholder: "Tell us more about your inquiry...",
+          required: "*",
+          sending: "Sending...",
+          sendButton: "Send Message",
+        },
+
+        // Map Section
+        map: {
+          title: "Map Location",
+          viewOnMaps: "View on Google Maps",
+        },
+
+        // Success/Error Messages
+        messages: {
+          success: "Message sent successfully! We will get back to you soon.",
+          error: "Failed to send message. Please try again.",
+          loading: "Loading contact information...",
+          requiredFields: "Please fill all required fields",
+        },
+
+        // Loading States
+        loading: "Loading...",
+        pageLoading: "Loading contact information...",
+      },
 
       // ============ ABOUT PAGE ============
       about: {
@@ -647,54 +685,95 @@ const resources = {
 
       // ============ WISHLIST - COMPLETE (नेपाली) ============
       wishlist: {
-        // Header & Title
         title: "मेरो इच्छा सूची",
-        
-        // Items Count
         itemSingular: "वस्तु",
         itemPlural: "वस्तुहरू",
-        
-        // Actions
         removeFromWishlist: "इच्छा सूचीबाट हटाउनुहोस्",
         moveToCart: "कार्टमा सार्नुहोस्",
         clearWishlist: "इच्छा सूची खाली गर्नुहोस्",
         continueShopping: "किनमेल जारी राख्नुहोस्",
-        
-        // Loading & Processing States
         loading: "इच्छा सूची लोड हुँदैछ...",
         moving: "सार्दै...",
-        
-        // Empty State
         empty: {
           title: "तपाईंको इच्छा सूची खाली छ",
-          description: "तपाईंलाई मनपर्ने उत्पादनहरू आफ्नो इच्छा सूचीमा थप्न सुरु गर्नुहोस् र पछि किन्नुहोस्!",
+          description:
+            "तपाईंलाई मनपर्ने उत्पादनहरू आफ्नो इच्छा सूचीमा थप्न सुरु गर्नुहोस् र पछि किन्नुहोस्!",
           button: "उत्पादनहरू हेर्नुहोस्",
         },
-        
-        // Product Details
         currency: "रू.",
         off: "छुट",
         outOfStock: "स्टकमा छैन",
-        
-        // Success Messages
         success: {
           movedToCart: "वस्तु सफलतापूर्वक कार्टमा सारियो!",
           cleared: "इच्छा सूची सफलतापूर्वक खाली गरियो!",
         },
-        
-        // Error Messages
         errors: {
           removeError: "इच्छा सूचीबाट वस्तु हटाउन असफल",
           moveToCartError: "वस्तु कार्टमा सार्न असफल",
           clearError: "इच्छा सूची खाली गर्न असफल",
         },
-        
-        // Notifications
         addedToWishlist: "इच्छा सूचीमा थपियो",
         removedFromWishlist: "इच्छा सूचीबाट हटाइयो",
         pleaseLogin: "कृपया आफ्नो इच्छा सूची हेर्न लगइन गर्नुहोस्",
-        confirmClear: "के तपाईं आफ्नो सम्पूर्ण इच्छा सूची खाली गर्न निश्चित हुनुहुन्छ?",
-      },
+        confirmClear:
+          "के तपाईं आफ्नो सम्पूर्ण इच्छा सूची खाली गर्न निश्चित हुनुहुन्छ?",
+      },// ============================================
+// ADD TO NEPALI (ne) SECTION:
+// ============================================
+contact: {
+  // Page Header
+  title: "सम्पर्कमा रहनुहोस्",
+  subtitle: "कुनै प्रश्न वा प्रतिक्रिया छ? हामी तपाईंबाट सुन्न चाहन्छौं। हामीलाई सन्देश पठाउनुहोस् र हामी सकेसम्म चाँडो जवाफ दिनेछौं।",
+  
+  // Contact Info Cards
+  phone: "फोन",
+  email: "इमेल",
+  address: "ठेगाना",
+  businessHours: "व्यापार समय",
+  
+  // Quick Response Card
+  quickResponse: {
+    title: "छिटो प्रतिक्रिया",
+    description: "हामी सामान्यतया कार्य दिनहरूमा २४ घण्टा भित्र जवाफ दिन्छौं।"
+  },
+  
+  // Form Labels
+  form: {
+    title: "सम्पर्क फारम",
+    nameLabel: "तपाईंको नाम",
+    namePlaceholder: "राम बहादुर",
+    emailLabel: "इमेल ठेगाना",
+    emailPlaceholder: "ram@example.com",
+    phoneLabel: "फोन नम्बर",
+    phonePlaceholder: "+977 9812345678",
+    subjectLabel: "विषय",
+    subjectPlaceholder: "हामी कसरी मद्दत गर्न सक्छौं?",
+    messageLabel: "सन्देश",
+    messagePlaceholder: "तपाईंको सोधपुछको बारेमा थप बताउनुहोस्...",
+    required: "*",
+    sending: "पठाउँदै...",
+    sendButton: "सन्देश पठाउनुहोस्"
+  },
+  
+  // Map Section
+  map: {
+    title: "नक्सा स्थान",
+    viewOnMaps: "गुगल नक्सामा हेर्नुहोस्"
+  },
+  
+  // Success/Error Messages
+  messages: {
+    success: "सन्देश सफलतापूर्वक पठाइयो! हामी चाँडै तपाईंलाई फिर्ता सम्पर्क गर्नेछौं।",
+    error: "सन्देश पठाउन असफल भयो। कृपया पुन: प्रयास गर्नुहोस्।",
+    loading: "सम्पर्क जानकारी लोड हुँदैछ...",
+    requiredFields: "कृपया सबै आवश्यक फिल्डहरू भर्नुहोस्"
+  },
+  
+  // Loading States
+  loading: "लोड हुँदैछ...",
+  pageLoading: "सम्पर्क जानकारी लोड हुँदैछ..."
+},
+
 
       // ============ PRODUCTS ============
       allProducts: "सबै उत्पादनहरू",

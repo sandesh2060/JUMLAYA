@@ -1,6 +1,5 @@
 // ============================================
-// ContactForm.model.js - Contact Form Schema
-// Path: Backend/models/ContactForm.model.js
+// FILE 1: Backend/models/ContactForm.model.js
 // ============================================
 const mongoose = require("mongoose");
 
@@ -25,7 +24,7 @@ const contactFormSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
-      maxlength: [20, "Phone number cannot exceed 20 characters"],
+      default: "",
     },
     subject: {
       type: String,

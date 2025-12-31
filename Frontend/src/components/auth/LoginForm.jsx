@@ -11,7 +11,8 @@ import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import toast from "react-hot-toast"
 
 export const LoginForm = () => {
-  const { t } = useLanguage()
+ const { t } = useLanguage() || {}
+const translate = (key) => (typeof t === 'function' ? t(key) : key)
   const [formData, setFormData] = useState({ email: "", password: "" })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)

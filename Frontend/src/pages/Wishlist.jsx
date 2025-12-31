@@ -1,5 +1,5 @@
 // ============================================
-// COMPLETE: Wishlist.jsx WITH i18n SUPPORT
+// COMPLETE & FIXED: Wishlist.jsx - Updated with correct i18n keys
 // Path: Frontend/src/pages/Wishlist.jsx
 // ============================================
 import { useState, useEffect } from 'react';
@@ -36,7 +36,7 @@ export default function Wishlist() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      toast.error(t('pleaseLogin'));
+      toast.error(t('wishlist.pleaseLogin'));
       navigate('/login');
     }
   }, [isAuthenticated, navigate, t]);
@@ -47,10 +47,10 @@ export default function Wishlist() {
     try {
       setProcessingItems(prev => new Set(prev).add(productId));
       await removeFromWishlist(productId);
-      toast.success(t('removedFromWishlist'));
+      toast.success(t('wishlist.removedFromWishlist'));
     } catch (error) {
       console.error('Error removing from wishlist:', error);
-      toast.error(t('error'));
+      toast.error(t('wishlist.errors.removeError'));
     } finally {
       setProcessingItems(prev => {
         const newSet = new Set(prev);
@@ -67,10 +67,10 @@ export default function Wishlist() {
       setProcessingItems(prev => new Set(prev).add(product._id));
       await addToCart(product._id, 1);
       await removeFromWishlist(product._id);
-      toast.success(t('cart.success.movedToCart'));
+      toast.success(t('wishlist.success.movedToCart'));
     } catch (error) {
       console.error('Error moving to cart:', error);
-      toast.error(t('cart.errors.moveToCart'));
+      toast.error(t('wishlist.errors.moveToCartError'));
     } finally {
       setProcessingItems(prev => {
         const newSet = new Set(prev);
@@ -81,13 +81,13 @@ export default function Wishlist() {
   };
 
   const handleClearAll = async () => {
-    if (window.confirm(t('cart.confirmClear'))) {
+    if (window.confirm(t('wishlist.confirmClear'))) {
       try {
         await clearWishlist();
-        toast.success(t('cart.success.cleared'));
+        toast.success(t('wishlist.success.cleared'));
       } catch (error) {
         console.error('Error clearing wishlist:', error);
-        toast.error(t('cart.errors.clearCart'));
+        toast.error(t('wishlist.errors.clearError'));
       }
     }
   };
@@ -97,7 +97,7 @@ export default function Wishlist() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('cart.loading')}</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('wishlist.loading')}</p>
         </div>
       </div>
     );
@@ -112,17 +112,17 @@ export default function Wishlist() {
               <Heart size={48} className="text-red-600 dark:text-red-400" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              {t('cart.empty.title')}
+              {t('wishlist.empty.title')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
-              {t('cart.empty.description')}
+              {t('wishlist.empty.description')}
             </p>
             <Link
               to="/products"
               className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
             >
               <Package size={20} />
-              {t('cart.empty.button')}
+              {t('wishlist.empty.button')}
             </Link>
           </div>
         </div>
@@ -137,10 +137,10 @@ export default function Wishlist() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {t('nav.wishlist')}
+              {t('wishlist.title')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              {wishlistItems.length} {wishlistItems.length === 1 ? t('cart.itemSingular') : t('cart.itemPlural')}
+              {wishlistItems.length} {wishlistItems.length === 1 ? t('wishlist.itemSingular') : t('wishlist.itemPlural')}
             </p>
           </div>
           
@@ -150,7 +150,7 @@ export default function Wishlist() {
               className="flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             >
               <Trash2 size={18} />
-              {t('cart.clearCart')}
+              {t('wishlist.clearWishlist')}
             </button>
           )}
         </div>
@@ -182,14 +182,14 @@ export default function Wishlist() {
                   {/* Discount Badge */}
                   {product.discount > 0 && (
                     <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      -{product.discount}% {t('productCard.off')}
+                      -{product.discount}% {t('wishlist.off')}
                     </div>
                   )}
 
                   {/* Stock Badge */}
                   {product.stock === 0 && (
                     <div className="absolute top-3 right-3 bg-gray-900 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      {t('productCard.outOfStock')}
+                      {t('wishlist.outOfStock')}
                     </div>
                   )}
                 </Link>
@@ -204,11 +204,11 @@ export default function Wishlist() {
 
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-2xl font-bold text-red-600 dark:text-red-400">
-                      {t('currency')} {product.salePrice || product.price}
+                      {t('wishlist.currency')} {product.salePrice || product.price}
                     </span>
                     {product.discount > 0 && (
                       <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                        {t('currency')} {product.price}
+                        {t('wishlist.currency')} {product.price}
                       </span>
                     )}
                   </div>
@@ -221,14 +221,14 @@ export default function Wishlist() {
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                       <ShoppingCart size={18} />
-                      {isProcessing ? t('loading') : t('moveToCart')}
+                      {isProcessing ? t('wishlist.moving') : t('wishlist.moveToCart')}
                     </button>
 
                     <button
                       onClick={() => handleRemove(product._id)}
                       disabled={isProcessing}
                       className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={t('removeFromWishlist')}
+                      title={t('wishlist.removeFromWishlist')}
                     >
                       <Trash2 size={20} />
                     </button>
@@ -246,7 +246,7 @@ export default function Wishlist() {
             className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors font-medium"
           >
             <Package size={20} />
-            {t('continueShopping')}
+            {t('wishlist.continueShopping')}
           </Link>
         </div>
       </div>

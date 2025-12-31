@@ -1,13 +1,13 @@
-// Frontend/src/context/LanguageContext.jsx
+// ============================================
+// Frontend/src/context/LanguageContext.jsx - FIXED WITH t FUNCTION
+// ============================================
 import { createContext, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const LanguageContext = createContext(null);
 
 const LanguageProvider = ({ children }) => {
-  const { i18n, t } = useTranslation();
-  
-  // ✅ FIX: Use i18n.language (which reads from i18nextLng in localStorage)
+  const { i18n, t } = useTranslation(); // ✅ Added t here
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language || 'en');
 
   const languages = [
@@ -15,9 +15,11 @@ const LanguageProvider = ({ children }) => {
     { code: "ne", name: "नेपाली", flag: "🇳🇵" },
   ];
 
-  // ✅ FIX: Sync state when i18n language changes
   useEffect(() => {
+    console.log("🌍 LanguageContext mounted, current language:", i18n.language);
+    
     const handleLanguageChange = (lng) => {
+      console.log("🌍 Language changed to:", lng);
       setCurrentLanguage(lng);
     };
 
@@ -29,8 +31,8 @@ const LanguageProvider = ({ children }) => {
     };
   }, [i18n]);
 
-  // ✅ FIX: Simplified changeLanguage function
   const changeLanguage = (langCode) => {
+    console.log("🌍 Changing language to:", langCode);
     i18n.changeLanguage(langCode);
   };
 
@@ -38,7 +40,7 @@ const LanguageProvider = ({ children }) => {
     currentLanguage,
     changeLanguage,
     languages,
-    t,
+    t, // ✅ Added t function to context value
   };
 
   return (
