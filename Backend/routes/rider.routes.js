@@ -72,7 +72,7 @@ router.post('/orders/:orderId/deliver', deliverOrder);
 // PROFILE - ✅ FIXED: Both GET and PUT
 // ============================================
 router.get('/profile', getProfile);
-router.put('/profile', updateProfile);  // ✅ Changed from PATCH to PUT
+router.patch('/profile', updateProfile);  // ✅ Changed from PATCH to PUT
 
 // ============================================
 // EARNINGS
