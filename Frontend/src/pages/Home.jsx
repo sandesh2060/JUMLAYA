@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next"; // ✅ ADD THIS
+import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowRight,
@@ -14,9 +14,10 @@ import {
 import { ProductGrid } from "@components/product/ProductGrid";
 import { Button } from "@components/common/Button";
 import { productAPI } from "@api/product.api";
+import LandingPagePopup from "@/components/ads/LandingPagePopup"; // ✅ ADD THIS
 
 const Home = () => {
-  const { t } = useTranslation(); // ✅ ADD THIS
+  const { t } = useTranslation();
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
@@ -118,6 +119,9 @@ const Home = () => {
 
   return (
     <div className="min-h-screen">
+      {/* ✅ ADD POPUP COMPONENT HERE */}
+      <LandingPagePopup />
+
       <style>{`
         .animate-in {
           animation: fadeInUp 0.6s ease-out forwards;
@@ -145,13 +149,11 @@ const Home = () => {
         ref={heroRef}
         className="observe-target relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-green-900/20 dark:to-gray-900"
       >
-        {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542838132-92c53300491e?w=1920')] bg-cover bg-center opacity-20"></div>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-white dark:via-gray-900/50 dark:to-gray-900"></div>
         </div>
 
-        {/* Hero Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 text-center">
           <div
             className={`transition-all duration-1000 ${
@@ -208,7 +210,6 @@ const Home = () => {
             </Link>
           </div>
 
-          {/* Stats */}
           <div
             className={`grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 transition-all duration-1000 delay-700 ${
               isVisible
@@ -251,7 +252,6 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Scroll Indicator */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
           <div className="w-6 h-10 border-2 border-gray-400 dark:border-gray-600 rounded-full flex items-start justify-center p-2">
             <div className="w-1 h-2 bg-gray-400 dark:bg-gray-600 rounded-full animate-pulse"></div>
@@ -330,37 +330,35 @@ const Home = () => {
               </Link>
             </div>
 
-           <div className="relative flex justify-center px-4 sm:px-6 lg:px-0">
-  {/* Main Image Container */}
-  <div className="relative w-full max-w-2xl">
-    <img
-      src="https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800"
-      alt="Organic farming"
-      className="w-full h-auto rounded-2xl shadow-2xl object-cover"
-      loading="lazy"
-    />
-    
-    {/* Floating Badge */}
-    <div className="absolute -bottom-4 -right-4 sm:-bottom-6 sm:-right-6 
-                    bg-white dark:bg-gray-800 rounded-xl shadow-xl 
-                    p-4 sm:p-6 max-w-[200px] sm:max-w-xs
-                    transform transition-transform hover:scale-105 duration-300">
-      <div className="flex items-center space-x-3 sm:space-x-4">
-        <div className="flex-shrink-0">
-          <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 dark:text-green-400" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-bold text-sm sm:text-base text-gray-900 dark:text-white leading-tight">
-            {t("home.delivery.sameDay")}
-          </div>
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-tight mt-0.5">
-            {t("home.delivery.available")}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+            <div className="relative flex justify-center px-4 sm:px-6 lg:px-0">
+              <div className="relative w-full max-w-2xl">
+                <img
+                  src="https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800"
+                  alt="Organic farming"
+                  className="w-full h-auto rounded-2xl shadow-2xl object-cover"
+                  loading="lazy"
+                />
+                
+                <div className="absolute -bottom-4 -right-4 sm:-bottom-6 sm:-right-6 
+                                bg-white dark:bg-gray-800 rounded-xl shadow-xl 
+                                p-4 sm:p-6 max-w-[200px] sm:max-w-xs
+                                transform transition-transform hover:scale-105 duration-300">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="flex-shrink-0">
+                      <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-sm sm:text-base text-gray-900 dark:text-white leading-tight">
+                        {t("home.delivery.sameDay")}
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-tight mt-0.5">
+                        {t("home.delivery.available")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

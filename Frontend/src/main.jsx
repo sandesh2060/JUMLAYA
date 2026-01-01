@@ -45,7 +45,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                         style: {
                           background: "var(--toast-bg, #fff)",
                           color: "var(--toast-color, #000)",
-                          marginTop: "30px",
+                          marginTop: "40px",
                         },
                         success: {
                           duration: 1300,

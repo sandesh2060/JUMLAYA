@@ -136,6 +136,9 @@ app.use("/api/notifications", require("./routes/notification.routes"));
 // Product reviews
 app.use("/api/products", require("./routes/product.review.routes"));
 
+// ✅ LANDING PAGE ADS ROUTES (NEW)
+app.use("/api/ads", require("./routes/ads.routes"));
+
 // =====================================================
 // ADMIN ROUTES
 // =====================================================

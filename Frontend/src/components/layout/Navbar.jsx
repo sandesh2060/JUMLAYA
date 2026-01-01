@@ -71,17 +71,18 @@ export default function Navbar() {
     prevCartCountRef.current = cartCount;
   }, [cartCount, t]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      showNotification(t('loggedOut'), "info");
-      setIsProfileMenuOpen(false);
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
+const handleLogout = async () => {
+  try {
+    // ✅ CLEAR AD SESSION FLAG
+    sessionStorage.removeItem('adShownThisSession');
+    await logout();
+    showNotification(t('loggedOut'), "info");
+    setIsProfileMenuOpen(false);
+    navigate("/login");
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+};
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 

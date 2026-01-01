@@ -48,6 +48,7 @@ import CustomerDetail from "@/admin/pages/CustomerDetail";
 import OrderDetail from "@/admin/pages/OrderDetail";
 import RiderManagement from "@/admin/pages/RiderManagement";
 import AuditLogViewer from "@/admin/pages/AuditLogViewer";
+import AdminAds from "@/admin/pages/AdminAds"; // ✅ ADDED
 
 // ============ RIDER PAGES ============
 import RiderDashboard from "@/rider/pages/RiderDashboard";
@@ -237,6 +238,9 @@ function App() {
 
         {/* Rider Management */}
         <Route path="riders" element={<RiderManagement />} />
+
+        {/* ✅ Landing Page Ads Route - ADDED */}
+        <Route path="ads" element={<AdminAds />} />
 
         {/* Settings */}
         <Route path="settings" element={<AdminSettings />} />

@@ -110,15 +110,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      await authAPI.logout();
-    } finally {
-      clearAuth();
-      navigate("/login", { replace: true });
-      toast.success("Logged out successfully");
-    }
-  };
+ const logout = async () => {
+  try {
+    await authAPI.logout();
+  } finally {
+    clearAuth();
+    // ✅ CLEAR AD SESSION FLAG ON LOGOUT
+    sessionStorage.removeItem('adShownThisSession');
+    navigate("/login", { replace: true });
+    toast.success("Logged out successfully");
+  }
+};
 
   const updateUser = (updatedUser) => {
     setUser(updatedUser);
