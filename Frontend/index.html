@@ -32,9 +32,6 @@
     <!-- FAVICON & ICONS -->
     <!-- ============================================ -->
     <link rel="icon" type="image/x-icon" href="/logo.png" />
-    <!-- <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" /> -->
-    <!-- <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" /> -->
-    <!-- <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" /> -->
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#229954" />
     
@@ -123,15 +120,6 @@
         overflow: hidden;
       }
       
-      /* Animated particles background */
-      .particles {
-        display: none;
-      }
-      
-      .particle {
-        display: none;
-      }
-      
       /* Glowing circles */
       .glow-circle {
         position: absolute;
@@ -185,22 +173,6 @@
         position: relative;
       }
       
-      /* Rotating ring around logo */
-      .logo-ring {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: clamp(90px, 20vw, 120px);
-        height: clamp(90px, 20vw, 120px);
-        border-radius: 50%;
-        transform-origin: center;
-        animation: ringRotate 4s linear infinite;
-      }
-      
-      .logo-ring::before {
-        display: none;
-      }
-      
       .logo-box {
         width: clamp(75px, 16vw, 100px);
         height: clamp(75px, 16vw, 100px); 
@@ -238,36 +210,6 @@
         filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.25));
       }
       
-      /* ==================== BRAND TEXT ==================== */
-      .brand-name {
-        font-family: 'Poppins', 'Inter', sans-serif;
-        font-size: clamp(1.75rem, 5vw, 2.25rem);
-        font-weight: 700;
-        letter-spacing: 0.03em;
-        margin-bottom: clamp(0.5rem, 1.5vw, 0.75rem);
-        animation: fadeInUp 1s ease-out 0.4s both;
-        text-shadow: 
-          0 0 30px rgba(255, 255, 255, 0.4),
-          0 2px 15px rgba(0, 0, 0, 0.25);
-        background: linear-gradient(to right, #ffffff, #f0f0f0, #ffffff);
-        background-size: 200% auto;
-        -webkit-background-clip: text;
-        background-clip: text;
-        animation: fadeInUp 1s ease-out 0.4s both, shimmer 3s linear infinite;
-      }
-      
-      .tagline {
-        font-size: clamp(0.95rem, 2.5vw, 1.05rem);
-        opacity: 0.9;
-        font-weight: 400;
-        animation: fadeInUp 1s ease-out 0.6s both;
-        line-height: 1.5;
-        max-width: 90%;
-        margin: 0 auto;
-        letter-spacing: 0.01em;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
-      }
-      
       /* ==================== TRUCK LOADER ==================== */
       .truck-loader {
         margin-top: 2rem;
@@ -277,7 +219,6 @@
         animation: fadeIn 1s ease-out 0.8s both;
       }
       
-      /* Road */
       .road {
         position: absolute;
         bottom: 0;
@@ -300,7 +241,6 @@
         animation: roadMove 1s linear infinite;
       }
       
-      /* Truck */
       .truck {
         position: absolute;
         bottom: 8px;
@@ -310,7 +250,6 @@
         animation: truckMove 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
       }
       
-      /* Truck cabin */
       .truck-cabin {
         position: absolute;
         right: 0;
@@ -322,7 +261,6 @@
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
       }
       
-      /* Truck cargo */
       .truck-cargo {
         position: absolute;
         left: 0;
@@ -334,7 +272,6 @@
         box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
       }
       
-      /* Wheels */
       .truck-wheel {
         position: absolute;
         bottom: 0;
@@ -356,238 +293,60 @@
       
       /* ==================== ANIMATIONS ==================== */
       @keyframes gradientFlow {
-        0%, 100% { 
-          background-position: 0% 50%; 
-        }
-        50% { 
-          background-position: 100% 50%; 
-        }
-      }
-      
-      @keyframes particleFloat {
-        0% {
-          transform: translateY(100vh) translateX(0) scale(0);
-          opacity: 0;
-        }
-        10% {
-          opacity: 1;
-        }
-        90% {
-          opacity: 1;
-        }
-        100% {
-          transform: translateY(-100vh) translateX(100px) scale(1);
-          opacity: 0;
-        }
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
       }
       
       @keyframes glowPulse {
-        0%, 100% {
-          transform: scale(1);
-          opacity: 0.3;
-        }
-        50% {
-          transform: scale(1.2);
-          opacity: 0.6;
-        }
+        0%, 100% { transform: scale(1); opacity: 0.3; }
+        50% { transform: scale(1.2); opacity: 0.6; }
       }
       
       @keyframes logoEntrance {
-        0% {
-          opacity: 0;
-          transform: scale(0.3) rotate(-180deg);
-        }
-        60% {
-          transform: scale(1.1) rotate(10deg);
-        }
-        100% {
-          opacity: 1;
-          transform: scale(1) rotate(0deg);
-        }
+        0% { opacity: 0; transform: scale(0.3) rotate(-180deg); }
+        60% { transform: scale(1.1) rotate(10deg); }
+        100% { opacity: 1; transform: scale(1) rotate(0deg); }
       }
       
       @keyframes logoFloat {
-        0%, 100% {
-          transform: translateY(0px);
-        }
-        50% {
-          transform: translateY(-8px);
-        }
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
       }
       
       @keyframes logoPulse {
-        0%, 100% {
-          opacity: 0.3;
-          transform: scale(1);
-        }
-        50% {
-          opacity: 0.6;
-          transform: scale(1.1);
-        }
-      }
-      
-      @keyframes ringRotate {
-        0% {
-          transform: translate(-50%, -50%) rotate(0deg);
-        }
-        100% {
-          transform: translate(-50%, -50%) rotate(360deg);
-        }
+        0%, 100% { opacity: 0.3; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(1.1); }
       }
       
       @keyframes fadeIn {
-        0% {
-          opacity: 0;
-        }
-        100% {
-          opacity: 1;
-        }
-      }
-      
-      @keyframes fadeInUp {
-        0% {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        100% {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      
-      @keyframes shimmer {
-        0% {
-          background-position: 200% center;
-        }
-        100% {
-          background-position: -200% center;
-        }
-      }
-      
-      @keyframes dotBounce {
-        0%, 80%, 100% {
-          transform: scale(0.8) translateY(0);
-          opacity: 0.7;
-        }
-        40% {
-          transform: scale(1.1) translateY(-15px);
-          opacity: 1;
-          box-shadow: 0 0 20px rgba(255, 255, 255, 0.9);
-        }
-      }
-      
-      @keyframes dotPulse {
-        0%, 100% {
-          transform: scale(1);
-          box-shadow: 
-            0 0 20px rgba(255, 255, 255, 1),
-            0 0 40px rgba(255, 255, 255, 0.6),
-            0 0 60px rgba(255, 255, 255, 0.3);
-        }
-        50% {
-          transform: scale(1.4);
-          box-shadow: 
-            0 0 30px rgba(255, 255, 255, 1),
-            0 0 60px rgba(255, 255, 255, 0.8),
-            0 0 90px rgba(255, 255, 255, 0.5);
-        }
+        0% { opacity: 0; }
+        100% { opacity: 1; }
       }
       
       @keyframes truckMove {
-        0% {
-          left: -50px;
-        }
-        70% {
-          left: calc(100% + 10px);
-        }
-        70.01% {
-          left: calc(100% + 10px);
-        }
-        70.02% {
-          left: -50px;
-        }
-        100% {
-          left: -50px;
-        }
+        0% { left: -50px; }
+        70% { left: calc(100% + 10px); }
+        70.01% { left: calc(100% + 10px); }
+        70.02% { left: -50px; }
+        100% { left: -50px; }
       }
       
       @keyframes roadMove {
-        0% {
-          left: -30px;
-        }
-        100% {
-          left: 100%;
-        }
+        0% { left: -30px; }
+        100% { left: 100%; }
       }
       
       @keyframes wheelSpin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
       
-      /* ==================== RESPONSIVE BREAKPOINTS ==================== */
-      
-      /* Small phones (320px - 480px) */
+      /* ==================== RESPONSIVE ==================== */
       @media (max-width: 480px) {
-        html {
-          font-size: 14px;
-        }
-        
-        .loading-content {
-          padding: 1.5rem 1rem;
-        }
-        
-        .logo-ring {
-          display: none;
-        }
+        html { font-size: 14px; }
+        .loading-content { padding: 1.5rem 1rem; }
       }
       
-      /* Tablets (481px - 768px) */
-      @media (min-width: 481px) and (max-width: 768px) {
-        html {
-          font-size: 15px;
-        }
-      }
-      
-      /* Landscape tablets and small laptops (769px - 1024px) */
-      @media (min-width: 769px) and (max-width: 1024px) {
-        html {
-          font-size: 16px;
-        }
-      }
-      
-      /* Landscape orientation adjustments */
-      @media (orientation: landscape) and (max-height: 600px) {
-        .logo-container {
-          margin-bottom: 1rem;
-        }
-        
-        .loading-spinner {
-          margin-top: 1rem;
-        }
-        
-        .brand-name {
-          font-size: clamp(1.5rem, 4vw, 1.75rem);
-          margin-bottom: 0.5rem;
-        }
-        
-        .tagline {
-          font-size: clamp(0.85rem, 2vw, 0.95rem);
-        }
-      }
-      
-      /* Ultra-wide screens */
-      @media (min-width: 1920px) {
-        .loading-content {
-          max-width: 900px;
-        }
-      }
-      
-      /* Reduced motion */
       @media (prefers-reduced-motion: reduce) {
         * {
           animation-duration: 0.01ms !important;
@@ -617,9 +376,8 @@
       <div class="glow-circle glow-circle-3"></div>
       
       <div class="loading-content">
-        <!-- Logo with Rotating Ring -->
+        <!-- Logo -->
         <div class="logo-container">
-          <div class="logo-ring"></div>
           <div class="logo-box">
             <img src="/logo.png" alt="JUMLAYA Logo" />
           </div>
@@ -648,37 +406,51 @@
     <!-- ============================================ -->
     <script type="module" src="/src/main.jsx"></script>
     
-    <!-- Smooth fade-out when React app loads -->
+    <!-- ✅ IMPROVED LOADER REMOVAL SCRIPT -->
     <script>
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          const loader = document.getElementById('app-loading');
-          if (loader) {
-            loader.style.opacity = '0';
-            loader.style.transition = 'opacity 1s ease-out';
-            
-            setTimeout(() => {
+      // Wait for React Router to fully initialize before removing loader
+      function removeLoader() {
+        const loader = document.getElementById('app-loading');
+        const root = document.getElementById('root');
+        
+        if (loader && root && root.children.length > 0) {
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 0.8s ease-out';
+          setTimeout(() => {
+            if (loader.parentNode) {
               loader.remove();
-            }, 1000);
-          }
-        }, 1500);
-      });
+            }
+          }, 800);
+        }
+      }
+
+      // Multi-attempt checker to ensure React has mounted
+      let attempts = 0;
+      const maxAttempts = 20; // Check for 4 seconds (20 * 200ms)
       
+      const checkInterval = setInterval(() => {
+        attempts++;
+        const root = document.getElementById('root');
+        
+        // Success: React has rendered content
+        if (root && root.children.length > 0) {
+          clearInterval(checkInterval);
+          setTimeout(removeLoader, 500); // Give it 500ms extra
+        } 
+        // Timeout: Remove loader anyway after max attempts
+        else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          removeLoader();
+        }
+      }, 200);
+
+      // Pause animations when tab is hidden (performance optimization)
       document.addEventListener('visibilitychange', () => {
         const loader = document.getElementById('app-loading');
         if (loader) {
           loader.style.animationPlayState = document.hidden ? 'paused' : 'running';
         }
       });
-      
-      setTimeout(() => {
-        const loader = document.getElementById('app-loading');
-        if (loader && document.querySelector('#root').children.length > 0) {
-          loader.style.opacity = '0';
-          loader.style.transition = 'opacity 0.8s ease-out';
-          setTimeout(() => loader.remove(), 800);
-        }
-      }, 4000);
     </script>
   </body>
 </html>
