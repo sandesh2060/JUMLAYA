@@ -201,7 +201,7 @@ export default function Navbar() {
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
                 <img
-                  src="images/logo.png"
+                  src="./public/images/logo.png"
                   alt="Logo"
                   className="w-full h-full object-contain"
                 />
