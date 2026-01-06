@@ -7,8 +7,9 @@ const express = require('express');
 const router = express.Router();
 const adsController = require('../controllers/ads.controller');
 const { protect } = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware'); // ✅ Import upload middleware
 
-// Custom admin check middleware (since authorize doesn't exist)
+// Custom admin check middleware
 const adminOnly = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -51,6 +52,18 @@ router.post('/:id/click', adsController.trackClick);
 // ============================================
 // ADMIN ROUTES (Protected)
 // ============================================
+
+/**
+ * POST /api/ads/upload
+ * Upload ad image (NEW)
+ */
+router.post(
+  '/upload', 
+  protect, 
+  adminOnly, 
+  upload.single('adImage'), // ✅ Handle single image upload with field name 'adImage'
+  adsController.uploadAdImage
+);
 
 /**
  * GET /api/ads

@@ -1,3 +1,4 @@
+// path : Frontend/src/components/ads/LandingPagePopup.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Clock, ArrowRight, Leaf, Sparkles } from "lucide-react";

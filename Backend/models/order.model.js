@@ -1,4 +1,4 @@
-// Backend/models/order.model.js - WITH RIDER SUPPORT
+// Backend/models/order.model.js - FIXED DUPLICATE INDEXES
 const mongoose = require("mongoose");
 
 const orderItemSchema = new mongoose.Schema({
@@ -29,12 +29,13 @@ const orderSchema = new mongoose.Schema(
     orderId: {
       type: String,
       required: true,
-      unique: true,
+      unique: true, // ✅ This creates an index automatically - removed duplicate
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true, // ✅ Keep only this
     },
     items: [orderItemSchema],
     shippingAddress: {
@@ -48,7 +49,6 @@ const orderSchema = new mongoose.Schema(
       postalCode: { type: String, required: true },
       country: { type: String, required: true, default: "Nepal" },
     },
-    // ✅ NEW: Location with GeoJSON for map integration
     location: {
       type: {
         type: String,
@@ -56,18 +56,18 @@ const orderSchema = new mongoose.Schema(
         default: "Point",
       },
       coordinates: {
-        type: [Number], // [longitude, latitude]
+        type: [Number],
         required: false,
       },
       address: String,
       landmark: String,
-      instructions: String, // "Leave at door", "Ring twice", etc.
+      instructions: String,
     },
-    // ✅ NEW: Rider assignment fields
     rider: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
+      index: true, // ✅ Keep only this
     },
     riderAssignedAt: Date,
     riderAcceptedAt: Date,
@@ -79,7 +79,7 @@ const orderSchema = new mongoose.Schema(
         enum: ["Point"],
         default: "Point",
       },
-      coordinates: [Number], // [longitude, latitude]
+      coordinates: [Number],
       lastUpdated: Date,
     },
     deliveryNotes: String,
@@ -95,6 +95,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["Pending", "Paid", "Failed", "Refunded"],
       default: "Pending",
+      index: true, // ✅ Keep only this
     },
     paymentDetails: {
       transactionId: String,
@@ -133,13 +134,14 @@ const orderSchema = new mongoose.Schema(
         "Pending",
         "Confirmed",
         "Processing",
-        "Shipped", // ✅ When assigned to rider
-        "Out for Delivery", // ✅ NEW: Rider accepted and on the way
+        "Shipped",
+        "Out for Delivery",
         "Delivered",
         "Cancelled",
         "Returned",
       ],
       default: "Pending",
+      index: true, // ✅ Keep only this
     },
     statusHistory: [
       {
@@ -169,17 +171,12 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// ✅ NEW: Geospatial index for location queries
+// ✅ Geospatial indexes
 orderSchema.index({ 'location.coordinates': '2dsphere' });
 orderSchema.index({ 'riderLocation.coordinates': '2dsphere' });
 
-// Existing indexes
-orderSchema.index({ orderId: 1 });
-orderSchema.index({ user: 1 });
-orderSchema.index({ rider: 1 }); // ✅ NEW
-orderSchema.index({ orderStatus: 1 });
+// ✅ Additional indexes (removed duplicates)
 orderSchema.index({ createdAt: -1 });
-orderSchema.index({ paymentStatus: 1 });
 
 // Virtual for order age in days
 orderSchema.virtual("orderAge").get(function () {
@@ -196,7 +193,7 @@ orderSchema.methods.addStatusHistory = function (status, comment, userId) {
   });
 };
 
-// ✅ NEW: Method to assign rider
+// Method to assign rider
 orderSchema.methods.assignRider = function (riderId, adminId) {
   this.rider = riderId;
   this.riderAssignedAt = new Date();
@@ -204,7 +201,7 @@ orderSchema.methods.assignRider = function (riderId, adminId) {
   this.addStatusHistory('Shipped', 'Order assigned to rider', adminId);
 };
 
-// ✅ NEW: Method to update rider location
+// Method to update rider location
 orderSchema.methods.updateRiderLocation = function (lat, lng) {
   this.riderLocation = {
     type: 'Point',

@@ -1,5 +1,5 @@
 // ============================================
-// Backend/app.js - PRODUCTION-READY
+// Backend/app.js - PRODUCTION-READY (FIXED CORS)
 // ============================================
 
 const express = require("express");
@@ -62,11 +62,15 @@ app.use(helmet({
 app.use(mongoSanitize());
 
 // =====================================================
-// CORS CONFIGURATION
+// CORS CONFIGURATION (FIXED)
 // =====================================================
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map(origin => origin.trim())
-  : ["http://localhost:5173"];
+  : [
+      "http://localhost:5173",  // Vite default dev server
+      "http://localhost:4173",  // Vite preview server (YOUR CURRENT FRONTEND)
+      "http://localhost:3000",  // Common alternative
+    ];
 
 if (isDevelopment) {
   console.log("🔒 CORS Configuration:");

@@ -4,19 +4,50 @@
 // ============================================================================
 
 const Ad = require('../models/ads.model');
+const path = require('path');
+const fs = require('fs');
 
-// Helper function to wrap async functions (replaces asyncHandler)
+// Helper function to wrap async functions
 const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// Helper class for custom errors (replaces ErrorResponse)
+// Helper class for custom errors
 class ErrorResponse extends Error {
   constructor(message, statusCode) {
     super(message);
     this.statusCode = statusCode;
   }
 }
+
+// ============================================
+// IMAGE UPLOAD ROUTE
+// ============================================
+
+/**
+ * @desc    Upload ad image
+ * @route   POST /api/ads/upload
+ * @access  Private/Admin
+ */
+exports.uploadAdImage = asyncHandler(async (req, res, next) => {
+  if (!req.file) {
+    return next(new ErrorResponse('Please upload an image file', 400));
+  }
+
+  // Generate the URL for the uploaded image
+  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/ads/${req.file.filename}`;
+
+  res.status(200).json({
+    success: true,
+    message: 'Image uploaded successfully',
+    data: {
+      filename: req.file.filename,
+      url: imageUrl,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    }
+  });
+});
 
 // ============================================
 // PUBLIC ROUTES (Customer-facing)
@@ -243,6 +274,17 @@ exports.deleteAd = asyncHandler(async (req, res, next) => {
 
   if (!ad) {
     return next(new ErrorResponse('Ad not found', 404));
+  }
+
+  // Delete associated image file if it exists and is a local upload
+  if (ad.posterImage && ad.posterImage.includes('/uploads/ads/')) {
+    const filename = path.basename(ad.posterImage);
+    const filePath = path.join(__dirname, '..', 'uploads', 'ads', filename);
+    
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`✅ Deleted image file: ${filename}`);
+    }
   }
 
   await ad.deleteOne();

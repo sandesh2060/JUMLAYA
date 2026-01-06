@@ -1,3 +1,4 @@
+// Backend/models/product.model.js - FIXED DUPLICATE INDEX
 const mongoose = require("mongoose");
 const slugify = require("slugify");
 const Cart = require('./cart.model');
@@ -9,7 +10,7 @@ const productSchema = new mongoose.Schema(
 
     slug: {
       type: String,
-      unique: true,
+      unique: true, // ✅ This creates an index automatically - removed duplicate
       lowercase: true,
       trim: true,
     },
@@ -20,19 +21,18 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: true,
+      index: true, // ✅ Keep only this
     },
 
-    // Updated images structure for frontend compatibility
     images: [
       {
-        type: String, // Just URLs for simplicity
+        type: String,
       },
     ],
 
     price: { type: Number, required: true, min: 0 },
     originalPrice: { type: Number, min: 0, default: 0 },
     
-    // Add discount calculation
     discount: { type: Number, default: 0, min: 0, max: 100 },
     
     stock: { type: Number, default: 0, min: 0 },
@@ -41,6 +41,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["fruit", "herb", "honey", "grain", "vegetable", "dairy", "other"],
       required: true,
+      index: true, // ✅ Keep only this
     },
     
     unit: { type: String, default: "kg" },
@@ -48,16 +49,14 @@ const productSchema = new mongoose.Schema(
     isOrganic: { type: Boolean, default: false },
     isSeasonal: { type: Boolean, default: false },
 
-    // Rating structure for frontend
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0, min: 0 },
 
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
     
     isActive: { type: Boolean, default: true },
-    isFeatured: { type: Boolean, default: false },
+    isFeatured: { type: Boolean, default: false, index: true }, // ✅ Keep only this
     
-    // Additional tracking
     views: { type: Number, default: 0 },
     sold: { type: Number, default: 0 },
   },
@@ -68,12 +67,8 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Indexes
-productSchema.index({ category: 1 });
+// ✅ INDEXES (removed duplicates)
 productSchema.index({ rating: -1 });
-productSchema.index({ slug: 1 });
-productSchema.index({ productType: 1 });
-productSchema.index({ isFeatured: 1 });
 
 // Pre-save middleware to auto-generate slug
 productSchema.pre("save", async function (next) {
@@ -122,25 +117,21 @@ productSchema.methods.getApprovedReviews = function (limit = 10, page = 1) {
     .limit(limit);
 };
 
-
 // When product is deleted, remove from all carts
 productSchema.post('findOneAndDelete', async function(doc) {
   if (doc) {
     console.log(`🗑️ Product ${doc._id} deleted, cleaning up carts...`);
     
-    // Remove from Cart collection
     await Cart.updateMany(
       { 'items.product': doc._id },
       { $pull: { items: { product: doc._id } } }
     );
 
-    // Remove from User.cart array
     await User.updateMany(
       { 'cart.product': doc._id },
       { $pull: { cart: { product: doc._id } } }
     );
 
-    // Remove from savedForLater
     await Cart.updateMany(
       { 'savedForLater.product': doc._id },
       { $pull: { savedForLater: { product: doc._id } } }
@@ -150,7 +141,6 @@ productSchema.post('findOneAndDelete', async function(doc) {
   }
 });
 
-// Handle deleteOne
 productSchema.post('deleteOne', { document: true, query: false }, async function() {
   const productId = this._id;
   
@@ -170,9 +160,7 @@ productSchema.post('deleteOne', { document: true, query: false }, async function
   );
 });
 
-// Handle deleteMany
 productSchema.post('deleteMany', async function() {
-  // This runs after bulk delete operations
   console.log('🗑️ Multiple products deleted, recommend full cart validation');
 });
 

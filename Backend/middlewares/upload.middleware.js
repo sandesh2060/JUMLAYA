@@ -15,7 +15,8 @@ const createUploadDirs = () => {
     'uploads',
     'uploads/avatars',
     'uploads/products',
-    'uploads/logos' // NEW: Logo directory
+    'uploads/logos',
+    'uploads/ads' // ✅ NEW: Ads directory
   ];
   
   dirs.forEach(dir => {
@@ -38,7 +39,9 @@ const storage = multer.diskStorage({
     if (file.fieldname === 'avatar') {
       cb(null, 'uploads/avatars/');
     } else if (file.fieldname === 'logo') {
-      cb(null, 'uploads/logos/'); // NEW: Logo destination
+      cb(null, 'uploads/logos/');
+    } else if (file.fieldname === 'adImage') { // ✅ NEW: Ad images
+      cb(null, 'uploads/ads/');
     } else {
       cb(null, 'uploads/products/');
     }
@@ -50,7 +53,9 @@ const storage = multer.diskStorage({
     if (file.fieldname === 'avatar') {
       cb(null, `avatar-${uniqueSuffix}${ext}`);
     } else if (file.fieldname === 'logo') {
-      cb(null, `logo-${uniqueSuffix}${ext}`); // NEW: Logo filename
+      cb(null, `logo-${uniqueSuffix}${ext}`);
+    } else if (file.fieldname === 'adImage') { // ✅ NEW: Ad image filename
+      cb(null, `ad-${uniqueSuffix}${ext}`);
     } else {
       cb(null, `product-${uniqueSuffix}${ext}`);
     }
@@ -61,7 +66,7 @@ const storage = multer.diskStorage({
 // FILE FILTER FOR IMAGES
 // ============================================
 const imageFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp|gif|svg/; // Added SVG support
+  const allowedTypes = /jpeg|jpg|png|webp|gif|svg/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype) || file.mimetype === 'image/svg+xml';
 

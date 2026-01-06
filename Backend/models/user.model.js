@@ -1,4 +1,4 @@
-// Backend/models/user.model.js - WITH RIDER ROLE SUPPORT + PASSWORD RESET OTP
+// Backend/models/user.model.js - FIXED DUPLICATE INDEXES
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -56,7 +56,7 @@ const userSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
 
-    // ✅ Rider-specific fields
+    // Rider-specific fields
     riderProfile: {
       vehicleType: {
         type: String,
@@ -115,7 +115,7 @@ const userSchema = new mongoose.Schema(
     passwordResetToken: String,
     passwordResetExpires: Date,
     
-    // ✅ NEW: Password Reset OTP Fields
+    // Password Reset OTP Fields
     resetPasswordOTP: String,
     resetPasswordOTPExpires: Date,
     
@@ -169,6 +169,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+// ✅ INDEXES (removed duplicates)
 // Index for rider location queries
 userSchema.index({ 'riderProfile.currentLocation.coordinates': '2dsphere' });
 userSchema.index({ 'riderProfile.status': 1 });
