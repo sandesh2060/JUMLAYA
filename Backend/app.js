@@ -1,5 +1,5 @@
 // ============================================
-// Backend/app.js - PRODUCTION-READY (FIXED CORS)
+// Backend/app.js - PRODUCTION-READY WITH PERFECT CORS
 // ============================================
 
 const express = require("express");
@@ -62,15 +62,23 @@ app.use(helmet({
 app.use(mongoSanitize());
 
 // =====================================================
-// CORS CONFIGURATION (FIXED)
+// CORS CONFIGURATION (PERFECT FOR DEVELOPMENT & PRODUCTION)
 // =====================================================
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map(origin => origin.trim())
-  : [
-      "http://localhost:5173",  // Vite default dev server
-      "http://localhost:4173",  // Vite preview server (YOUR CURRENT FRONTEND)
-      "http://localhost:3000",  // Common alternative
-    ];
+  : isDevelopment 
+    ? [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:4173",
+        "http://localhost:4174",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:4173",
+        "http://127.0.0.1:4174",
+      ]
+    : [];
 
 if (isDevelopment) {
   console.log("🔒 CORS Configuration:");
@@ -80,23 +88,57 @@ if (isDevelopment) {
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin in development (Postman, mobile apps, etc.)
+    // ✅ Allow requests with no origin in development (Postman, mobile apps, etc.)
     if (!origin && isDevelopment) {
       return callback(null, true);
     }
     
+    // ✅ PRODUCTION: Smart origin checking
+    if (isProduction && origin) {
+      // 1. Check exact matches from ALLOWED_ORIGINS
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // 2. Allow all Vercel deployments (preview & production)
+      if (origin.endsWith('.vercel.app')) {
+        return callback(null, true);
+      }
+      
+      // 3. Allow your custom domains
+      const customDomains = [
+        'jumlaya.com',
+        'www.jumlaya.com',
+        'jumlaya.vercel.app'
+      ];
+      
+      if (customDomains.some(domain => origin.includes(domain))) {
+        return callback(null, true);
+      }
+      
+      // 4. Block everything else in production
+      console.warn(`🚫 CORS blocked in production: ${origin}`);
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+    
+    // ✅ DEVELOPMENT: Check allowed origins
+    if (isDevelopment) {
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      console.warn(`🚫 CORS blocked in development: ${origin}`);
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+    
     // Block requests with no origin in production
     if (!origin && isProduction) {
-      console.warn("⚠️  Blocked request with no origin");
+      console.warn("⚠️  Blocked request with no origin in production");
       return callback(new Error("Origin not allowed by CORS"));
     }
     
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    console.warn(`🚫 CORS blocked: ${origin}`);
+    // Fallback: block
+    console.warn(`🚫 CORS blocked (fallback): ${origin}`);
     return callback(new Error(`Origin ${origin} not allowed by CORS`));
   },
   credentials: true,
@@ -106,6 +148,7 @@ app.use(cors({
   maxAge: 86400, // 24 hours
 }));
 
+// Handle preflight requests
 app.options("*", cors());
 
 // CORS error handler
