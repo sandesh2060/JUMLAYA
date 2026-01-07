@@ -195,21 +195,21 @@ export default function Navbar() {
         <div className="container mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo */}
-            <Link
-              to="/"
-              className="flex items-center gap-2 group flex-shrink-0"
-            >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-                <img
-                  src="./public/images/logo.png"
-                  alt="Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent hidden xs:inline">
-                {t("navbar.brandName")}
-              </span>
-            </Link>
+           <Link
+  to="/"
+  className="flex items-center gap-2 group flex-shrink-0"
+>
+  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+    <img
+      src="/images/logo.png"
+      alt="Logo"
+      className="w-full h-full object-contain"
+    />
+  </div>
+  <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent hidden xs:inline">
+    {t("navbar.brandName")}
+  </span>
+</Link>
 
             {/* Desktop Navigation Links */}
             <div className="hidden lg:flex items-center space-x-6">

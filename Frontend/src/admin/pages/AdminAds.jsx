@@ -32,19 +32,20 @@ const AdminAds = () => {
   const [editingAd, setEditingAd] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    type: "promotion",
-    posterImage: "",
-    discount: 0,
-    couponCode: "",
-    buttonText: "Shop Now",
-    buttonLink: "/products",
-    displayDuration: 5,
-    isActive: true,
-  });
+const [formData, setFormData] = useState({
+  title: "",
+  description: "",
+  type: "promotion",
+  posterImage: "",
+  discount: 0,
+  couponCode: "",
+  buttonText: "Shop Now",
+  buttonLink: "/products",
+  displayDuration: 5,
+  isActive: true,
+  validFrom: "", // ✅ ADD
+  validUntil: "", // ✅ ADD
+});
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -109,15 +110,43 @@ const AdminAds = () => {
     e.preventDefault();
 
     try {
+      // Validate required fields
+      if (!formData.title.trim()) {
+        showNotification("Title is required", "error");
+        return;
+      }
+      if (!formData.description.trim()) {
+        showNotification("Description is required", "error");
+        return;
+      }
+
       // Upload image if new file selected
       let imageUrl = formData.posterImage;
       if (imageFile) {
         imageUrl = await uploadImage();
+        if (!imageUrl) {
+          showNotification("Image upload failed", "error");
+          return;
+        }
       }
+
+      if (!imageUrl) {
+        showNotification("Poster image is required", "error");
+        return;
+      }
+
+      // ✅ ADD: Calculate dates (30 days from now by default)
+      const now = new Date();
+      const validFrom = formData.validFrom || now.toISOString();
+      const validUntil =
+        formData.validUntil ||
+        new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       const adData = {
         ...formData,
         posterImage: imageUrl,
+        validFrom, // ✅ ADD
+        validUntil, // ✅ ADD
       };
 
       let response;
@@ -138,30 +167,32 @@ const AdminAds = () => {
     } catch (error) {
       console.error("Failed to save ad:", error);
       showNotification(
-        `Failed to ${editingAd ? "update" : "create"} ad`,
+        error.response?.data?.message ||
+          `Failed to ${editingAd ? "update" : "create"} ad`,
         "error"
       );
     }
   };
-
-  const handleEdit = (ad) => {
-    setEditingAd(ad);
-    setFormData({
-      title: ad.title,
-      description: ad.description,
-      type: ad.type,
-      posterImage: ad.posterImage,
-      discount: ad.discount || 0,
-      couponCode: ad.couponCode || "",
-      buttonText: ad.buttonText || "Shop Now",
-      buttonLink: ad.buttonLink || "/products",
-      displayDuration: ad.displayDuration || 5,
-      isActive: ad.isActive,
-    });
-    setImagePreview(ad.posterImage);
-    setShowModal(true);
-  };
-
+ const handleEdit = (ad) => {
+  setEditingAd(ad);
+  setFormData({
+    title: ad.title,
+    description: ad.description,
+    type: ad.type,
+    posterImage: ad.posterImage,
+    discount: ad.discount || 0,
+    couponCode: ad.couponCode || "",
+    buttonText: ad.buttonText || "Shop Now",
+    buttonLink: ad.buttonLink || "/products",
+    displayDuration: ad.displayDuration || 5,
+    isActive: ad.isActive,
+    // ✅ ADD: Convert dates to datetime-local format
+    validFrom: ad.validFrom ? new Date(ad.validFrom).toISOString().slice(0, 16) : "",
+    validUntil: ad.validUntil ? new Date(ad.validUntil).toISOString().slice(0, 16) : "",
+  });
+  setImagePreview(ad.posterImage);
+  setShowModal(true);
+};
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this ad?")) return;
 
@@ -330,7 +361,9 @@ const AdminAds = () => {
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading ads...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Loading ads...
+          </p>
         </div>
       ) : filteredAds.length === 0 ? (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -630,7 +663,39 @@ const AdminAds = () => {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
+              {/* Add this AFTER the Display Duration field and BEFORE the Active Status checkbox */}
 
+              {/* Valid From Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Valid From *
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.validFrom}
+                  onChange={(e) =>
+                    setFormData({ ...formData, validFrom: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  required
+                />
+              </div>
+
+              {/* Valid Until Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Valid Until *
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.validUntil}
+                  onChange={(e) =>
+                    setFormData({ ...formData, validUntil: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  required
+                />
+              </div>
               {/* Active Status */}
               <div className="flex items-center gap-2">
                 <input

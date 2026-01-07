@@ -8,56 +8,74 @@ import { useAuth } from "@/context/AuthContext";
 const LandingPagePopup = () => {
   const [ad, setAd] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(8);
   const [isClosing, setIsClosing] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
-    // Only show ad if user is logged in
+    // ✅ FIX: Don't show ads for admin or rider
     if (!user) {
-      // Clear the flag when user logs out
       sessionStorage.removeItem("adShownThisSession");
       return;
     }
 
-    // Check if ad was already shown in this login session
+    // ✅ Block ads for admin and rider roles
+    const userRole = user.role?.toLowerCase();
+    if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'rider' || user.isAdmin === true) {
+      console.log("🚫 Admin/Rider detected - No ads will be shown");
+      return;
+    }
+
+    // ✅ Only show ads for customers
     const adShownThisSession = sessionStorage.getItem("adShownThisSession");
 
     if (!adShownThisSession) {
+      console.log("🎯 Fetching active ad for customer...");
       fetchActiveAd();
-      // Mark as shown for this session
-      sessionStorage.setItem("adShownThisSession", "true");
+    } else {
+      console.log("⏭️ Ad already shown this session");
     }
   }, [user]);
 
   const fetchActiveAd = async () => {
     try {
-      // Fetch active ad from API
+      console.log("📡 Calling API: /api/ads/active");
+      
       const response = await adsAPI.getActiveAd();
+      
+      console.log("📦 API Response:", response);
 
       if (response.success && response.data.ad) {
+        console.log("✅ Active ad found:", response.data.ad);
         setAd(response.data.ad);
 
-        // Show popup after 500ms delay
         setTimeout(() => {
+          console.log("🎬 Showing popup...");
           setIsVisible(true);
           startCountdown(response.data.ad);
         }, 500);
+
+        sessionStorage.setItem("adShownThisSession", "true");
+      } else {
+        console.log("ℹ️ No active ads available");
       }
     } catch (error) {
-      console.error("Failed to fetch active ad:", error);
+      console.error("❌ Failed to fetch active ad:", error);
+      console.error("Error details:", error.response?.data || error.message);
     }
   };
 
   const startCountdown = (adData) => {
-    const duration = adData.displayDuration || 5;
+    const duration = adData.displayDuration || 8;
+    console.log(`⏱️ Starting countdown: ${duration} seconds`);
     setCountdown(duration);
 
     const interval = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
+          console.log("⏰ Countdown finished, closing popup");
           handleClose();
           return 0;
         }
@@ -69,22 +87,26 @@ const LandingPagePopup = () => {
   };
 
   const handleClose = () => {
+    console.log("🚪 Closing popup");
     setIsClosing(true);
     setTimeout(() => {
       setIsVisible(false);
       setAd(null);
+      setIsClosing(false);
     }, 400);
   };
 
   const handleCTAClick = async () => {
+    console.log("🖱️ CTA clicked");
+    
     try {
-      // Track click
       if (ad?._id) {
+        console.log("📊 Tracking click for ad:", ad._id);
         await adsAPI.trackClick(ad._id);
       }
 
-      // Navigate to link
       if (ad?.buttonLink) {
+        console.log("🔗 Navigating to:", ad.buttonLink);
         if (ad.buttonLink.startsWith("http")) {
           window.open(ad.buttonLink, "_blank");
         } else {
@@ -94,8 +116,7 @@ const LandingPagePopup = () => {
 
       handleClose();
     } catch (error) {
-      console.error("Failed to track click:", error);
-      // Still navigate even if tracking fails
+      console.error("❌ Failed to track click:", error);
       if (ad?.buttonLink) {
         if (ad.buttonLink.startsWith("http")) {
           window.open(ad.buttonLink, "_blank");
@@ -108,7 +129,9 @@ const LandingPagePopup = () => {
   };
 
   // Don't render if not visible or no ad
-  if (!isVisible || !ad) return null;
+  if (!isVisible || !ad) {
+    return null;
+  }
 
   const getTypeBadge = (type) => {
     const badges = {

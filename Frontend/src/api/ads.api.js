@@ -157,7 +157,7 @@ export const adsAPI = {
   uploadAdImage: async (file) => {
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('adImage', file); // ✅ FIXED: Changed from 'image' to 'adImage'
       
       const response = await api.post('/ads/upload', formData, {
         headers: {

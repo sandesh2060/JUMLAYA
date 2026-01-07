@@ -61,10 +61,9 @@ router.post(
   '/upload', 
   protect, 
   adminOnly, 
-  upload.single('adImage'), // ✅ Handle single image upload with field name 'adImage'
+  upload.single('adImage'), // ✅ Must be 'adImage'
   adsController.uploadAdImage
 );
-
 /**
  * GET /api/ads
  * Get all ads with filters and pagination
