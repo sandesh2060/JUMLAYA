@@ -1,11 +1,16 @@
-// ============================================================================
-// FILE: Backend/controllers/ads.controller.js
-// Handles all ad-related operations for landing page popups
-// ============================================================================
+// ============================================
+// ADS CONTROLLER - WITH CLOUDINARY
+// Path: Backend/controllers/ads.controller.js
+// REPLACE YOUR EXISTING FILE WITH THIS
+// ============================================
 
 const Ad = require('../models/ads.model');
-const path = require('path');
-const fs = require('fs');
+const {
+  uploadImage,
+  deleteImage,
+  extractPublicId,
+  FOLDERS
+} = require('../config/cloudinary');
 
 // Helper function to wrap async functions
 const asyncHandler = (fn) => (req, res, next) => {
@@ -21,32 +26,49 @@ class ErrorResponse extends Error {
 }
 
 // ============================================
-// IMAGE UPLOAD ROUTE
+// IMAGE UPLOAD ROUTE - WITH CLOUDINARY
 // ============================================
 
 /**
- * @desc    Upload ad image
+ * @desc    Upload ad image to Cloudinary
  * @route   POST /api/ads/upload
  * @access  Private/Admin
  */
 exports.uploadAdImage = asyncHandler(async (req, res, next) => {
+  console.log('📤 Uploading ad image to Cloudinary');
+  
   if (!req.file) {
     return next(new ErrorResponse('Please upload an image file', 400));
   }
 
-  // Generate the URL for the uploaded image
-  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/ads/${req.file.filename}`;
+  try {
+    // Upload to Cloudinary
+    const result = await uploadImage(
+      req.file.buffer,
+      {
+        preset: 'banner',
+        folder: FOLDERS.ADS
+      }
+    );
 
-  res.status(200).json({
-    success: true,
-    message: 'Image uploaded successfully',
-    data: {
-      filename: req.file.filename,
-      url: imageUrl,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    }
-  });
+    console.log('✅ Ad image uploaded to Cloudinary:', result.url);
+
+    res.status(200).json({
+      success: true,
+      message: 'Image uploaded successfully',
+      data: {
+        url: result.url,
+        publicId: result.publicId,
+        width: result.width,
+        height: result.height,
+        format: result.format,
+        size: result.size
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error uploading ad image:', error);
+    return next(new ErrorResponse('Failed to upload image', 500));
+  }
 });
 
 // ============================================
@@ -265,7 +287,7 @@ exports.updateAd = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @desc    Delete ad
+ * @desc    Delete ad (with Cloudinary cleanup)
  * @route   DELETE /api/ads/:id (admin)
  * @access  Private/Admin
  */
@@ -276,14 +298,13 @@ exports.deleteAd = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Ad not found', 404));
   }
 
-  // Delete associated image file if it exists and is a local upload
-  if (ad.posterImage && ad.posterImage.includes('/uploads/ads/')) {
-    const filename = path.basename(ad.posterImage);
-    const filePath = path.join(__dirname, '..', 'uploads', 'ads', filename);
-    
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      console.log(`✅ Deleted image file: ${filename}`);
+  // Delete image from Cloudinary if it's a Cloudinary URL
+  if (ad.posterImage && ad.posterImage.includes('cloudinary.com')) {
+    const publicId = extractPublicId(ad.posterImage);
+    if (publicId) {
+      console.log('🗑️ Deleting ad image from Cloudinary...');
+      await deleteImage(publicId);
+      console.log('✅ Ad image deleted from Cloudinary');
     }
   }
 

@@ -1,4 +1,3 @@
-// Navbar.jsx - FULLY RESPONSIVE FOR ALL DEVICES
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -76,7 +75,6 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
-      // ✅ CLEAR AD SESSION FLAG
       sessionStorage.removeItem("adShownThisSession");
       await logout();
       showNotification(t("loggedOut"), "info");
@@ -86,6 +84,7 @@ export default function Navbar() {
       console.error("Logout error:", error);
     }
   };
+
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
@@ -117,10 +116,7 @@ export default function Navbar() {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target))
         setShowDropdown(false);
-      if (
-        languageMenuRef.current &&
-        !languageMenuRef.current.contains(e.target)
-      )
+      if (languageMenuRef.current && !languageMenuRef.current.contains(e.target))
         setShowLanguageMenu(false);
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target))
         setIsProfileMenuOpen(false);
@@ -169,9 +165,9 @@ export default function Navbar() {
     <>
       {/* Notification Toast */}
       {notification && (
-        <div className="fixed top-4 right-4 z-[100] animate-slide-in-right max-w-[calc(100vw-2rem)]">
+        <div className="fixed top-4 right-4 z-[100] max-w-[calc(100vw-2rem)] animate-slide-in">
           <div
-            className={`px-4 py-3 sm:px-6 sm:py-4 rounded-xl shadow-2xl border-l-4 flex items-center gap-2 sm:gap-3 min-w-[280px] backdrop-blur-sm ${
+            className={`px-4 py-3 sm:px-6 sm:py-4 rounded-xl shadow-2xl border-l-4 flex items-center gap-2 sm:gap-3 min-w-[280px] sm:min-w-[320px] backdrop-blur-sm ${
               notification.type === "success"
                 ? "bg-green-50 dark:bg-green-900/30 border-green-500 text-green-800 dark:text-green-200"
                 : "bg-blue-50 dark:bg-blue-900/30 border-blue-500 text-blue-800 dark:text-blue-200"
@@ -184,64 +180,51 @@ export default function Navbar() {
                 <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
               )}
             </div>
-            <p className="font-semibold text-xs sm:text-sm">
+            <p className="font-semibold text-xs sm:text-sm flex-1 break-words">
               {notification.message}
             </p>
           </div>
         </div>
       )}
 
-      <nav className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800">
-        <div className="container mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-between h-14 sm:h-16">
+      <nav className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 transition-colors duration-200">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="flex items-center justify-between h-14 sm:h-16 lg:h-18">
             {/* Logo */}
-           <Link
-  to="/"
-  className="flex items-center gap-2 group flex-shrink-0"
->
-  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-    <img
-      src="/images/logo.png"
-      alt="Logo"
-      className="w-full h-full object-contain"
-    />
-  </div>
-  <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent hidden xs:inline">
-    {t("navbar.brandName")}
-  </span>
-</Link>
+            <Link to="/" className="flex items-center gap-2 group flex-shrink-0 mr-2 sm:mr-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+                <img
+                  src="/images/logo.png"
+                  alt="Logo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <span className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent hidden xs:inline whitespace-nowrap">
+                {t("navbar.brandName")}
+              </span>
+            </Link>
 
             {/* Desktop Navigation Links */}
-            <div className="hidden lg:flex items-center space-x-6">
-              <Link
-                to="/"
-                className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors font-medium"
-              >
-                {t("nav.home")}
-              </Link>
-              <Link
-                to="/products"
-                className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors font-medium"
-              >
-                {t("nav.products")}
-              </Link>
-              <Link
-                to="/about"
-                className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors font-medium"
-              >
-                {t("nav.about")}
-              </Link>
-              <Link
-                to="/contact"
-                className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors font-medium"
-              >
-                {t("nav.contact")}
-              </Link>
+            <div className="hidden lg:flex items-center space-x-4 xl:space-x-6">
+              {[
+                { path: "/", label: t("nav.home") },
+                { path: "/products", label: t("nav.products") },
+                { path: "/about", label: t("nav.about") },
+                { path: "/contact", label: t("nav.contact") },
+              ].map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="text-sm xl:text-base text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors font-medium whitespace-nowrap"
+                >
+                  {item.label}
+                </Link>
+              ))}
             </div>
 
             {/* Desktop Search */}
             <div
-              className="hidden md:block relative flex-1 max-w-md mx-4 lg:mx-8"
+              className="hidden md:block relative flex-1 max-w-xs lg:max-w-md mx-2 lg:mx-6"
               ref={dropdownRef}
             >
               <input
@@ -249,11 +232,9 @@ export default function Navbar() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyPress}
-                onFocus={() =>
-                  searchResults.length > 0 && setShowDropdown(true)
-                }
+                onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
                 placeholder={t("search")}
-                className="w-full px-4 py-2 pl-10 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent focus:border-green-500 text-sm"
+                className="w-full px-3 py-2 pl-9 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent focus:border-green-500 text-sm transition-all"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
               {isSearching && (
@@ -262,7 +243,7 @@ export default function Navbar() {
                 </div>
               )}
               {showDropdown && (
-                <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+                <div className="absolute z-[60] mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-96 overflow-y-auto">
                   {searchResults.length > 0 ? (
                     searchResults.map((product) => (
                       <button
@@ -277,9 +258,7 @@ export default function Navbar() {
                           src={getImageUrl(product.images?.[0])}
                           alt={product.name}
                           className="w-12 h-12 object-cover rounded flex-shrink-0"
-                          onError={(e) => {
-                            e.target.src = "/placeholder.png";
-                          }}
+                          onError={(e) => (e.target.src = "/placeholder.png")}
                         />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
@@ -301,23 +280,20 @@ export default function Navbar() {
             </div>
 
             {/* Right Side Icons */}
-            <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2">
               {/* Mobile Search Toggle */}
               <button
                 onClick={() => setShowMobileSearch(!showMobileSearch)}
                 className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                 aria-label="Search"
               >
-                <Search
-                  size={20}
-                  className="text-gray-700 dark:text-gray-300"
-                />
+                <Search size={20} className="text-gray-700 dark:text-gray-300" />
               </button>
 
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="hidden sm:block p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="hidden sm:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors items-center justify-center"
                 aria-label={t("navbar.toggleTheme")}
               >
                 {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
@@ -330,17 +306,15 @@ export default function Navbar() {
                 <button
                   onClick={() => setShowLanguageMenu(!showLanguageMenu)}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-1"
+                  aria-label="Language"
                 >
-                  <Globe
-                    size={20}
-                    className="text-gray-700 dark:text-gray-300"
-                  />
+                  <Globe size={20} className="text-gray-700 dark:text-gray-300" />
                   <span className="text-xs font-medium hidden lg:inline">
                     {currentLanguage?.toUpperCase() || "EN"}
                   </span>
                 </button>
                 {showLanguageMenu && languages && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 animate-fade-in">
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60] animate-fade-in">
                     {languages.map((lang) => (
                       <button
                         key={lang.code}
@@ -348,19 +322,14 @@ export default function Navbar() {
                           changeLanguage(lang.code);
                           setShowLanguageMenu(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors ${
-                          currentLanguage === lang.code
-                            ? "bg-green-50 dark:bg-gray-700"
-                            : ""
+                        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                          currentLanguage === lang.code ? "bg-green-50 dark:bg-gray-700" : ""
                         }`}
                       >
                         <span className="text-2xl">{lang.flag}</span>
                         <span className="text-sm font-medium">{lang.name}</span>
                         {currentLanguage === lang.code && (
-                          <CheckCircle
-                            size={16}
-                            className="ml-auto text-green-600"
-                          />
+                          <CheckCircle size={16} className="ml-auto text-green-600" />
                         )}
                       </button>
                     ))}
@@ -371,12 +340,13 @@ export default function Navbar() {
               {/* Wishlist */}
               <button
                 onClick={() => handleNavClick("/wishlist")}
-                className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
                 disabled={wishlistLoading}
+                aria-label="Wishlist"
               >
                 <Heart size={20} className="text-gray-700 dark:text-gray-300" />
                 {wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
                     {wishlistCount > 99 ? "99+" : wishlistCount}
                   </span>
                 )}
@@ -385,15 +355,13 @@ export default function Navbar() {
               {/* Cart */}
               <button
                 onClick={() => handleNavClick("/cart")}
-                className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
                 disabled={cartLoading}
+                aria-label="Cart"
               >
-                <ShoppingCart
-                  size={20}
-                  className="text-gray-700 dark:text-gray-300"
-                />
+                <ShoppingCart size={20} className="text-gray-700 dark:text-gray-300" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
                     {cartCount > 99 ? "99+" : cartCount}
                   </span>
                 )}
@@ -405,8 +373,9 @@ export default function Navbar() {
                   <button
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                     className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    aria-label="Profile"
                   >
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
                       {user?.avatar ? (
                         <img
                           src={getImageUrl(user.avatar)}
@@ -422,11 +391,11 @@ export default function Navbar() {
                   </button>
 
                   {isProfileMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in">
+                    <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden z-[60] animate-fade-in">
                       {/* Profile Header */}
                       <div className="bg-gradient-to-r from-green-600 to-emerald-700 p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-lg">
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-lg flex-shrink-0">
                             {user?.avatar ? (
                               <img
                                 src={getImageUrl(user.avatar)}
@@ -456,28 +425,24 @@ export default function Navbar() {
                           {
                             path: "/profile",
                             icon: User,
-                            color: "blue",
                             label: t("myProfile"),
                             desc: t("navbar.viewProfile"),
                           },
                           {
                             path: "/orders",
                             icon: Package,
-                            color: "purple",
                             label: t("myOrders"),
                             desc: t("navbar.trackOrders"),
                           },
                           {
                             path: "/wishlist",
                             icon: Heart,
-                            color: "red",
                             label: t("nav.wishlist"),
                             desc: t("navbar.wishlistPreferences"),
                           },
                           {
                             path: "/profile/settings",
                             icon: Settings,
-                            color: "green",
                             label: t("nav.settings"),
                             desc: t("navbar.accountPreferences"),
                           },
@@ -487,23 +452,18 @@ export default function Navbar() {
                             onClick={() => handleNavClick(item.path)}
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors group"
                           >
-                            <div
-                              className={`w-9 h-9 rounded-lg bg-${item.color}-100 dark:bg-${item.color}-900/30 flex items-center justify-center group-hover:scale-110 transition-transform`}
-                            >
-                              <item.icon
-                                size={18}
-                                className={`text-${item.color}-600 dark:text-${item.color}-400`}
-                              />
+                            <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                              <item.icon size={18} className="text-green-600 dark:text-green-400" />
                             </div>
-                            <div className="flex-1 text-left">
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <div className="flex-1 text-left min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                                 {item.label}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                 {item.desc}
                               </p>
                             </div>
-                            <ChevronRight size={16} className="text-gray-400" />
+                            <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
                           </button>
                         ))}
                       </div>
@@ -513,11 +473,8 @@ export default function Navbar() {
                           onClick={handleLogout}
                           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         >
-                          <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                            <LogOut
-                              size={18}
-                              className="text-red-600 dark:text-red-400"
-                            />
+                          <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                            <LogOut size={18} className="text-red-600 dark:text-red-400" />
                           </div>
                           <p className="text-sm font-medium text-red-600 dark:text-red-400">
                             {t("nav.logout")}
@@ -530,7 +487,7 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => handleNavClick("/login")}
-                  className="hidden sm:block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  className="hidden sm:block px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap"
                 >
                   {t("login")}
                 </button>
@@ -539,7 +496,8 @@ export default function Navbar() {
               {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                aria-label="Menu"
               >
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -548,10 +506,7 @@ export default function Navbar() {
 
           {/* Mobile Search Bar */}
           {showMobileSearch && (
-            <div
-              className="md:hidden px-3 pb-3 pt-2 border-t border-gray-200 dark:border-gray-700"
-              ref={dropdownRef}
-            >
+            <div className="md:hidden px-3 pb-3 pt-2 border-t border-gray-200 dark:border-gray-700 animate-slide-down">
               <div className="relative">
                 <input
                   type="text"
@@ -559,7 +514,7 @@ export default function Navbar() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder={t("search")}
-                  className="w-full px-4 py-2.5 pl-10 bg-gray-100 dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  className="w-full px-4 py-2.5 pl-10 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm transition-all"
                   autoFocus
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -573,18 +528,16 @@ export default function Navbar() {
                     <button
                       key={product._id}
                       onClick={() => handleSelectProduct(product.slug)}
-                      className="w-full text-left px-3 py-3 hover:bg-green-50 dark:hover:bg-gray-700 flex items-center gap-3 border-b last:border-b-0"
+                      className="w-full text-left px-3 py-3 hover:bg-green-50 dark:hover:bg-gray-700 flex items-center gap-3 border-b last:border-b-0 transition-colors"
                     >
                       <img
                         src={getImageUrl(product.images?.[0])}
                         alt={product.name}
-                        className="w-10 h-10 object-cover rounded"
+                        className="w-10 h-10 object-cover rounded flex-shrink-0"
                         onError={(e) => (e.target.src = "/placeholder.png")}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {product.name}
-                        </p>
+                        <p className="text-sm font-medium truncate">{product.name}</p>
                         <p className="text-xs text-green-600">
                           {t("currency")} {product.price}
                         </p>
@@ -598,42 +551,39 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
-            <div className="lg:hidden py-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="space-y-3">
-                {["/", "/products", "/about", "/contact"].map((path) => (
+            <div className="lg:hidden py-4 border-t border-gray-200 dark:border-gray-700 animate-slide-down">
+              <div className="space-y-1">
+                {[
+                  { path: "/", label: t("nav.home") },
+                  { path: "/products", label: t("nav.products") },
+                  { path: "/about", label: t("nav.about") },
+                  { path: "/contact", label: t("nav.contact") },
+                ].map((item) => (
                   <button
-                    key={path}
-                    onClick={() => handleNavClick(path)}
-                    className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-green-600 font-medium"
+                    key={item.path}
+                    onClick={() => handleNavClick(item.path)}
+                    className="block w-full text-left px-4 py-2.5 text-gray-700 dark:text-gray-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-gray-800 font-medium rounded-lg transition-colors"
                   >
-                    {path === "/"
-                      ? t("nav.home")
-                      : path === "/products"
-                      ? t("nav.products")
-                      : path === "/about"
-                      ? t("nav.about")
-                      : t("nav.contact")}
+                    {item.label}
                   </button>
                 ))}
 
-                <div className="flex flex-col gap-3 px-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-                  {/* <button onClick={toggleTheme} className="flex items-center gap-3 py-2">
-                    {theme === 'dark' ? <><Sun size={20} /><span className="text-sm">{t('navbar.light')}</span></> : <><Moon size={20} /><span className="text-sm">{t('navbar.dark')}</span></>}
-                  </button> */}
-                  {/* <button onClick={() => setShowLanguageMenu(!showLanguageMenu)} className="flex items-center gap-3 py-2">
-                    <Globe size={20} />
-                    <span className="text-sm">{languages?.find(l => l.code === currentLanguage)?.name || 'English'}</span>
-                  </button> */}
-                </div>
-
-                {!isAuthenticated && (
-                  <button
-                    onClick={() => handleNavClick("/login")}
-                    className="mx-4 mt-3 block w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"
-                  >
-                    {t("login")}
-                  </button>
-                )}
+                {!isAuthenticated ? (
+  <button
+    onClick={() => handleNavClick("/login")}
+    className="mx-4 mt-3 block w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm transition-colors"
+  >
+    {t("login")}
+  </button>
+) : (
+  <button
+    onClick={handleLogout}
+    className="mx-4 mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 font-medium text-sm transition-colors"
+  >
+    <LogOut size={18} />
+    {t("nav.logout")}
+  </button>
+)}
               </div>
             </div>
           )}
@@ -641,7 +591,7 @@ export default function Navbar() {
       </nav>
 
       <style jsx>{`
-        @keyframes slide-in-right {
+        @keyframes slide-in {
           from {
             transform: translateX(100%);
             opacity: 0;
@@ -649,6 +599,16 @@ export default function Navbar() {
           to {
             transform: translateX(0);
             opacity: 1;
+          }
+        }
+        @keyframes slide-down {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
         @keyframes fade-in {
@@ -661,8 +621,11 @@ export default function Navbar() {
             transform: scale(1);
           }
         }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        .animate-slide-in {
+          animation: slide-in 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        .animate-slide-down {
+          animation: slide-down 0.2s ease-out;
         }
         .animate-fade-in {
           animation: fade-in 0.2s ease-out;

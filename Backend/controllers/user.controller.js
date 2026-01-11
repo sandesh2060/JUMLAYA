@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const mongoose = require("mongoose");
 const Order = require("../models/order.model");
 const Wishlist = require("../models/wishlist.model");
+const { uploadImage, deleteImage, extractPublicId } = require('../config/cloudinary');
 
 // ------------------ RELAXED VALIDATORS ------------------
 const isEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -546,19 +547,54 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
   console.log("Body:", req.body);
   console.log("File:", req.file);
 
-  // Extract fields from body
   const { firstname, lastname, phone } = req.body;
   
-  // Build updates object
   const updates = {};
   if (firstname) updates.firstname = firstname;
   if (lastname) updates.lastname = lastname;
   if (phone) updates.phone = phone;
   
-  // ✅ FIX: Save avatar path matching folder structure
-  if (req.file && req.file.filename) {
-    updates.avatar = `/uploads/users/${req.file.filename}`;
-    console.log("✅ Avatar file uploaded:", updates.avatar);
+  // ✅ CLOUDINARY: Handle avatar upload
+  if (req.file && req.file.buffer) {
+    try {
+      console.log("📤 Uploading avatar to Cloudinary...");
+      
+      // Get current user to find old avatar
+      const currentUser = await User.findById(req.user.id);
+      
+      // Upload new avatar to Cloudinary
+      const uploadResult = await uploadImage(req.file.buffer, {
+        folder: 'jumlaya/avatars',
+        preset: 'avatar'
+      });
+      
+      // Save Cloudinary URL
+      updates.avatar = uploadResult.url;
+      
+      console.log("✅ Avatar uploaded successfully!");
+      console.log("🔗 Cloudinary URL:", uploadResult.url);
+      console.log("📊 Image details:", {
+        publicId: uploadResult.publicId,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        format: uploadResult.format,
+        size: `${(uploadResult.size / 1024).toFixed(2)} KB`
+      });
+      
+      // Delete old avatar from Cloudinary if exists
+      if (currentUser.avatar && currentUser.avatar.includes('cloudinary.com')) {
+        const oldPublicId = extractPublicId(currentUser.avatar);
+        if (oldPublicId) {
+          console.log("🗑️ Deleting old avatar:", oldPublicId);
+          await deleteImage(oldPublicId).catch(err => 
+            console.log('⚠️ Could not delete old avatar:', err.message)
+          );
+        }
+      }
+    } catch (error) {
+      console.error("❌ Cloudinary upload failed:", error);
+      return next(new AppError("Failed to upload image. Please try again.", 500));
+    }
   }
 
   // Check if there's anything to update
@@ -589,6 +625,7 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
   console.log("✅ Profile updated successfully");
   sendSuccess(res, 200, "Profile updated successfully", user);
 });
+
 
 // ------------------ CHANGE PASSWORD ------------------
 exports.changePassword = catchAsync(async (req, res, next) => {

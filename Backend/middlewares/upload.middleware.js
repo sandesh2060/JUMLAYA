@@ -1,91 +1,71 @@
 // ============================================
-// upload.middleware.js - File Upload Handler
-// Path: Backend/middlewares/upload.middleware.js
+// FILE 1: Backend/middlewares/upload.middleware.js
+// ✅ CREATE THIS NEW FILE - COPY EVERYTHING BELOW
 // ============================================
 
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
-// ============================================
-// CREATE UPLOAD DIRECTORIES
-// ============================================
-const createUploadDirs = () => {
-  const dirs = [
-    'uploads',
-    'uploads/avatars',
-    'uploads/products',
-    'uploads/logos',
-    'uploads/ads' // ✅ NEW: Ads directory
-  ];
-  
-  dirs.forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-      console.log(`✅ Created directory: ${dir}`);
-    }
-  });
-};
+// Memory storage - files stored as Buffer, sent directly to Cloudinary
+const storage = multer.memoryStorage();
 
-// Create directories on module load
-createUploadDirs();
-
-// ============================================
-// STORAGE CONFIGURATION
-// ============================================
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // Determine destination based on fieldname
-    if (file.fieldname === 'avatar') {
-      cb(null, 'uploads/avatars/');
-    } else if (file.fieldname === 'logo') {
-      cb(null, 'uploads/logos/');
-    } else if (file.fieldname === 'adImage') { // ✅ NEW: Ad images
-      cb(null, 'uploads/ads/');
-    } else {
-      cb(null, 'uploads/products/');
-    }
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    
-    if (file.fieldname === 'avatar') {
-      cb(null, `avatar-${uniqueSuffix}${ext}`);
-    } else if (file.fieldname === 'logo') {
-      cb(null, `logo-${uniqueSuffix}${ext}`);
-    } else if (file.fieldname === 'adImage') { // ✅ NEW: Ad image filename
-      cb(null, `ad-${uniqueSuffix}${ext}`);
-    } else {
-      cb(null, `product-${uniqueSuffix}${ext}`);
-    }
-  }
-});
-
-// ============================================
-// FILE FILTER FOR IMAGES
-// ============================================
+// File filter - only allow images
 const imageFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp|gif|svg/;
+  const allowedTypes = /jpeg|jpg|png|webp|gif/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype) || file.mimetype === 'image/svg+xml';
+  const mimetype = allowedTypes.test(file.mimetype);
 
   if (mimetype && extname) {
-    return cb(null, true);
+    cb(null, true);
   } else {
-    cb(new Error('Only image files (jpeg, jpg, png, webp, gif, svg) are allowed!'));
+    cb(new Error('Only image files are allowed (jpg, jpeg, png, webp, gif)'));
   }
 };
 
-// ============================================
-// MULTER INSTANCE
-// ============================================
+// Multer configuration
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
+    fileSize: 5 * 1024 * 1024, // 5MB max for avatars
   },
-  fileFilter: imageFilter,
+  fileFilter: imageFilter
 });
 
-module.exports = upload;
+// Single file upload
+const uploadSingle = (fieldName) => upload.single(fieldName);
+
+// Multiple files upload (for products, galleries, etc.)
+const uploadMultiple = (fieldName, maxCount = 10) => upload.array(fieldName, maxCount);
+
+// Error handler middleware
+const handleUploadError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File too large. Maximum size is 5MB'
+      });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Too many files uploaded'
+      });
+    }
+  }
+  
+  if (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+  
+  next();
+};
+
+module.exports = {
+  uploadSingle,
+  uploadMultiple,
+  handleUploadError
+};

@@ -7,7 +7,7 @@ const router = express.Router();
 const settingsController = require('../controllers/admin/admin.settings.controller');
 const { protect } = require('../middlewares/auth.middleware');
 const { adminOnly } = require('../middlewares/authorize.middleware');
-const upload = require('../middlewares/upload.middleware'); // NEW: Import upload middleware
+const { uploadSingle, handleUploadError } = require('../middlewares/upload.middleware'); // ✅ FIXED
 
 // All routes require authentication and admin role
 router.use(protect);
@@ -45,11 +45,11 @@ router.put('/notifications', settingsController.updateNotificationSettings);
 router.put('/maintenance', settingsController.updateMaintenanceMode);
 
 // ============================================
-// NEW: LOGO UPLOAD ROUTES
+// LOGO UPLOAD ROUTES
 // ============================================
 
 // POST /api/admin/settings/logo - Upload store logo
-router.post('/logo', upload.single('logo'), settingsController.uploadLogo);
+router.post('/logo', uploadSingle('logo'), handleUploadError, settingsController.uploadLogo);
 
 // DELETE /api/admin/settings/logo - Delete store logo
 router.delete('/logo', settingsController.deleteLogo);

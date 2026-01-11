@@ -1,12 +1,16 @@
 // ============================================
-// admin.settings.controller.js
-// Complete controller with ALL database fields + Logo Upload
+// ADMIN SETTINGS CONTROLLER - WITH CLOUDINARY
 // Path: Backend/controllers/admin/admin.settings.controller.js
+// REPLACE YOUR EXISTING FILE WITH THIS
 // ============================================
 
 const Settings = require('../../models/settings.model');
-const fs = require('fs');
-const path = require('path');
+const {
+  uploadImage,
+  deleteImage,
+  extractPublicId,
+  FOLDERS
+} = require('../../config/cloudinary');
 
 // ============================================
 // GET ALL SETTINGS
@@ -57,11 +61,11 @@ exports.getSettings = async (req, res) => {
 };
 
 // ============================================
-// UPLOAD LOGO
+// UPLOAD LOGO - WITH CLOUDINARY
 // ============================================
 exports.uploadLogo = async (req, res) => {
   try {
-    console.log('📦 Uploading store logo');
+    console.log('📤 Uploading store logo to Cloudinary');
 
     if (!req.file) {
       return res.status(400).json({
@@ -70,30 +74,42 @@ exports.uploadLogo = async (req, res) => {
       });
     }
 
-    // Get existing settings to delete old logo
-    const existingSettings = await Settings.findOne();
-    if (existingSettings && existingSettings.storeLogo) {
-      const oldLogoPath = path.join(__dirname, '../..', existingSettings.storeLogo);
-      if (fs.existsSync(oldLogoPath)) {
-        fs.unlinkSync(oldLogoPath);
-        console.log('🗑️ Old logo deleted');
+    // Get existing settings
+    let settings = await Settings.findOne();
+    
+    // Delete old logo from Cloudinary if exists
+    if (settings && settings.storeLogo) {
+      const oldPublicId = extractPublicId(settings.storeLogo);
+      if (oldPublicId) {
+        console.log('🗑️ Deleting old logo from Cloudinary...');
+        await deleteImage(oldPublicId);
       }
     }
 
-    // Save new logo path (relative path for database)
-    const logoPath = `/uploads/logos/${req.file.filename}`;
-    
-    let settings = await Settings.findOne();
+    // Upload new logo to Cloudinary
+    const result = await uploadImage(
+      req.file.buffer,
+      {
+        preset: 'logo',
+        folder: FOLDERS.LOGOS
+      }
+    );
+
+    console.log('✅ Logo uploaded to Cloudinary:', result.url);
+
+    // Update or create settings
     if (!settings) {
       settings = await Settings.create({ 
         storeName: 'JUMLAYA',
-        storeLogo: logoPath,
+        storeLogo: result.url,
+        storeLogoPublicId: result.publicId,
         storeEmail: 'info@jumlaya.com',
         storePhone: '+977-9800000000',
         storeAddress: 'Kathmandu, Nepal'
       });
     } else {
-      settings.storeLogo = logoPath;
+      settings.storeLogo = result.url;
+      settings.storeLogoPublicId = result.publicId;
       await settings.save();
     }
 
@@ -103,19 +119,11 @@ exports.uploadLogo = async (req, res) => {
       message: 'Logo uploaded successfully',
       data: { 
         settings,
-        logoUrl: logoPath
+        logoUrl: result.url
       }
     });
   } catch (error) {
     console.error('❌ Error uploading logo:', error);
-    
-    // Delete uploaded file if database update fails
-    if (req.file) {
-      const filePath = path.join(__dirname, '../..', 'uploads/logos', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
     
     res.status(500).json({
       success: false,
@@ -126,11 +134,11 @@ exports.uploadLogo = async (req, res) => {
 };
 
 // ============================================
-// DELETE LOGO
+// DELETE LOGO - FROM CLOUDINARY
 // ============================================
 exports.deleteLogo = async (req, res) => {
   try {
-    console.log('📦 Deleting store logo');
+    console.log('🗑️ Deleting store logo from Cloudinary');
 
     const settings = await Settings.findOne();
     if (!settings || !settings.storeLogo) {
@@ -140,15 +148,16 @@ exports.deleteLogo = async (req, res) => {
       });
     }
 
-    // Delete file from filesystem
-    const logoPath = path.join(__dirname, '../..', settings.storeLogo);
-    if (fs.existsSync(logoPath)) {
-      fs.unlinkSync(logoPath);
-      console.log('🗑️ Logo file deleted from filesystem');
+    // Delete from Cloudinary
+    const publicId = extractPublicId(settings.storeLogo);
+    if (publicId) {
+      await deleteImage(publicId);
+      console.log('✅ Logo deleted from Cloudinary');
     }
 
     // Update database
     settings.storeLogo = '';
+    settings.storeLogoPublicId = '';
     await settings.save();
 
     console.log('✅ Logo deleted successfully');
@@ -168,7 +177,7 @@ exports.deleteLogo = async (req, res) => {
 };
 
 // ============================================
-// UPDATE STORE INFO (with support & business registration)
+// UPDATE STORE INFO
 // ============================================
 exports.updateStoreInfo = async (req, res) => {
   try {

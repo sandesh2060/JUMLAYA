@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const adsController = require('../controllers/ads.controller');
 const { protect } = require('../middlewares/auth.middleware');
-const upload = require('../middlewares/upload.middleware'); // ✅ Import upload middleware
+const { uploadSingle, handleUploadError } = require('../middlewares/upload.middleware'); // ✅ FIXED
 
 // Custom admin check middleware
 const adminOnly = (req, res, next) => {
@@ -55,15 +55,17 @@ router.post('/:id/click', adsController.trackClick);
 
 /**
  * POST /api/ads/upload
- * Upload ad image (NEW)
+ * Upload ad image
  */
 router.post(
   '/upload', 
   protect, 
   adminOnly, 
-  upload.single('adImage'), // ✅ Must be 'adImage'
+  uploadSingle('adImage'), // ✅ FIXED
+  handleUploadError,
   adsController.uploadAdImage
 );
+
 /**
  * GET /api/ads
  * Get all ads with filters and pagination

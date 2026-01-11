@@ -1,4 +1,9 @@
-// Backend/models/product.model.js - FIXED DUPLICATE INDEX
+// ============================================
+// PRODUCT MODEL - WITH CLOUDINARY SUPPORT
+// Path: Backend/models/product.model.js
+// REPLACE YOUR EXISTING FILE WITH THIS
+// ============================================
+
 const mongoose = require("mongoose");
 const slugify = require("slugify");
 const Cart = require('./cart.model');
@@ -10,7 +15,7 @@ const productSchema = new mongoose.Schema(
 
     slug: {
       type: String,
-      unique: true, // ✅ This creates an index automatically - removed duplicate
+      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -21,14 +26,19 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: true,
-      index: true, // ✅ Keep only this
+      index: true,
     },
 
-    images: [
-      {
-        type: String,
-      },
-    ],
+    // ============================================
+    // CLOUDINARY IMAGE FIELDS
+    // ============================================
+    images: [{
+      type: String, // Cloudinary URLs
+    }],
+    
+    imagePublicIds: [{
+      type: String // Cloudinary public IDs for deletion
+    }],
 
     price: { type: Number, required: true, min: 0 },
     originalPrice: { type: Number, min: 0, default: 0 },
@@ -41,7 +51,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["fruit", "herb", "honey", "grain", "vegetable", "dairy", "other"],
       required: true,
-      index: true, // ✅ Keep only this
+      index: true,
     },
     
     unit: { type: String, default: "kg" },
@@ -55,7 +65,7 @@ const productSchema = new mongoose.Schema(
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
     
     isActive: { type: Boolean, default: true },
-    isFeatured: { type: Boolean, default: false, index: true }, // ✅ Keep only this
+    isFeatured: { type: Boolean, default: false, index: true },
     
     views: { type: Number, default: 0 },
     sold: { type: Number, default: 0 },
@@ -67,11 +77,41 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// ✅ INDEXES (removed duplicates)
+// ============================================
+// INDEXES
+// ============================================
 productSchema.index({ rating: -1 });
 
-// Pre-save middleware to auto-generate slug
+// ============================================
+// VIRTUALS
+// ============================================
+productSchema.virtual("fullName").get(function () {
+  return this.name;
+});
+
+// Main image (first image)
+productSchema.virtual("mainImage").get(function () {
+  return this.images && this.images.length > 0 ? this.images[0] : null;
+});
+
+// Thumbnail (optimized version)
+productSchema.virtual("thumbnail").get(function () {
+  if (!this.mainImage) return null;
+  
+  // Add Cloudinary transformation for thumbnail
+  const parts = this.mainImage.split('/upload/');
+  if (parts.length === 2) {
+    return `${parts[0]}/upload/w_400,h_400,c_fill,q_auto,f_auto/${parts[1]}`;
+  }
+  
+  return this.mainImage;
+});
+
+// ============================================
+// PRE-SAVE MIDDLEWARE
+// ============================================
 productSchema.pre("save", async function (next) {
+  // Generate slug
   if (!this.slug || this.isModified("name")) {
     let baseSlug = slugify(this.name, {
       lower: true,
@@ -102,12 +142,23 @@ productSchema.pre("save", async function (next) {
   next();
 });
 
-// Virtuals
-productSchema.virtual("fullName").get(function () {
-  return this.name;
-});
+// ============================================
+// METHODS
+// ============================================
 
-// Method to get approved reviews
+// Get optimized image URL
+productSchema.methods.getOptimizedImage = function(width = 800, height = 800) {
+  if (!this.mainImage) return null;
+  
+  const parts = this.mainImage.split('/upload/');
+  if (parts.length === 2) {
+    return `${parts[0]}/upload/w_${width},h_${height},c_limit,q_auto,f_auto/${parts[1]}`;
+  }
+  
+  return this.mainImage;
+};
+
+// Get approved reviews
 productSchema.methods.getApprovedReviews = function (limit = 10, page = 1) {
   const Review = mongoose.model("Review");
   return Review.find({ product: this._id, status: "approved", deletedAt: null })
@@ -116,6 +167,10 @@ productSchema.methods.getApprovedReviews = function (limit = 10, page = 1) {
     .skip((page - 1) * limit)
     .limit(limit);
 };
+
+// ============================================
+// POST DELETE MIDDLEWARE
+// ============================================
 
 // When product is deleted, remove from all carts
 productSchema.post('findOneAndDelete', async function(doc) {
