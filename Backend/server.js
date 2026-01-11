@@ -1,10 +1,9 @@
 // ============================================
-// Backend/server.js (PRODUCTION-READY)
-// Replace your current server.js with this
+// Backend/server.js (CORRECTED - PRODUCTION-READY)
 // ============================================
 require("dotenv").config();
 const http = require("http");
-const app = require("./app");
+const app = require("./app"); // ✅ Import Express app (CORS already configured in app.js)
 const connectToDB = require("./config/db");
 
 // =====================================================
@@ -15,9 +14,7 @@ const requiredEnvVars = [
   "PORT",
   "DB_CONNECT",
   "JWT_SECRET",
-  "JWT_REFRESH_SECRET",
-  "FRONTEND_URL",
-  "ALLOWED_ORIGINS"
+  "JWT_REFRESH_SECRET"
 ];
 
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -96,10 +93,10 @@ const startServer = async () => {
       console.log("🚀 JUMLAYA Backend Server Started Successfully");
       console.log("=".repeat(50));
       console.log(`🌍 Environment:     ${process.env.NODE_ENV}`);
-      console.log(`🚀 Server URL:      http://localhost:${PORT}`);
-      console.log(`📍 API Base URL:    http://localhost:${PORT}/api`);
+      console.log(`🚀 Server URL:      http://${HOST}:${PORT}`);
+      console.log(`📍 API Base URL:    http://${HOST}:${PORT}/api`);
       console.log(`💾 Database:        Connected`);
-      console.log(`🔒 CORS:            ${isProduction ? "Restricted" : "Development mode"}`);
+      console.log(`🔒 CORS:            ${isProduction ? "Production (Vercel only)" : "Development (localhost)"}`);
       console.log(`⏰ Started at:      ${new Date().toLocaleString()}`);
       console.log("=".repeat(50));
       
@@ -107,11 +104,16 @@ const startServer = async () => {
         console.log("\n💡 Quick Links:");
         console.log(`   🌐 Frontend:       http://localhost:5173`);
         console.log(`   ❤️  Health Check:   http://localhost:${PORT}/api/health`);
-        console.log(`   📚 API Docs:       http://localhost:${PORT}/`);
+        console.log(`   📚 API Root:       http://localhost:${PORT}/`);
         console.log("\n💡 Tips:");
         console.log("   - Press Ctrl+C to stop the server");
         console.log("   - Check logs above for any warnings");
         console.log("   - Make sure Frontend is running on port 5173\n");
+      } else {
+        console.log("\n🌐 Production Mode Active");
+        console.log(`   CORS: Allowing *.vercel.app domains`);
+        console.log(`   Rate Limiting: Enabled`);
+        console.log(`   Security Headers: Enabled\n`);
       }
     });
     
@@ -124,7 +126,7 @@ const startServer = async () => {
       if (error.code === "EADDRINUSE") {
         console.error(`Port ${PORT} is already in use!`);
         console.error("\n💡 Solutions:");
-        console.error(`   1. Kill the process: kill -9 $(lsof -ti:${PORT})`);
+        console.error(`   1. Kill the process: lsof -ti:${PORT} | xargs kill -9`);
         console.error(`   2. Or use a different port in your .env file`);
         console.error(`   3. Or find and stop the other process using this port`);
       } else if (error.code === "EACCES") {
