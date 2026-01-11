@@ -61,6 +61,15 @@ const adSchema = new mongoose.Schema(
       required: [true, 'Valid until date is required']
     },
 
+    // ✅ FIX: Add display duration field
+    displayDuration: {
+      type: Number,
+      min: 3,
+      max: 30,
+      default: 8,
+      required: false
+    },
+
     // Priority (1-10, higher = shows first)
     priority: {
       type: Number,

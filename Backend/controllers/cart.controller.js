@@ -152,8 +152,6 @@ exports.removeFromCart = catchAsync(async (req, res, next) => {
     return next(new AppError("Cart not found", 404));
   }
 
-  console.log("🔍 Cart found, items:", cart.items.length);
-  console.log("🔍 About to call cart.removeItem...");
 
   await cart.removeItem(productId);
 

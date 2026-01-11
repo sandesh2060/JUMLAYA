@@ -1,3 +1,9 @@
+// ============================================
+// PRODUCT MODEL - WITH CLOUDINARY SUPPORT
+// Path: Backend/models/product.model.js
+// REPLACE YOUR EXISTING FILE WITH THIS
+// ============================================
+
 const mongoose = require("mongoose");
 const slugify = require("slugify");
 const Cart = require('./cart.model');
@@ -20,19 +26,23 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: true,
+      index: true,
     },
 
-    // Updated images structure for frontend compatibility
-    images: [
-      {
-        type: String, // Just URLs for simplicity
-      },
-    ],
+    // ============================================
+    // CLOUDINARY IMAGE FIELDS
+    // ============================================
+    images: [{
+      type: String, // Cloudinary URLs
+    }],
+    
+    imagePublicIds: [{
+      type: String // Cloudinary public IDs for deletion
+    }],
 
     price: { type: Number, required: true, min: 0 },
     originalPrice: { type: Number, min: 0, default: 0 },
     
-    // Add discount calculation
     discount: { type: Number, default: 0, min: 0, max: 100 },
     
     stock: { type: Number, default: 0, min: 0 },
@@ -41,6 +51,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["fruit", "herb", "honey", "grain", "vegetable", "dairy", "other"],
       required: true,
+      index: true,
     },
     
     unit: { type: String, default: "kg" },
@@ -48,16 +59,14 @@ const productSchema = new mongoose.Schema(
     isOrganic: { type: Boolean, default: false },
     isSeasonal: { type: Boolean, default: false },
 
-    // Rating structure for frontend
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0, min: 0 },
 
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
     
     isActive: { type: Boolean, default: true },
-    isFeatured: { type: Boolean, default: false },
+    isFeatured: { type: Boolean, default: false, index: true },
     
-    // Additional tracking
     views: { type: Number, default: 0 },
     sold: { type: Number, default: 0 },
   },
@@ -68,15 +77,41 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Indexes
-productSchema.index({ category: 1 });
+// ============================================
+// INDEXES
+// ============================================
 productSchema.index({ rating: -1 });
-productSchema.index({ slug: 1 });
-productSchema.index({ productType: 1 });
-productSchema.index({ isFeatured: 1 });
 
-// Pre-save middleware to auto-generate slug
+// ============================================
+// VIRTUALS
+// ============================================
+productSchema.virtual("fullName").get(function () {
+  return this.name;
+});
+
+// Main image (first image)
+productSchema.virtual("mainImage").get(function () {
+  return this.images && this.images.length > 0 ? this.images[0] : null;
+});
+
+// Thumbnail (optimized version)
+productSchema.virtual("thumbnail").get(function () {
+  if (!this.mainImage) return null;
+  
+  // Add Cloudinary transformation for thumbnail
+  const parts = this.mainImage.split('/upload/');
+  if (parts.length === 2) {
+    return `${parts[0]}/upload/w_400,h_400,c_fill,q_auto,f_auto/${parts[1]}`;
+  }
+  
+  return this.mainImage;
+});
+
+// ============================================
+// PRE-SAVE MIDDLEWARE
+// ============================================
 productSchema.pre("save", async function (next) {
+  // Generate slug
   if (!this.slug || this.isModified("name")) {
     let baseSlug = slugify(this.name, {
       lower: true,
@@ -107,12 +142,23 @@ productSchema.pre("save", async function (next) {
   next();
 });
 
-// Virtuals
-productSchema.virtual("fullName").get(function () {
-  return this.name;
-});
+// ============================================
+// METHODS
+// ============================================
 
-// Method to get approved reviews
+// Get optimized image URL
+productSchema.methods.getOptimizedImage = function(width = 800, height = 800) {
+  if (!this.mainImage) return null;
+  
+  const parts = this.mainImage.split('/upload/');
+  if (parts.length === 2) {
+    return `${parts[0]}/upload/w_${width},h_${height},c_limit,q_auto,f_auto/${parts[1]}`;
+  }
+  
+  return this.mainImage;
+};
+
+// Get approved reviews
 productSchema.methods.getApprovedReviews = function (limit = 10, page = 1) {
   const Review = mongoose.model("Review");
   return Review.find({ product: this._id, status: "approved", deletedAt: null })
@@ -122,25 +168,25 @@ productSchema.methods.getApprovedReviews = function (limit = 10, page = 1) {
     .limit(limit);
 };
 
+// ============================================
+// POST DELETE MIDDLEWARE
+// ============================================
 
 // When product is deleted, remove from all carts
 productSchema.post('findOneAndDelete', async function(doc) {
   if (doc) {
     console.log(`🗑️ Product ${doc._id} deleted, cleaning up carts...`);
     
-    // Remove from Cart collection
     await Cart.updateMany(
       { 'items.product': doc._id },
       { $pull: { items: { product: doc._id } } }
     );
 
-    // Remove from User.cart array
     await User.updateMany(
       { 'cart.product': doc._id },
       { $pull: { cart: { product: doc._id } } }
     );
 
-    // Remove from savedForLater
     await Cart.updateMany(
       { 'savedForLater.product': doc._id },
       { $pull: { savedForLater: { product: doc._id } } }
@@ -150,7 +196,6 @@ productSchema.post('findOneAndDelete', async function(doc) {
   }
 });
 
-// Handle deleteOne
 productSchema.post('deleteOne', { document: true, query: false }, async function() {
   const productId = this._id;
   
@@ -170,9 +215,7 @@ productSchema.post('deleteOne', { document: true, query: false }, async function
   );
 });
 
-// Handle deleteMany
 productSchema.post('deleteMany', async function() {
-  // This runs after bulk delete operations
   console.log('🗑️ Multiple products deleted, recommend full cart validation');
 });
 

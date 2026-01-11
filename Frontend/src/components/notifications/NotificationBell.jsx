@@ -11,40 +11,33 @@ const NotificationBell = () => {
   const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
-    console.log('🔔 NotificationBell Effect Running:', {
+    console.log("🔔 NotificationBell Effect Running:", {
       isAuthenticated,
-      user: user?.email || 'No user',
-      hasToken: !!localStorage.getItem('authToken')
+      user: user?.email || "No user",
+      hasToken: !!localStorage.getItem("authToken"),
     });
 
     if (!isAuthenticated) {
-      console.log('⏭️ Skipping fetch - Not authenticated');
+      console.log("⏭️ Skipping fetch - Not authenticated");
       return;
     }
-    
+
     // Initial fetch
-    console.log('🚀 Initial fetch unread count...');
+    console.log("🚀 Initial fetch unread count...");
     fetchUnreadCount();
-    
+
     // Fetch count every 30 seconds
     const interval = setInterval(() => {
-      console.log('🔄 Interval fetch unread count...');
+      console.log("🔄 Interval fetch unread count...");
       fetchUnreadCount();
     }, 30000);
-    
+
     return () => {
-      console.log('🧹 Cleaning up interval');
+      console.log("🧹 Cleaning up interval");
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
-
-  // Debug log on every render
-  console.log('🔔 NotificationBell Render:', { 
-    isAuthenticated, 
-    unreadCount,
-    shouldShowBadge: isAuthenticated && unreadCount > 0 
-  });
 
   return (
     <div className="relative">
@@ -57,7 +50,7 @@ const NotificationBell = () => {
 
         {/* ✅ FIXED: Only show badge when count > 0 */}
         {isAuthenticated && unreadCount > 0 && (
-          <span 
+          <span
             className="absolute top-0 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full transform translate-x-1/2 -translate-y-1/2"
             title={`Unread: ${unreadCount}`}
           >

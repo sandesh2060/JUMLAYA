@@ -1,5 +1,5 @@
 // ============================================
-// 3. Frontend/src/main.jsx - FIXED
+// Frontend/src/main.jsx - WITH SCROLL TO TOP
 // ============================================
 import React from "react";
 import ReactDOM from "react-dom/client";
@@ -11,6 +11,9 @@ import "./i18n";
 import "./index.css";
 import App from "./App";
 import "leaflet/dist/leaflet.css";
+
+// ✅ Import ScrollToTop component
+import ScrollToTop from "./components/ScrollToTop";
 
 // Context Providers
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -30,6 +33,9 @@ console.log("🔧 Environment Variables:", {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
+      {/* ✅ Add ScrollToTop here - inside BrowserRouter */}
+      <ScrollToTop />
+      
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>

@@ -1,62 +1,81 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X, Clock, ArrowRight, Leaf, Sparkles } from 'lucide-react';
-import { adsAPI } from '@/api/ads.api';
-import { useAuth } from '@/context/AuthContext';
+// path : Frontend/src/components/ads/LandingPagePopup.jsx
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { X, Clock, ArrowRight, Leaf, Sparkles } from "lucide-react";
+import { adsAPI } from "@/api/ads.api";
+import { useAuth } from "@/context/AuthContext";
 
 const LandingPagePopup = () => {
   const [ad, setAd] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(8);
   const [isClosing, setIsClosing] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
-    // Only show ad if user is logged in
+    // ✅ FIX: Don't show ads for admin or rider
     if (!user) {
-      // Clear the flag when user logs out
-      sessionStorage.removeItem('adShownThisSession');
+      sessionStorage.removeItem("adShownThisSession");
       return;
     }
 
-    // Check if ad was already shown in this login session
-    const adShownThisSession = sessionStorage.getItem('adShownThisSession');
-    
+    // ✅ Block ads for admin and rider roles
+    const userRole = user.role?.toLowerCase();
+    if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'rider' || user.isAdmin === true) {
+      console.log("🚫 Admin/Rider detected - No ads will be shown");
+      return;
+    }
+
+    // ✅ Only show ads for customers
+    const adShownThisSession = sessionStorage.getItem("adShownThisSession");
+
     if (!adShownThisSession) {
+      console.log("🎯 Fetching active ad for customer...");
       fetchActiveAd();
-      // Mark as shown for this session
-      sessionStorage.setItem('adShownThisSession', 'true');
+    } else {
+      console.log("⏭️ Ad already shown this session");
     }
   }, [user]);
 
   const fetchActiveAd = async () => {
     try {
-      // Fetch active ad from API
+      console.log("📡 Calling API: /api/ads/active");
+      
       const response = await adsAPI.getActiveAd();
       
+      console.log("📦 API Response:", response);
+
       if (response.success && response.data.ad) {
+        console.log("✅ Active ad found:", response.data.ad);
         setAd(response.data.ad);
-        
-        // Show popup after 500ms delay
+
         setTimeout(() => {
+          console.log("🎬 Showing popup...");
           setIsVisible(true);
           startCountdown(response.data.ad);
         }, 500);
+
+        sessionStorage.setItem("adShownThisSession", "true");
+      } else {
+        console.log("ℹ️ No active ads available");
       }
     } catch (error) {
-      console.error('Failed to fetch active ad:', error);
+      console.error("❌ Failed to fetch active ad:", error);
+      console.error("Error details:", error.response?.data || error.message);
     }
   };
 
   const startCountdown = (adData) => {
-    const duration = adData.displayDuration || 5;
+    const duration = adData.displayDuration || 8;
+    console.log(`⏱️ Starting countdown: ${duration} seconds`);
     setCountdown(duration);
 
     const interval = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
+          console.log("⏰ Countdown finished, closing popup");
           handleClose();
           return 0;
         }
@@ -68,24 +87,28 @@ const LandingPagePopup = () => {
   };
 
   const handleClose = () => {
+    console.log("🚪 Closing popup");
     setIsClosing(true);
     setTimeout(() => {
       setIsVisible(false);
       setAd(null);
+      setIsClosing(false);
     }, 400);
   };
 
   const handleCTAClick = async () => {
+    console.log("🖱️ CTA clicked");
+    
     try {
-      // Track click
       if (ad?._id) {
+        console.log("📊 Tracking click for ad:", ad._id);
         await adsAPI.trackClick(ad._id);
       }
 
-      // Navigate to link
       if (ad?.buttonLink) {
-        if (ad.buttonLink.startsWith('http')) {
-          window.open(ad.buttonLink, '_blank');
+        console.log("🔗 Navigating to:", ad.buttonLink);
+        if (ad.buttonLink.startsWith("http")) {
+          window.open(ad.buttonLink, "_blank");
         } else {
           navigate(ad.buttonLink);
         }
@@ -93,11 +116,10 @@ const LandingPagePopup = () => {
 
       handleClose();
     } catch (error) {
-      console.error('Failed to track click:', error);
-      // Still navigate even if tracking fails
+      console.error("❌ Failed to track click:", error);
       if (ad?.buttonLink) {
-        if (ad.buttonLink.startsWith('http')) {
-          window.open(ad.buttonLink, '_blank');
+        if (ad.buttonLink.startsWith("http")) {
+          window.open(ad.buttonLink, "_blank");
         } else {
           navigate(ad.buttonLink);
         }
@@ -107,14 +129,32 @@ const LandingPagePopup = () => {
   };
 
   // Don't render if not visible or no ad
-  if (!isVisible || !ad) return null;
+  if (!isVisible || !ad) {
+    return null;
+  }
 
   const getTypeBadge = (type) => {
     const badges = {
-      festival: { emoji: '🌿', label: 'ORGANIC HARVEST', gradient: 'from-green-500 to-emerald-600' },
-      discount: { emoji: '🌱', label: 'SPECIAL OFFER', gradient: 'from-green-600 to-teal-600' },
-      offer: { emoji: '🍃', label: 'LIMITED OFFER', gradient: 'from-lime-500 to-green-600' },
-      promotion: { emoji: '🌾', label: 'FRESH ARRIVAL', gradient: 'from-emerald-500 to-green-700' },
+      festival: {
+        emoji: "🌿",
+        label: "ORGANIC HARVEST",
+        gradient: "from-green-500 to-emerald-600",
+      },
+      discount: {
+        emoji: "🌱",
+        label: "SPECIAL OFFER",
+        gradient: "from-green-600 to-teal-600",
+      },
+      offer: {
+        emoji: "🍃",
+        label: "LIMITED OFFER",
+        gradient: "from-lime-500 to-green-600",
+      },
+      promotion: {
+        emoji: "🌾",
+        label: "FRESH ARRIVAL",
+        gradient: "from-emerald-500 to-green-700",
+      },
     };
     return badges[type] || badges.promotion;
   };
@@ -122,35 +162,34 @@ const LandingPagePopup = () => {
   const typeBadge = getTypeBadge(ad.type);
 
   return (
-    <div 
+    <div
       className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-500 ${
-        isVisible && !isClosing 
-          ? 'opacity-100' 
-          : 'opacity-0 pointer-events-none'
+        isVisible && !isClosing
+          ? "opacity-100"
+          : "opacity-0 pointer-events-none"
       }`}
     >
       {/* Backdrop with blur - organic green tint */}
-      <div 
+      <div
         className={`absolute inset-0 bg-gradient-to-br from-green-900/80 via-emerald-900/70 to-teal-900/80 backdrop-blur-md transition-all duration-500 ${
-          isVisible && !isClosing ? 'opacity-100' : 'opacity-0'
+          isVisible && !isClosing ? "opacity-100" : "opacity-0"
         }`}
         onClick={handleClose}
       />
-      
+
       {/* Full-page popup container */}
-      <div 
+      <div
         className={`relative w-full h-full max-w-7xl max-h-[95vh] m-4 overflow-hidden transition-all duration-700 ease-out ${
-          isVisible && !isClosing 
-            ? 'scale-100 opacity-100 translate-y-0' 
-            : 'scale-95 opacity-0 translate-y-8'
+          isVisible && !isClosing
+            ? "scale-100 opacity-100 translate-y-0"
+            : "scale-95 opacity-0 translate-y-8"
         }`}
       >
         {/* Main content wrapper */}
         <div className="relative w-full h-full bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden">
-          
           {/* Animated organic gradient background */}
           <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50 to-lime-50 dark:from-gray-900 dark:via-green-900/20 dark:to-emerald-900/20 opacity-60" />
-          
+
           {/* Floating organic particles effect */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {[...Array(15)].map((_, i) => (
@@ -160,18 +199,20 @@ const LandingPagePopup = () => {
                 style={{
                   width: `${8 + Math.random() * 12}px`,
                   height: `${8 + Math.random() * 12}px`,
-                  background: `radial-gradient(circle, ${i % 2 === 0 ? '#22c55e' : '#10b981'}, transparent)`,
+                  background: `radial-gradient(circle, ${
+                    i % 2 === 0 ? "#22c55e" : "#10b981"
+                  }, transparent)`,
                   left: `${Math.random() * 100}%`,
                   top: `${Math.random() * 100}%`,
                   animationDelay: `${Math.random() * 5}s`,
-                  animationDuration: `${4 + Math.random() * 6}s`
+                  animationDuration: `${4 + Math.random() * 6}s`,
                 }}
               />
             ))}
           </div>
 
           {/* Close button - organic green theme */}
-          <button 
+          <button
             onClick={handleClose}
             className="absolute top-6 right-6 z-20 w-12 h-12 flex items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full shadow-lg hover:scale-110 hover:rotate-90 transition-all duration-300 group border-2 border-green-200 dark:border-green-700"
             aria-label="Close popup"
@@ -189,23 +230,24 @@ const LandingPagePopup = () => {
 
           {/* Content grid */}
           <div className="relative h-full grid md:grid-cols-2 gap-0">
-            
             {/* Left side - Image with organic overlay */}
             <div className="relative overflow-hidden bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30">
               <div className="absolute inset-0">
                 {ad.posterImage && (
-                  <img 
-                    src={ad.posterImage} 
+                  <img
+                    src={ad.posterImage}
                     alt={ad.title}
                     className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
                   />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-green-900/60 via-transparent to-transparent" />
               </div>
-              
+
               {/* Floating badge on image - organic theme */}
               <div className="absolute top-8 left-8">
-                <div className={`px-6 py-3 bg-gradient-to-r ${typeBadge.gradient} rounded-full shadow-xl transform hover:scale-105 transition-transform`}>
+                <div
+                  className={`px-6 py-3 bg-gradient-to-r ${typeBadge.gradient} rounded-full shadow-xl transform hover:scale-105 transition-transform`}
+                >
                   <span className="text-white font-bold text-sm tracking-wider flex items-center gap-2">
                     <span className="text-xl">{typeBadge.emoji}</span>
                     {typeBadge.label}
@@ -240,14 +282,12 @@ const LandingPagePopup = () => {
 
             {/* Right side - Content with organic theme */}
             <div className="relative flex flex-col justify-center p-8 md:p-12 lg:p-16 bg-white dark:bg-gray-900">
-              
               {/* Leaf decoration */}
               <div className="absolute top-12 right-12 text-green-200 dark:text-green-800 opacity-30 animate-spin-slow">
                 <Leaf className="w-20 h-20" />
               </div>
 
               <div className="relative space-y-6 max-w-xl">
-                
                 {/* Title with green gradient */}
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white leading-tight">
                   <span className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent animate-gradient">
@@ -293,13 +333,15 @@ const LandingPagePopup = () => {
                 )}
 
                 {/* CTA Button - organic green */}
-                <button 
+                <button
                   onClick={handleCTAClick}
                   className="group relative inline-flex items-center gap-3 px-8 py-5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   <Leaf className="relative w-5 h-5 group-hover:rotate-12 transition-transform" />
-                  <span className="relative">{ad.buttonText || 'Shop Now'}</span>
+                  <span className="relative">
+                    {ad.buttonText || "Shop Now"}
+                  </span>
                   <ArrowRight className="relative w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
 
@@ -326,37 +368,48 @@ const LandingPagePopup = () => {
 
       <style jsx>{`
         @keyframes float {
-          0%, 100% { 
-            transform: translateY(0px) translateX(0px) rotate(0deg); 
+          0%,
+          100% {
+            transform: translateY(0px) translateX(0px) rotate(0deg);
           }
-          33% { 
-            transform: translateY(-25px) translateX(10px) rotate(120deg); 
+          33% {
+            transform: translateY(-25px) translateX(10px) rotate(120deg);
           }
-          66% { 
-            transform: translateY(-15px) translateX(-10px) rotate(240deg); 
+          66% {
+            transform: translateY(-15px) translateX(-10px) rotate(240deg);
           }
         }
-        
+
         @keyframes gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
         }
-        
+
         @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
-        
+
         .animate-float {
           animation: float linear infinite;
         }
-        
+
         .animate-gradient {
           background-size: 200% 200%;
           animation: gradient 4s ease infinite;
         }
-        
+
         .animate-spin-slow {
           animation: spin-slow 25s linear infinite;
         }

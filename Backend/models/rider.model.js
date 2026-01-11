@@ -1,26 +1,22 @@
-// Backend/models/rider.model.js
+// Backend/models/rider.model.js - FIXED DUPLICATE INDEXES
 const mongoose = require('mongoose');
 
 const riderSchema = new mongoose.Schema({
-  // ============ BASIC INFO ============
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
-    index: true
+    unique: true, // ✅ This creates an index automatically - removed duplicate
   },
   
   riderCode: {
     type: String,
-    unique: true,
+    unique: true, // ✅ This creates an index automatically - removed duplicate
     required: true,
     uppercase: true,
     trim: true,
-    index: true
   },
 
-  // ============ VEHICLE INFO ============
   vehicleType: {
     type: String,
     enum: ['bike', 'scooter', 'bicycle', 'car', 'van'],
@@ -32,7 +28,7 @@ const riderSchema = new mongoose.Schema({
     type: String,
     trim: true,
     uppercase: true,
-    sparse: true // Allows multiple null values
+    sparse: true
   },
 
   vehicleBrand: {
@@ -50,7 +46,6 @@ const riderSchema = new mongoose.Schema({
     trim: true
   },
 
-  // ============ LICENSE & DOCUMENTS ============
   licenseNumber: {
     type: String,
     trim: true,
@@ -96,12 +91,11 @@ const riderSchema = new mongoose.Schema({
     }
   },
 
-  // ============ CONTACT INFO ============
   phoneNumber: {
     type: String,
     required: true,
     trim: true,
-    index: true
+    index: true, // ✅ Keep only this
   },
 
   alternatePhone: {
@@ -115,12 +109,11 @@ const riderSchema = new mongoose.Schema({
     relation: String
   },
 
-  // ============ STATUS ============
   status: {
     type: String,
     enum: ['offline', 'active', 'on_delivery', 'inactive', 'suspended'],
     default: 'offline',
-    index: true
+    index: true, // ✅ Keep only this
   },
 
   availability: {
@@ -130,7 +123,6 @@ const riderSchema = new mongoose.Schema({
     totalOnlineHours: { type: Number, default: 0 }
   },
 
-  // ============ LOCATION ============
   currentLocation: {
     type: {
       type: String,
@@ -138,7 +130,7 @@ const riderSchema = new mongoose.Schema({
       default: 'Point'
     },
     coordinates: {
-      type: [Number], // [longitude, latitude]
+      type: [Number],
       default: [0, 0]
     },
     address: String,
@@ -151,28 +143,26 @@ const riderSchema = new mongoose.Schema({
       enum: ['Point']
     },
     coordinates: {
-      type: [Number] // [longitude, latitude]
+      type: [Number]
     },
     address: String
   },
 
-  // ============ DELIVERY ZONE ============
   deliveryZones: [{
     name: String,
-    coordinates: [[Number]], // Polygon coordinates
+    coordinates: [[Number]],
     isActive: { type: Boolean, default: true }
   }],
 
-  preferredAreas: [String], // City names or area names
+  preferredAreas: [String],
 
   maxDeliveryRadius: {
     type: Number,
-    default: 10, // kilometers
+    default: 10,
     min: 1,
     max: 50
   },
 
-  // ============ PERFORMANCE METRICS ============
   rating: {
     average: { type: Number, default: 0, min: 0, max: 5 },
     count: { type: Number, default: 0 },
@@ -189,33 +179,24 @@ const riderSchema = new mongoose.Schema({
     totalDeliveries: { type: Number, default: 0 },
     completedDeliveries: { type: Number, default: 0 },
     cancelledDeliveries: { type: Number, default: 0 },
-    acceptanceRate: { type: Number, default: 100 }, // Percentage
-    onTimeDeliveryRate: { type: Number, default: 100 }, // Percentage
-    averageDeliveryTime: { type: Number, default: 0 }, // Minutes
-    totalDistance: { type: Number, default: 0 }, // Kilometers
-    
-    // Daily stats
+    acceptanceRate: { type: Number, default: 100 },
+    onTimeDeliveryRate: { type: Number, default: 100 },
+    averageDeliveryTime: { type: Number, default: 0 },
+    totalDistance: { type: Number, default: 0 },
     todayDeliveries: { type: Number, default: 0 },
     todayEarnings: { type: Number, default: 0 },
-    
-    // Weekly stats
     weeklyDeliveries: { type: Number, default: 0 },
     weeklyEarnings: { type: Number, default: 0 },
-    
-    // Monthly stats
     monthlyDeliveries: { type: Number, default: 0 },
     monthlyEarnings: { type: Number, default: 0 }
   },
 
-  // ============ EARNINGS ============
   earnings: {
     total: { type: Number, default: 0 },
     pending: { type: Number, default: 0 },
     paid: { type: Number, default: 0 },
-    
     thisWeek: { type: Number, default: 0 },
     thisMonth: { type: Number, default: 0 },
-    
     lastPayout: {
       amount: Number,
       date: Date,
@@ -224,7 +205,6 @@ const riderSchema = new mongoose.Schema({
     }
   },
 
-  // Earnings breakdown
   earningsHistory: [{
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
     amount: Number,
@@ -233,7 +213,6 @@ const riderSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'paid'], default: 'pending' }
   }],
 
-  // ============ BANKING INFO ============
   bankDetails: {
     accountHolderName: String,
     accountNumber: String,
@@ -243,40 +222,32 @@ const riderSchema = new mongoose.Schema({
     verified: { type: Boolean, default: false }
   },
 
-  // Payment methods (for receiving payments)
   paymentMethods: [{
     type: { type: String, enum: ['bank', 'esewa', 'khalti', 'paypal'] },
     details: mongoose.Schema.Types.Mixed,
     isDefault: { type: Boolean, default: false }
   }],
 
-  // ============ VERIFICATION ============
   verification: {
     isVerified: { type: Boolean, default: false },
     verifiedAt: Date,
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    
     identityVerified: { type: Boolean, default: false },
     documentVerified: { type: Boolean, default: false },
     backgroundCheckDone: { type: Boolean, default: false },
     backgroundCheckDate: Date,
-    
     rejectionReason: String,
     rejectedAt: Date
   },
 
-  // ============ PREFERENCES ============
   preferences: {
     notificationsEnabled: { type: Boolean, default: true },
     smsEnabled: { type: Boolean, default: true },
     emailEnabled: { type: Boolean, default: true },
-    
     acceptCashOrders: { type: Boolean, default: true },
     acceptOnlineOrders: { type: Boolean, default: true },
-    
     autoAcceptOrders: { type: Boolean, default: false },
     maxConcurrentOrders: { type: Number, default: 3, min: 1, max: 5 },
-    
     workingHours: {
       monday: { start: String, end: String, isActive: Boolean },
       tuesday: { start: String, end: String, isActive: Boolean },
@@ -288,15 +259,12 @@ const riderSchema = new mongoose.Schema({
     }
   },
 
-  // ============ ACTIVITY TRACKING ============
   activity: {
     lastOnline: Date,
     lastOffline: Date,
     lastDelivery: Date,
     lastLocationUpdate: Date,
-    
     sessionsToday: { type: Number, default: 0 },
-    
     loginHistory: [{
       timestamp: Date,
       device: String,
@@ -304,13 +272,11 @@ const riderSchema = new mongoose.Schema({
     }]
   },
 
-  // ============ CURRENT ASSIGNMENTS ============
   currentOrders: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order'
   }],
 
-  // Order limits
   maxActiveOrders: {
     type: Number,
     default: 3,
@@ -318,7 +284,6 @@ const riderSchema = new mongoose.Schema({
     max: 10
   },
 
-  // ============ INCIDENTS & ISSUES ============
   incidents: [{
     type: { type: String, enum: ['accident', 'complaint', 'late_delivery', 'other'] },
     description: String,
@@ -328,7 +293,6 @@ const riderSchema = new mongoose.Schema({
     status: { type: String, enum: ['open', 'investigating', 'resolved'], default: 'open' }
   }],
 
-  // ============ TRAINING & CERTIFICATION ============
   training: {
     isCompleted: { type: Boolean, default: false },
     completedAt: Date,
@@ -339,14 +303,12 @@ const riderSchema = new mongoose.Schema({
     }]
   },
 
-  // ============ ADMIN NOTES ============
   adminNotes: [{
     note: String,
     addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     addedAt: { type: Date, default: Date.now }
   }],
 
-  // ============ REFERRAL ============
   referral: {
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Rider' },
     referralCode: { type: String, unique: true, sparse: true },
@@ -354,7 +316,6 @@ const riderSchema = new mongoose.Schema({
     referralEarnings: { type: Number, default: 0 }
   },
 
-  // ============ METADATA ============
   isActive: {
     type: Boolean,
     default: true
@@ -381,12 +342,10 @@ const riderSchema = new mongoose.Schema({
     default: Date.now
   },
 
-  // App version (for tracking rider app version)
   appVersion: String,
 
-  // Device info
   deviceInfo: {
-    platform: String, // ios, android, web
+    platform: String,
     deviceModel: String,
     osVersion: String
   }
@@ -398,27 +357,21 @@ const riderSchema = new mongoose.Schema({
 });
 
 // ============ INDEXES ============
-riderSchema.index({ currentLocation: '2dsphere' }); // Geospatial queries
-riderSchema.index({ user: 1, status: 1 });
-riderSchema.index({ riderCode: 1 });
-riderSchema.index({ phoneNumber: 1 });
+// ✅ FIXED: Removed duplicate indexes
+riderSchema.index({ 'currentLocation.coordinates': '2dsphere' }); // Geospatial queries
 riderSchema.index({ 'verification.isVerified': 1, status: 1 });
 riderSchema.index({ createdAt: -1 });
 riderSchema.index({ 'rating.average': -1 });
 
 // ============ VIRTUALS ============
-
-// Full name from user
 riderSchema.virtual('fullName').get(function() {
   return this.user?.name || 'Unknown';
 });
 
-// Is currently online
 riderSchema.virtual('isOnline').get(function() {
   return this.status === 'active' || this.status === 'on_delivery';
 });
 
-// Can accept new orders
 riderSchema.virtual('canAcceptOrders').get(function() {
   return this.status === 'active' && 
          this.verification.isVerified && 
@@ -427,8 +380,6 @@ riderSchema.virtual('canAcceptOrders').get(function() {
 });
 
 // ============ METHODS ============
-
-// Generate unique rider code
 riderSchema.statics.generateRiderCode = async function() {
   const prefix = 'RDR';
   let code;
@@ -443,7 +394,6 @@ riderSchema.statics.generateRiderCode = async function() {
   return code;
 };
 
-// Update location
 riderSchema.methods.updateLocation = function(lat, lng) {
   this.currentLocation = {
     type: 'Point',
@@ -454,9 +404,7 @@ riderSchema.methods.updateLocation = function(lat, lng) {
   return this.save();
 };
 
-// Update status
 riderSchema.methods.updateStatus = function(newStatus) {
-  const oldStatus = this.status;
   this.status = newStatus;
   this.availability.lastStatusChange = new Date();
 
@@ -471,7 +419,6 @@ riderSchema.methods.updateStatus = function(newStatus) {
   return this.save();
 };
 
-// Calculate rating
 riderSchema.methods.updateRating = function(newRating) {
   const breakdown = this.rating.breakdown;
   breakdown[newRating] = (breakdown[newRating] || 0) + 1;
@@ -486,7 +433,6 @@ riderSchema.methods.updateRating = function(newRating) {
   return this.save();
 };
 
-// Add earnings
 riderSchema.methods.addEarnings = function(amount, orderId, type = 'delivery') {
   this.earnings.total += amount;
   this.earnings.pending += amount;
@@ -508,7 +454,6 @@ riderSchema.methods.addEarnings = function(amount, orderId, type = 'delivery') {
   return this.save();
 };
 
-// Accept order
 riderSchema.methods.acceptOrder = function(orderId) {
   if (this.currentOrders.length >= this.maxActiveOrders) {
     throw new Error('Maximum active orders reached');
@@ -524,7 +469,6 @@ riderSchema.methods.acceptOrder = function(orderId) {
   return this.save();
 };
 
-// Complete order
 riderSchema.methods.completeOrder = function(orderId) {
   this.currentOrders = this.currentOrders.filter(
     id => id.toString() !== orderId.toString()
@@ -546,7 +490,6 @@ riderSchema.methods.completeOrder = function(orderId) {
 
 // ============ PRE-SAVE MIDDLEWARE ============
 riderSchema.pre('save', function(next) {
-  // Update acceptance rate
   if (this.stats.totalDeliveries > 0) {
     this.stats.acceptanceRate = 
       (this.stats.completedDeliveries / this.stats.totalDeliveries) * 100;

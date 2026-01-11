@@ -1,14 +1,16 @@
 {
   "name": "JUMLAYA",
   "short_name": "JUMLAYA",
+  "description": "Your trusted e-commerce platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
   "icons": [
     {
-      "src": "/logo.png",
-      "sizes": "192x192",
+      "src": "/images/logo.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
-  ],
-  "theme_color": "#229954",
-  "background_color": "#ffffff",
-  "display": "standalone"
+  ]
 }
