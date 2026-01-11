@@ -11,9 +11,7 @@ export const useCart = () => {
     throw new Error('useCart must be used within CartProvider');
   }
 
-  // 🔍 DEBUG: Log what we're getting from context
-  console.log('🛒 useCart - context.items:', context.items);
-  console.log('🛒 useCart - items length:', context.items?.length);
+
 
   // Calculate totals from cart items
   const calculateTotals = () => {

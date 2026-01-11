@@ -24,6 +24,7 @@ import { useCart } from "../../hooks/useCart";
 import { useWishlist } from "../../hooks/useWishlist";
 import { useTheme } from "../../hooks/useTheme";
 import { useLanguage } from "../../hooks/useLanguage";
+import { useSettings } from "../../hooks/useSettings.js"; // ✅ ADD THIS
 import NotificationBell from "../notifications/NotificationBell";
 import { productAPI } from "../../api/product.api";
 
@@ -35,6 +36,7 @@ export default function Navbar() {
   const { items: wishlistItems, loading: wishlistLoading } = useWishlist();
   const { theme, toggleTheme } = useTheme();
   const { currentLanguage, changeLanguage, languages } = useLanguage();
+  const { settings, loading: settingsLoading } = useSettings(); // ✅ ADD THIS
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -116,7 +118,10 @@ export default function Navbar() {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target))
         setShowDropdown(false);
-      if (languageMenuRef.current && !languageMenuRef.current.contains(e.target))
+      if (
+        languageMenuRef.current &&
+        !languageMenuRef.current.contains(e.target)
+      )
         setShowLanguageMenu(false);
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target))
         setIsProfileMenuOpen(false);
@@ -190,19 +195,47 @@ export default function Navbar() {
       <nav className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 transition-colors duration-200">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16 lg:h-18">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group flex-shrink-0 mr-2 sm:mr-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-                <img
-                  src="/images/logo.png"
-                  alt="Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <span className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent hidden xs:inline whitespace-nowrap">
-                {t("navbar.brandName")}
-              </span>
-            </Link>
+           {/* ✅ FIXED LOGO - WORKS WITH CLOUDINARY */}
+<Link
+  to="/"
+  className="flex items-center gap-2 group flex-shrink-0 mr-2 sm:mr-4"
+>
+  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+    {settingsLoading ? (
+      // Loading skeleton
+      <div className="w-full h-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg" />
+    ) : (
+      <img
+        src={(() => {
+          // ✅ FIX: Handle Cloudinary URLs properly
+          const logoUrl = settings?.storeLogo || settings?.logo;
+          
+          // If no logo URL, use fallback
+          if (!logoUrl) {
+            return import.meta.env.VITE_LOGO_URL || "/images/logo.png";
+          }
+          
+          // ✅ If it's a Cloudinary URL (starts with http/https), use it directly
+          if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+            return logoUrl;
+          }
+          
+          // Otherwise, use the getImageUrl helper for local paths
+          return getImageUrl(logoUrl);
+        })()}
+        alt={settings?.storeName || t("navbar.brandName")}
+        className="w-full h-full object-contain rounded-lg"
+        onError={(e) => {
+          console.error('❌ Logo failed to load:', e.target.src);
+          e.target.src = import.meta.env.VITE_LOGO_URL || "/images/logo.png";
+        }}
+      />
+    )}
+  </div>
+  <span className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent hidden xs:inline whitespace-nowrap">
+    {settings?.storeName || t("navbar.brandName")}
+  </span>
+</Link>
 
             {/* Desktop Navigation Links */}
             <div className="hidden lg:flex items-center space-x-4 xl:space-x-6">
@@ -569,21 +602,21 @@ export default function Navbar() {
                 ))}
 
                 {!isAuthenticated ? (
-  <button
-    onClick={() => handleNavClick("/login")}
-    className="mx-4 mt-3 block w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm transition-colors"
-  >
-    {t("login")}
-  </button>
-) : (
-  <button
-    onClick={handleLogout}
-    className="mx-4 mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 font-medium text-sm transition-colors"
-  >
-    <LogOut size={18} />
-    {t("nav.logout")}
-  </button>
-)}
+                  <button
+                    onClick={() => handleNavClick("/login")}
+                    className="mx-4 mt-3 block w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm transition-colors"
+                  >
+                    {t("login")}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleLogout}
+                    className="mx-4 mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 font-medium text-sm transition-colors"
+                  >
+                    <LogOut size={18} />
+                    {t("nav.logout")}
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -625,15 +658,11 @@ export default function Navbar() {
           animation: slide-in 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
         .animate-slide-down {
-          animation: slide-down 0.2s ease-out;
-        }
+          animation: slide-down 0.2s ease
+;        }
         .animate-fade-in {
-          animation: fade-in 0.2s ease-out;
-        }
-        @media (min-width: 375px) {
-          .xs\\:inline {
-            display: inline;
-          }
+          animation: fade-in 0.2s ease
+;
         }
       `}</style>
     </>

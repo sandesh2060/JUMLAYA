@@ -15,6 +15,8 @@ const app = express();
 
 const isProduction = process.env.NODE_ENV === "production";
 const isDevelopment = process.env.NODE_ENV === "development";
+const adminSettingsRoutes = require('./routes/admin.settings.routes');
+
 
 // =====================================================
 // TRUST PROXY (for production deployments)
@@ -60,6 +62,7 @@ app.use(helmet({
 }));
 
 app.use(mongoSanitize());
+
 
 // =====================================================
 // CORS CONFIGURATION (PERFECT FOR DEVELOPMENT & PRODUCTION)
@@ -279,6 +282,7 @@ app.use("/api/products", require("./routes/product.review.routes"));
 app.use("/api/ads", require("./routes/ads.routes"));
 
 // Admin routes
+app.use('/api/admin/settings', adminSettingsRoutes);
 app.use("/api/settings", require("./routes/settings.routes"));
 app.use("/api/admin/settings", require("./routes/admin.settings.routes"));
 app.use("/api/admin/dashboard", require("./routes/admin.dashboard.routes"));
