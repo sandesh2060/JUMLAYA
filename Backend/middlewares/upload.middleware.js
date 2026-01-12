@@ -1,6 +1,6 @@
 // ============================================
-// FILE 1: Backend/middlewares/upload.middleware.js
-// ✅ CREATE THIS NEW FILE - COPY EVERYTHING BELOW
+// Backend/middlewares/upload.middleware.js
+// ✅ COMPLETE UPLOAD MIDDLEWARE
 // ============================================
 
 const multer = require('multer');
@@ -26,7 +26,7 @@ const imageFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max for avatars
+    fileSize: 5 * 1024 * 1024, // 5MB max
   },
   fileFilter: imageFilter
 });
@@ -34,7 +34,7 @@ const upload = multer({
 // Single file upload
 const uploadSingle = (fieldName) => upload.single(fieldName);
 
-// Multiple files upload (for products, galleries, etc.)
+// Multiple files upload
 const uploadMultiple = (fieldName, maxCount = 10) => upload.array(fieldName, maxCount);
 
 // Error handler middleware

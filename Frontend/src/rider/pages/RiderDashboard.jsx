@@ -1,8 +1,3 @@
-
-// ============================================
-// Frontend/src/rider/pages/RiderDashboard.jsx
-// ✅ PRODUCTION READY - Geolocation Error Handling Fixed
-// ============================================
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -22,9 +17,14 @@ import {
   Settings,
   AlertCircle,
   MapPinOff,
+  Bell,
+  Award,
+  Target,
+  Activity,
+  Zap,
 } from "lucide-react";
-import toast from "react-hot-toast";
-import { riderAPI } from "../../api/rider.api";
+
+
 
 const RiderDashboard = () => {
   const navigate = useNavigate();
@@ -54,7 +54,12 @@ const RiderDashboard = () => {
   const [locationError, setLocationError] = useState(null);
   const [locationPermission, setLocationPermission] = useState("prompt");
 
-  // ✅ Check geolocation permission status
+  // Toast notifications
+  const showToast = (message, type = 'success') => {
+    console.log(`${type.toUpperCase()}: ${message}`);
+  };
+
+  // Check location permission
   const checkLocationPermission = useCallback(async () => {
     if (!navigator.permissions) {
       console.warn("⚠️ Permissions API not supported");
@@ -66,10 +71,8 @@ const RiderDashboard = () => {
       setLocationPermission(result.state);
       console.log("📍 Location permission:", result.state);
 
-      // Listen for permission changes
       result.addEventListener("change", () => {
         setLocationPermission(result.state);
-        console.log("📍 Permission changed to:", result.state);
       });
 
       return result.state;
@@ -79,19 +82,18 @@ const RiderDashboard = () => {
     }
   }, []);
 
-  // ✅ Request location permission
+  // Request location permission
   const requestLocationPermission = useCallback(async () => {
     if (!navigator.geolocation) {
       const errorMsg = "Geolocation is not supported by your browser";
       setLocationError(errorMsg);
-      toast.error(errorMsg);
+      showToast(errorMsg, 'error');
       return false;
     }
 
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log("✅ Location permission granted");
           setLocationError(null);
           setLocationPermission("granted");
           setCurrentPosition({
@@ -101,7 +103,6 @@ const RiderDashboard = () => {
           resolve(true);
         },
         (error) => {
-          console.error("❌ Location permission error:", error);
           handleGeolocationError(error);
           resolve(false);
         },
@@ -114,47 +115,38 @@ const RiderDashboard = () => {
     });
   }, []);
 
-  // ✅ Handle geolocation errors with detailed messages
+  // Handle geolocation errors
   const handleGeolocationError = useCallback((error) => {
-    let errorMessage = "";
     let userFriendlyMessage = "";
 
     switch (error.code) {
       case error.PERMISSION_DENIED:
-        errorMessage = "Location permission denied by user";
-        userFriendlyMessage = "📍 Please enable location access in your browser settings to use tracking features";
+        userFriendlyMessage = "📍 Please enable location access in your browser settings";
         setLocationPermission("denied");
         break;
       case error.POSITION_UNAVAILABLE:
-        errorMessage = "Location information unavailable";
-        userFriendlyMessage = "📍 Unable to retrieve your location. Please check your device settings";
+        userFriendlyMessage = "📍 Unable to retrieve your location";
         break;
       case error.TIMEOUT:
-        errorMessage = "Location request timeout";
-        userFriendlyMessage = "📍 Location request timed out. Please try again";
+        userFriendlyMessage = "📍 Location request timed out";
         break;
       default:
-        errorMessage = "Unknown geolocation error";
         userFriendlyMessage = "📍 An error occurred while accessing your location";
     }
 
-    console.error(`❌ Geolocation Error [${error.code}]:`, errorMessage);
     setLocationError(userFriendlyMessage);
     setLocationTracking(false);
     
-    // Show toast only for critical errors
     if (error.code !== error.TIMEOUT) {
-      toast.error(userFriendlyMessage, { duration: 5000 });
+      showToast(userFriendlyMessage, 'error');
     }
   }, []);
 
-  // ✅ Fetch dashboard data
+  // Fetch dashboard data
   const fetchDashboard = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
     try {
-      const response = await riderAPI.getDashboard();
-      console.log("📊 Dashboard API Response:", response);
-
+      const response = await mockAPI.getDashboard();
       const dashboardData = response.data || response;
 
       setStats({
@@ -173,10 +165,9 @@ const RiderDashboard = () => {
       setAvailableOrders(dashboardData.orders || []);
 
       try {
-        const activeResponse = await riderAPI.orders.getActive();
+        const activeResponse = await mockAPI.orders.getActive();
         setCurrentOrders(activeResponse.data || []);
       } catch (error) {
-        console.warn("No active orders:", error);
         setCurrentOrders([]);
       }
 
@@ -188,179 +179,110 @@ const RiderDashboard = () => {
         setCurrentPosition({ lat, lng });
       }
     } catch (error) {
-      console.error("❌ Dashboard fetch error:", error);
-      const errorMsg =
-        error.response?.data?.message || "Failed to load dashboard";
-      toast.error(errorMsg);
+      showToast("Failed to load dashboard", 'error');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ✅ Initial load
+  // Navigate to order details
+  const viewOrderDetails = (orderId) => {
+    navigate(`/rider/orders/${orderId}`);
+  };
+
+  // Manual enable location tracking
+  const enableLocationTracking = async () => {
+    const granted = await requestLocationPermission();
+    if (granted) {
+      setLocationTracking(true);
+      showToast("📍 Location tracking enabled", 'success');
+    }
+  };
+
+  // Initial load
   useEffect(() => {
     fetchDashboard();
     checkLocationPermission();
   }, [fetchDashboard, checkLocationPermission]);
 
-  // ✅ Refresh dashboard when coming back from order details
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (
-        !document.hidden &&
-        (status === "active" || status === "on_delivery")
-      ) {
-        console.log("📱 Tab became visible - refreshing dashboard");
-        fetchDashboard(false);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [status, fetchDashboard]);
-
-  // ✅ Refresh when navigating back to dashboard
-  useEffect(() => {
-    console.log("🔄 Dashboard mounted/updated - fetching fresh data");
-    fetchDashboard(false);
-  }, [location.pathname, fetchDashboard]);
-
-  // ✅ Auto-refresh every 30 seconds when online
-  useEffect(() => {
-    if (status === "active" || status === "on_delivery") {
-      const interval = setInterval(() => {
-        fetchDashboard(false);
-      }, 30000);
-
-      return () => clearInterval(interval);
-    }
-  }, [status, fetchDashboard]);
-
-  // ✅ Enhanced Location tracking with better error handling
+  // Location tracking
   useEffect(() => {
     let watchId;
-    let retryCount = 0;
-    const MAX_RETRIES = 3;
 
-    const startLocationTracking = () => {
+    if (locationTracking && (status === "active" || status === "on_delivery")) {
       if (!navigator.geolocation) {
-        console.error("❌ Geolocation not supported");
-        setLocationError("Geolocation is not supported by your browser");
+        setLocationError("Geolocation is not supported");
         setLocationTracking(false);
         return;
       }
 
-      console.log("📍 Starting location tracking...");
-
       watchId = navigator.geolocation.watchPosition(
-        // Success callback
         async (position) => {
           const { latitude, longitude } = position.coords;
           setCurrentPosition({ lat: latitude, lng: longitude });
           setLocationError(null);
-          retryCount = 0; // Reset retry count on success
 
           try {
-            await riderAPI.updateLocation(latitude, longitude);
-            console.log("📍 Location updated successfully:", {
-              lat: latitude.toFixed(6),
-              lng: longitude.toFixed(6),
-              accuracy: position.coords.accuracy.toFixed(2) + "m",
-            });
+            await mockAPI.updateLocation(latitude, longitude);
           } catch (error) {
-            console.error("❌ Failed to update location on server:", error);
-            // Don't stop tracking if server update fails
+            console.error("Location update failed:", error);
           }
         },
-        // Error callback
         (error) => {
-          console.error("❌ Location watch error:", error);
           handleGeolocationError(error);
-
-          // Retry logic for timeout errors
-          if (error.code === error.TIMEOUT && retryCount < MAX_RETRIES) {
-            retryCount++;
-            console.log(`🔄 Retrying location tracking (${retryCount}/${MAX_RETRIES})...`);
-            // Don't stop tracking on timeout, let it retry automatically
-          } else if (error.code === error.PERMISSION_DENIED) {
-            // Stop tracking if permission is denied
-            setLocationTracking(false);
-          }
         },
-        // Options
         {
           enableHighAccuracy: true,
-          timeout: 15000, // Increased timeout to 15 seconds
-          maximumAge: 5000, // Allow cached position up to 5 seconds old
+          timeout: 15000,
+          maximumAge: 5000,
         }
       );
-    };
-
-    if (locationTracking && (status === "active" || status === "on_delivery")) {
-      startLocationTracking();
     }
 
     return () => {
       if (watchId) {
         navigator.geolocation.clearWatch(watchId);
-        console.log("📍 Location tracking stopped");
       }
     };
   }, [locationTracking, status, handleGeolocationError]);
 
-  // ✅ Toggle online/offline status with location check
+  // Toggle status
   const toggleStatus = async () => {
     const newStatus = status === "offline" ? "active" : "offline";
 
-    // Check location permission before going online
     if (newStatus === "active") {
       const permission = await checkLocationPermission();
       
       if (permission === "denied") {
-        toast.error(
-          "📍 Location access is required to go online. Please enable it in your browser settings.",
-          { duration: 6000 }
-        );
+        showToast("📍 Location access is required to go online", 'error');
         return;
       }
 
-      // Request permission if not granted
       if (permission !== "granted") {
         const granted = await requestLocationPermission();
         if (!granted) {
-          toast.error("📍 Location access is required to accept orders");
+          showToast("📍 Location access is required", 'error');
           return;
         }
       }
     }
 
     try {
-      await riderAPI.updateStatus(newStatus);
+      await mockAPI.updateStatus(newStatus);
       setStatus(newStatus);
 
       if (newStatus === "active") {
         setLocationTracking(true);
-        toast.success("✅ You are now online! 🟢");
+        showToast("✅ You are now online! 🟢");
       } else {
         setLocationTracking(false);
         setLocationError(null);
-        toast.success("✅ You are now offline");
+        showToast("✅ You are now offline");
       }
 
       await fetchDashboard(false);
     } catch (error) {
-      console.error("❌ Toggle status error:", error);
-      toast.error(error.response?.data?.message || "Failed to update status");
-    }
-  };
-
-  // ✅ Manual enable location tracking
-  const enableLocationTracking = async () => {
-    const granted = await requestLocationPermission();
-    if (granted) {
-      setLocationTracking(true);
-      toast.success("📍 Location tracking enabled");
+      showToast("Failed to update status", 'error');
     }
   };
 
@@ -369,37 +291,29 @@ const RiderDashboard = () => {
     setRefreshing(true);
     await fetchDashboard(false);
     setRefreshing(false);
-    toast.success("✅ Dashboard refreshed!");
+    showToast("✅ Dashboard refreshed!");
   };
 
   // Accept order
   const handleAcceptOrder = async (orderId) => {
     try {
-      await riderAPI.orders.accept(orderId);
-      toast.success("✅ Order accepted successfully!");
+      await mockAPI.orders.accept(orderId);
+      showToast("✅ Order accepted successfully!");
       await fetchDashboard(false);
     } catch (error) {
-      console.error("❌ Accept order error:", error);
-      const errorMsg =
-        error.response?.data?.message || "Failed to accept order";
-      toast.error(errorMsg);
+      showToast("Failed to accept order", 'error');
     }
-  };
-
-  // Navigate to order details
-  const viewOrderDetails = (orderId) => {
-    navigate(`/rider/orders/${orderId}`);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
-          <Loader
-            className="animate-spin text-green-600 mx-auto mb-4"
-            size={48}
-          />
-          <p className="text-gray-600 dark:text-gray-400">
+          <div className="relative">
+            <Loader className="animate-spin text-green-600 dark:text-green-400 mx-auto mb-4" size={64} />
+            <div className="absolute inset-0 bg-green-400 dark:bg-green-600 opacity-20 blur-xl rounded-full animate-pulse" />
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium">
             Loading dashboard...
           </p>
         </div>
@@ -408,73 +322,82 @@ const RiderDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-8">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 shadow-lg">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/30 to-gray-50 dark:from-gray-900 dark:via-green-900/10 dark:to-gray-900 pb-8">
+      {/* Enhanced Header with Gradient */}
+      <div className="bg-gradient-to-r from-green-600 via-green-500 to-emerald-600 text-white shadow-2xl">
+        <div className="max-w-7xl mx-auto p-6">
+          {/* Top Section */}
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                <User className="text-green-600" size={32} />
+              <div className="relative">
+                <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform">
+                  <User className="text-green-600" size={40} />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-4 border-white flex items-center justify-center">
+                  <Award size={12} className="text-white" />
+                </div>
               </div>
               <div>
-                <h1 className="text-2xl font-bold">
+                <h1 className="text-3xl font-bold mb-1">
                   {riderInfo?.name || "Rider Dashboard"}
                 </h1>
-                <p className="text-green-100 text-sm">
-                  {riderInfo?.riderCode || "Loading..."}
-                </p>
-                {riderInfo?.phone && (
-                  <p className="text-green-100 text-xs">📞 {riderInfo.phone}</p>
-                )}
+                <div className="flex items-center gap-3">
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-semibold">
+                    {riderInfo?.riderCode || "Loading..."}
+                  </span>
+                  {riderInfo?.phone && (
+                    <span className="text-green-100 text-sm flex items-center gap-1">
+                      <Phone size={14} />
+                      {riderInfo.phone}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              <button className="relative p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all transform hover:scale-105">
+                <Bell size={20} />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              </button>
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                title="Refresh Dashboard"
+                className="p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all transform hover:scale-105"
               >
-                <RefreshCw
-                  className={refreshing ? "animate-spin" : ""}
-                  size={20}
-                />
+                <RefreshCw className={refreshing ? "animate-spin" : ""} size={20} />
               </button>
-              <button
+              <button 
                 onClick={() => navigate("/rider/profile")}
-                className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                title="Settings"
+                className="p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl transition-all transform hover:scale-105"
               >
                 <Settings size={20} />
               </button>
             </div>
           </div>
 
-          {/* Status Toggle */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-3 h-3 rounded-full ${
-                    status === "active"
-                      ? "bg-green-400 animate-pulse"
-                      : status === "on_delivery"
-                      ? "bg-blue-400 animate-pulse"
-                      : "bg-gray-400"
-                  }`}
-                />
+          {/* Status Control */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className={`w-4 h-4 rounded-full ${
+                    status === "active" ? "bg-green-400 animate-pulse" :
+                    status === "on_delivery" ? "bg-blue-400 animate-pulse" :
+                    "bg-gray-400"
+                  }`} />
+                  <div className={`absolute inset-0 rounded-full ${
+                    status === "active" ? "bg-green-400" :
+                    status === "on_delivery" ? "bg-blue-400" :
+                    "bg-gray-400"
+                  } opacity-50 blur-md`} />
+                </div>
                 <div>
-                  <p className="font-semibold">Status</p>
+                  <p className="font-bold text-lg">Status</p>
                   <p className="text-sm text-green-100">
-                    {status === "active"
-                      ? "Available for Orders"
-                      : status === "on_delivery"
-                      ? "On Delivery"
-                      : status === "inactive"
-                      ? "Busy"
-                      : "Offline"}
+                    {status === "active" ? "Available for Orders" :
+                     status === "on_delivery" ? "On Delivery" :
+                     status === "inactive" ? "Busy" : "Offline"}
                   </p>
                 </div>
               </div>
@@ -482,136 +405,120 @@ const RiderDashboard = () => {
               <button
                 onClick={toggleStatus}
                 disabled={status === "on_delivery"}
-                className={`px-6 py-3 rounded-xl font-semibold transition-all shadow-lg ${
+                className={`px-8 py-3 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg ${
                   status === "active"
                     ? "bg-red-600 hover:bg-red-700 text-white"
                     : "bg-white hover:bg-gray-50 text-green-600"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                } disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
               >
-                {status === "active"
-                  ? "Go Offline"
-                  : status === "on_delivery"
-                  ? "On Delivery"
-                  : "Go Online"}
+                {status === "active" ? "Go Offline" :
+                 status === "on_delivery" ? "On Delivery" :
+                 "Go Online"}
               </button>
             </div>
 
             {/* Location Status */}
             {(status === "active" || status === "on_delivery") && (
-              <div className="mt-3">
+              <div className="pt-3 border-t border-white/20">
                 {locationTracking && !locationError ? (
-                  <div className="flex items-center gap-2 text-sm text-green-100">
-                    <Navigation size={14} className="animate-pulse" />
-                    <span>Location tracking active</span>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Navigation size={16} className="animate-pulse" />
+                    <span className="font-medium">Location tracking active</span>
                     {currentPosition && (
-                      <span className="text-xs">
-                        ({currentPosition.lat.toFixed(4)},{" "}
-                        {currentPosition.lng.toFixed(4)})
+                      <span className="text-xs opacity-75">
+                        ({currentPosition.lat.toFixed(4)}, {currentPosition.lng.toFixed(4)})
                       </span>
                     )}
                   </div>
                 ) : locationError ? (
-                  <div className="flex items-center justify-between gap-2 p-2 bg-red-500/20 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-red-100">
-                      <MapPinOff size={14} />
+                  <div className="flex items-center justify-between p-3 bg-red-500/20 backdrop-blur-sm rounded-xl">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPinOff size={16} />
                       <span>{locationError}</span>
                     </div>
                     {locationPermission !== "granted" && (
-                      <button
+                      <button 
                         onClick={enableLocationTracking}
-                        className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-semibold transition-colors"
+                        className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
                       >
                         Enable
                       </button>
                     )}
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-sm text-yellow-100">
-                    <AlertCircle size={14} />
-                    <span>Location tracking disabled</span>
-                  </div>
-                )}
+                ) : null}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
-        {/* Location Permission Warning */}
-        {locationPermission === "denied" && (status === "active" || status === "on_delivery") && (
-          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <MapPinOff className="text-red-600 dark:text-red-400 mt-0.5" size={20} />
-              <div className="flex-1">
-                <h4 className="font-bold text-red-900 dark:text-red-100 mb-1">
-                  Location Access Required
-                </h4>
-                <p className="text-sm text-red-800 dark:text-red-200 mb-2">
-                  Location tracking is essential for accepting and delivering orders. Please enable location access in your browser settings.
-                </p>
-                <p className="text-xs text-red-700 dark:text-red-300">
-                  <strong>Chrome:</strong> Click the lock icon in the address bar → Site settings → Location → Allow
-                  <br />
-                  <strong>Firefox:</strong> Click the lock icon → Connection secure → More information → Permissions
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+        {/* Enhanced Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             icon={<Package className="text-blue-600" />}
             label="Today's Deliveries"
             value={stats.todayDeliveries}
             subtitle={`${stats.weeklyDeliveries} this week`}
+            color="blue"
+            trend="+12%"
           />
           <StatCard
             icon={<DollarSign className="text-green-600" />}
             label="Today's Earnings"
             value={`Rs. ${stats.todayEarnings.toLocaleString()}`}
             subtitle={`Total: Rs. ${stats.totalEarnings.toLocaleString()}`}
+            color="green"
+            trend="+8%"
           />
           <StatCard
             icon={<Clock className="text-yellow-600" />}
             label="Available Orders"
             value={availableOrders.length}
             subtitle="Ready to accept"
+            color="yellow"
           />
           <StatCard
             icon={<Star className="text-purple-600" />}
             label="Rating"
             value={stats.rating.toFixed(1)}
             subtitle={`${stats.completedOrders} completed`}
+            color="purple"
             showStar
           />
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Quick Actions with Icons */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+            <Zap className="text-yellow-500" size={20} />
+            Quick Actions
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <QuickActionButton
               icon={<MapPin />}
               label="Track Location"
               active={locationTracking && !locationError}
+              color="green"
               onClick={() => locationTracking ? setLocationTracking(false) : enableLocationTracking()}
               disabled={locationPermission === "denied"}
             />
             <QuickActionButton
               icon={<Package />}
               label="My Orders"
+              color="blue"
               onClick={() => navigate("/rider/orders")}
             />
             <QuickActionButton
               icon={<DollarSign />}
               label="Earnings"
+              color="purple"
               onClick={() => navigate("/rider/earnings")}
             />
             <QuickActionButton
               icon={<User />}
               label="Profile"
+              color="orange"
               onClick={() => navigate("/rider/profile")}
             />
           </div>
@@ -619,23 +526,23 @@ const RiderDashboard = () => {
 
         {/* Current Active Orders */}
         {currentOrders.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-blue-500">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl shadow-xl border-2 border-blue-200 dark:border-blue-700 overflow-hidden">
+            <div className="p-6 border-b border-blue-200 dark:border-blue-700 bg-gradient-to-r from-blue-600 to-indigo-600">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <Package className="text-white" size={20} />
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                    <Package className="text-white" size={24} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-xl font-bold text-white">
                       My Active Deliveries
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-blue-100">
                       Orders currently assigned to you
                     </p>
                   </div>
                 </div>
-                <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-semibold">
+                <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm font-bold">
                   {currentOrders.length} active
                 </span>
               </div>
@@ -655,13 +562,14 @@ const RiderDashboard = () => {
         )}
 
         {/* Available Orders */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Target className="text-green-600" size={24} />
                 Available Orders
               </h3>
-              <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm font-semibold">
+              <span className="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm font-bold">
                 {availableOrders.length} orders
               </span>
             </div>
@@ -669,15 +577,12 @@ const RiderDashboard = () => {
 
           <div className="p-6 space-y-4">
             {availableOrders.length === 0 ? (
-              <div className="text-center py-12">
-                <Package
-                  className="mx-auto text-gray-300 dark:text-gray-600 mb-4"
-                  size={64}
-                />
-                <p className="text-gray-500 dark:text-gray-400 text-lg font-medium mb-2">
+              <div className="text-center py-16">
+                <Package className="mx-auto text-gray-300 dark:text-gray-600 mb-4" size={80} />
+                <p className="text-gray-500 dark:text-gray-400 text-xl font-semibold mb-2">
                   No available orders
                 </p>
-                <p className="text-gray-400 dark:text-gray-500 text-sm">
+                <p className="text-gray-400 dark:text-gray-500">
                   {status === "offline"
                     ? "Go online to start receiving orders"
                     : "New orders will appear here when available"}
@@ -697,62 +602,56 @@ const RiderDashboard = () => {
           </div>
         </div>
 
-        {/* Performance Insights */}
+        {/* Performance Dashboard */}
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-700">
+            <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
               <TrendingUp className="text-green-600" size={20} />
-              Performance
+              Performance Metrics
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <PerformanceItem
                 label="Acceptance Rate"
                 value={`${Math.round(stats.acceptanceRate)}%`}
                 progress={stats.acceptanceRate}
                 color="green"
+                icon={<CheckCircle size={16} />}
               />
               <PerformanceItem
                 label="On-time Delivery"
                 value={`${Math.round(stats.onTimeRate)}%`}
                 progress={stats.onTimeRate}
                 color="blue"
+                icon={<Clock size={16} />}
               />
               <PerformanceItem
                 label="Customer Rating"
                 value={`${stats.rating.toFixed(1)}/5.0`}
                 progress={(stats.rating / 5) * 100}
                 color="purple"
+                icon={<Star size={16} />}
               />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-700">
+            <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
+              <Activity className="text-blue-600" size={20} />
               Weekly Summary
             </h3>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Package className="text-blue-600" size={20} />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Deliveries
-                  </span>
-                </div>
-                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  {stats.weeklyDeliveries}
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="text-green-600" size={20} />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Earnings
-                  </span>
-                </div>
-                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  Rs. {stats.weeklyEarnings?.toLocaleString() || 0}
-                </span>
-              </div>
+              <SummaryCard
+                icon={<Package className="text-blue-600" size={24} />}
+                label="Deliveries"
+                value={stats.weeklyDeliveries}
+                color="blue"
+              />
+              <SummaryCard
+                icon={<DollarSign className="text-green-600" size={24} />}
+                label="Earnings"
+                value={`Rs. ${stats.weeklyEarnings?.toLocaleString() || 0}`}
+                color="green"
+              />
             </div>
           </div>
         </div>
@@ -761,52 +660,69 @@ const RiderDashboard = () => {
   );
 };
 
-// ============================================
-// SUB-COMPONENTS
-// ============================================
+// Enhanced StatCard Component
+const StatCard = ({ icon, label, value, subtitle, color, trend, showStar }) => {
+  const colorClasses = {
+    blue: "from-blue-500 to-blue-600",
+    green: "from-green-500 to-green-600",
+    yellow: "from-yellow-500 to-yellow-600",
+    purple: "from-purple-500 to-purple-600",
+  };
 
-const StatCard = ({ icon, label, value, subtitle, showStar }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 hover:shadow-lg transition-shadow">
-    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center mb-3">
-      {icon}
-    </div>
-    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{label}</p>
-    <div className="flex items-baseline gap-2">
-      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-        {value}
-      </p>
-      {showStar && (
-        <Star className="text-yellow-500 fill-yellow-500" size={16} />
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-700 hover:shadow-2xl transition-all transform hover:-translate-y-1">
+      <div className={`w-14 h-14 bg-gradient-to-br ${colorClasses[color]} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
+        <div className="text-white">{icon}</div>
+      </div>
+      <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</p>
+      <div className="flex items-baseline gap-2 mb-2">
+        <p className="text-3xl font-bold text-gray-900 dark:text-white">
+          {value}
+        </p>
+        {showStar && <Star className="text-yellow-500 fill-yellow-500" size={20} />}
+        {trend && (
+          <span className="text-xs font-semibold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">
+            {trend}
+          </span>
+        )}
+      </div>
+      {subtitle && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
       )}
     </div>
-    {subtitle && (
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        {subtitle}
-      </p>
-    )}
-  </div>
-);
+  );
+};
 
-// Quick Action Button
-const QuickActionButton = ({ icon, label, onClick, active = false }) => (
-  <button
-    onClick={onClick}
-    className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all ${
-      active
-        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-        : "bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
-    }`}
-  >
-    <div
-      className={`w-10 h-10 rounded-full flex items-center justify-center ${
-        active ? "bg-green-200 dark:bg-green-800" : "bg-white dark:bg-gray-600"
+// Enhanced QuickActionButton
+const QuickActionButton = ({ icon, label, active = false, color = "green", onClick, disabled }) => {
+  const colorClasses = {
+    green: "from-green-500 to-green-600",
+    blue: "from-blue-500 to-blue-600",
+    purple: "from-purple-500 to-purple-600",
+    orange: "from-orange-500 to-orange-600",
+  };
+
+  return (
+    <button 
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all transform hover:scale-105 disabled:opacity-50// Continuing from line with disabled:opacity-50
+
+disabled:cursor-not-allowed ${
+        active
+          ? "bg-gradient-to-br " + colorClasses[color] + " text-white shadow-lg"
+          : "bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
       }`}
     >
-      {icon}
-    </div>
-    <span className="text-xs font-medium">{label}</span>
-  </button>
-);
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+        active ? "bg-white/20" : "bg-white dark:bg-gray-800"
+      }`}>
+        {icon}
+      </div>
+      <span className="text-sm font-medium text-center">{label}</span>
+    </button>
+  );
+};
 
 // Order Card Component
 const OrderCard = ({ order, onAccept, onViewDetails, isActive = false }) => {
@@ -900,7 +816,7 @@ const OrderCard = ({ order, onAccept, onViewDetails, isActive = false }) => {
       </div>
 
       <div className="flex gap-2">
-        {!isActive && order.orderStatus === "Processing" && !order.rider && (
+        {!isActive && order.orderStatus === "Processing" && !order.rider && onAccept && (
           <button
             onClick={handleAccept}
             disabled={accepting}
@@ -919,28 +835,30 @@ const OrderCard = ({ order, onAccept, onViewDetails, isActive = false }) => {
             )}
           </button>
         )}
-        <button
-          onClick={() => onViewDetails(order._id)}
-          className={`${
-            !isActive && order.orderStatus === "Processing" && !order.rider
-              ? "flex-1"
-              : "w-full"
-          } py-2.5 border-2 ${
-            isActive
-              ? "border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400"
-              : "border-green-600 dark:border-green-500 text-green-600 dark:text-green-400"
-          } rounded-lg font-semibold hover:bg-opacity-10 hover:bg-current flex items-center justify-center gap-2 transition-colors`}
-        >
-          <span>{isActive ? "Continue Delivery" : "View Details"}</span>
-          <ChevronRight size={16} />
-        </button>
+        {onViewDetails && (
+          <button
+            onClick={() => onViewDetails(order._id)}
+            className={`${
+              !isActive && order.orderStatus === "Processing" && !order.rider && onAccept
+                ? "flex-1"
+                : "w-full"
+            } py-2.5 border-2 ${
+              isActive
+                ? "border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-green-600 dark:border-green-500 text-green-600 dark:text-green-400"
+            } rounded-lg font-semibold hover:bg-opacity-10 hover:bg-current flex items-center justify-center gap-2 transition-colors`}
+          >
+            <span>{isActive ? "Continue Delivery" : "View Details"}</span>
+            <ChevronRight size={16} />
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
 // Performance Item
-const PerformanceItem = ({ label, value, progress, color }) => {
+const PerformanceItem = ({ label, value, progress, color, icon }) => {
   const colorClasses = {
     green: "bg-green-600",
     blue: "bg-blue-600",
@@ -949,8 +867,11 @@ const PerformanceItem = ({ label, value, progress, color }) => {
 
   return (
     <div>
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-600 dark:text-gray-400">{label}</span>
+      <div className="flex justify-between items-center text-sm mb-2">
+        <div className="flex items-center gap-2">
+          {icon && <span className="text-gray-500">{icon}</span>}
+          <span className="text-gray-600 dark:text-gray-400">{label}</span>
+        </div>
         <span className="font-semibold text-gray-900 dark:text-gray-100">
           {value}
         </span>
@@ -961,6 +882,28 @@ const PerformanceItem = ({ label, value, progress, color }) => {
           style={{ width: `${Math.min(progress, 100)}%` }}
         />
       </div>
+    </div>
+  );
+};
+
+// Summary Card
+const SummaryCard = ({ icon, label, value, color }) => {
+  const colorClasses = {
+    blue: "bg-blue-50 dark:bg-blue-900/20",
+    green: "bg-green-50 dark:bg-green-900/20",
+  };
+
+  return (
+    <div className={`flex items-center justify-between p-4 rounded-xl ${colorClasses[color] || colorClasses.blue}`}>
+      <div className="flex items-center gap-3">
+        {icon}
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label}
+        </span>
+      </div>
+      <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+        {value}
+      </span>
     </div>
   );
 };

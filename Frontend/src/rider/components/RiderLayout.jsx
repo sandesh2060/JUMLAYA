@@ -1,33 +1,23 @@
 // ============================================
-// Frontend/src/rider/components/RiderLayout.jsx
-// ✅ COMPLETE - With Dark Mode Toggle & Notifications
+// INDEX 3A: Frontend/src/rider/components/RiderLayout.jsx
+// ✅ COMPLETE - Professional Layout with Dark Mode
+// ============================================
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  Package, 
-  DollarSign, 
-  User, 
-  MapPin,
-  LogOut,
-  Menu,
-  X,
-  Bell,
-  Settings,
-  Moon,
-  Sun
+  LayoutDashboard, Package, DollarSign, User, MapPin,
+  LogOut, Menu, X, Bell, Settings, Moon, Sun
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { ThemeContext } from '../../context/ThemeContext'; // ✅ FIXED
-import { useNotification } from '../../context/NotificationContext';
+import { useAuth } from '../../hooks/useAuth';
+import { ThemeContext } from '../../context/ThemeContext';
 
 const RiderLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useContext(ThemeContext); // ✅ FIXED
-  const { unreadCount } = useNotification();
+  const { theme, toggleTheme } = useContext(ThemeContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0); // TODO: Connect to notification API
 
   const navigation = [
     { name: 'Dashboard', path: '/rider/dashboard', icon: LayoutDashboard },
@@ -66,7 +56,7 @@ const RiderLayout = () => {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
@@ -84,14 +74,12 @@ const RiderLayout = () => {
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <h1 className="text-xl font-bold text-green-600 dark:text-green-400">
-                JUMLAYA
-              </h1>
+              <h1 className="text-xl font-bold text-green-600 dark:text-green-400">JUMLAYA</h1>
               <p className="text-xs text-gray-600 dark:text-gray-400">Rider Portal</p>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="lg:hidden text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             >
               <X className="w-6 h-6" />
             </button>
@@ -108,7 +96,7 @@ const RiderLayout = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                     isActive
                       ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-semibold'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -121,7 +109,7 @@ const RiderLayout = () => {
             })}
           </nav>
 
-          {/* User Profile Section */}
+          {/* User Profile */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-bold shadow-md">
@@ -131,9 +119,7 @@ const RiderLayout = () => {
                 <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                   {getUserDisplayName()}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Rider
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Rider</p>
               </div>
             </div>
             <button
@@ -152,15 +138,15 @@ const RiderLayout = () => {
         {/* Top Bar */}
         <header className="bg-white dark:bg-gray-800 shadow-sm z-10 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between px-4 py-4">
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu */}
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="lg:hidden text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <Menu className="w-6 h-6" />
             </button>
             
-            {/* Desktop: Page Title */}
+            {/* Page Title */}
             <div className="hidden lg:block">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {navigation.find(nav => location.pathname.startsWith(nav.path))?.name || 'Rider Dashboard'}
@@ -169,26 +155,21 @@ const RiderLayout = () => {
             
             <div className="flex-1 lg:hidden"></div>
             
-            {/* Right Side Actions */}
+            {/* Actions */}
             <div className="flex items-center gap-2">
               {/* Dark Mode Toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                 aria-label="Toggle dark mode"
               >
-                {theme === 'dark' ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
 
               {/* Notifications */}
               <button 
                 onClick={() => navigate('/rider/notifications')}
-                className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Notifications"
+                className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
@@ -201,13 +182,12 @@ const RiderLayout = () => {
               {/* Settings */}
               <button 
                 onClick={() => navigate('/rider/profile')}
-                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Settings"
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <Settings className="w-5 h-5" />
               </button>
 
-              {/* Mobile: User Avatar */}
+              {/* Mobile Avatar */}
               <button
                 onClick={() => navigate('/rider/profile')}
                 className="lg:hidden w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-bold text-sm shadow-md"
@@ -218,7 +198,7 @@ const RiderLayout = () => {
           </div>
         </header>
 
-        {/* Page Content - This is where child routes render */}
+        {/* Page Content */}
         <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
           <Outlet />
         </main>

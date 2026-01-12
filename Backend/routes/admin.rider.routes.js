@@ -1,39 +1,82 @@
 // ============================================
 // Backend/routes/admin.rider.routes.js
-// Admin Rider Management Routes - FIXED
+// ✅ PERFECT - Complete Admin Rider Routes
 // ============================================
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 
-// ✅ FIXED: Use the correct function names from auth.middleware.js
-const { protect, restrictTo } = require("../middlewares/auth.middleware");
-
-// ✅ FIXED: Import controller functions correctly
 const {
   getAllRiders,
   getRider,
+  getRiderStats,
   approveRider,
   rejectRider,
-  getRiderStats
-} = require("../controllers/admin/admin.rider.controller");
+  verifyDocument
+} = require('../controllers/admin/admin.rider.controller');
 
-// ✅ Apply authentication and authorization middleware
-router.use(protect);           // Verify JWT token
-router.use(restrictTo("admin")); // Only admins allowed
+const { protect, restrictTo } = require('../middlewares/auth.middleware');
 
-// ✅ IMPORTANT: Stats route MUST come BEFORE /:id route
-router.get("/stats", getRiderStats);
+// ============================================
+// ALL ROUTES REQUIRE ADMIN AUTHENTICATION
+// ============================================
+router.use(protect);
+router.use(restrictTo('admin'));
 
-// ✅ Get all riders with filters
-router.get("/", getAllRiders);
+// ============================================
+// RIDER STATISTICS
+// ============================================
+/**
+ * @route   GET /api/admin/riders/stats
+ * @desc    Get rider statistics (total, pending, approved, active, offline)
+ * @access  Admin
+ */
+router.get('/stats', getRiderStats);
 
-// ✅ Get single rider by ID
-router.get("/:id", getRider);
+// ============================================
+// RIDER LISTING & DETAILS
+// ============================================
+/**
+ * @route   GET /api/admin/riders
+ * @desc    Get all riders with filters
+ * @query   status=pending|approved|all, search, page, limit
+ * @access  Admin
+ */
+router.get('/', getAllRiders);
 
-// ✅ Approve rider
-router.patch("/:id/approve", approveRider);
+/**
+ * @route   GET /api/admin/riders/:id
+ * @desc    Get single rider details
+ * @access  Admin
+ */
+router.get('/:id', getRider);
 
-// ✅ Reject rider
-router.post("/:id/reject", rejectRider);
+// ============================================
+// DOCUMENT VERIFICATION
+// ============================================
+/**
+ * @route   PATCH /api/admin/riders/:id/documents/:documentType/verify
+ * @desc    Verify or reject a specific document
+ * @body    { verified: boolean, rejectionReason?: string }
+ * @access  Admin
+ */
+router.patch('/:id/documents/:documentType/verify', verifyDocument);
+
+// ============================================
+// RIDER APPROVAL/REJECTION
+// ============================================
+/**
+ * @route   PATCH /api/admin/riders/:id/approve
+ * @desc    Approve rider application (after all documents verified)
+ * @access  Admin
+ */
+router.patch('/:id/approve', approveRider);
+
+/**
+ * @route   PATCH /api/admin/riders/:id/reject
+ * @desc    Reject rider application with reason
+ * @body    { reason: string }
+ * @access  Admin
+ */
+router.patch('/:id/reject', rejectRider);
 
 module.exports = router;

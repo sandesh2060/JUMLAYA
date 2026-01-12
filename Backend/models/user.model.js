@@ -1,4 +1,4 @@
-// Backend/models/user.model.js - FIXED DUPLICATE INDEXES
+// Backend/models/user.model.js - FIXED WITH DOCUMENTS FIELD
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -63,6 +63,8 @@ const userSchema = new mongoose.Schema(
         enum: ["bike", "scooter", "bicycle", "car"],
       },
       vehicleNumber: String,
+      vehicleBrand: String,
+      vehicleModel: String,
       licenseNumber: String,
       status: {
         type: String,
@@ -108,6 +110,64 @@ const userSchema = new mongoose.Schema(
       },
       approvedAt: Date,
       riderCode: String,
+      
+      // ✅ ADDED: Documents field for storing uploaded files
+      documents: {
+        license: {
+          url: String,
+          uploadedAt: Date,
+          verified: { type: Boolean, default: false },
+          verifiedAt: Date,
+          verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+        },
+        vehicleRegistration: {
+          url: String,
+          uploadedAt: Date,
+          verified: { type: Boolean, default: false },
+          verifiedAt: Date,
+          verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+        },
+        insurance: {
+          url: String,
+          uploadedAt: Date,
+          verified: { type: Boolean, default: false },
+          verifiedAt: Date,
+          verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+        },
+        identityProof: {
+          url: String,
+          uploadedAt: Date,
+          verified: { type: Boolean, default: false },
+          verifiedAt: Date,
+          verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+        },
+        profilePhoto: {
+          url: String,
+          uploadedAt: Date
+        }
+      },
+      
+      // ✅ ADDED: Verification details
+      verification: {
+        isVerified: { type: Boolean, default: false },
+        verifiedAt: Date,
+        verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        identityVerified: { type: Boolean, default: false },
+        documentVerified: { type: Boolean, default: false },
+        backgroundCheckDone: { type: Boolean, default: false },
+        rejectionReason: String,
+        rejectedAt: Date
+      },
+      
+      // ✅ ADDED: Additional rider fields
+      phoneNumber: String,
+      alternatePhone: String,
+      stats: {
+        completedDeliveries: { type: Number, default: 0 },
+        cancelledDeliveries: { type: Number, default: 0 },
+        acceptanceRate: { type: Number, default: 100 },
+        onTimeDeliveryRate: { type: Number, default: 100 }
+      }
     },
 
     verificationCode: String,
@@ -179,6 +239,11 @@ userSchema.virtual("fullName").get(function () {
   return `${this.firstname} ${this.lastname}`;
 });
 
+// Virtual for rider name compatibility
+userSchema.virtual("name").get(function () {
+  return `${this.firstname} ${this.lastname}`;
+});
+
 // Hash password before save
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
@@ -188,9 +253,14 @@ userSchema.pre("save", async function (next) {
 
 // Generate unique rider code
 userSchema.pre("save", async function (next) {
-  if (this.role === "rider" && !this.riderProfile.riderCode) {
+  if (this.role === "rider" && !this.riderProfile?.riderCode) {
     const count = await this.constructor.countDocuments({ role: "rider" });
-    this.riderProfile.riderCode = `RDR${String(count + 1).padStart(4, "0")}`;
+    const riderCode = `RDR${String(count + 1).padStart(6, "0")}`;
+    
+    if (!this.riderProfile) {
+      this.riderProfile = {};
+    }
+    this.riderProfile.riderCode = riderCode;
   }
   next();
 });
@@ -225,6 +295,7 @@ userSchema.methods.removeCartItemSafe = async function (productId) {
 // Rider methods
 userSchema.methods.updateRiderLocation = function (lat, lng) {
   if (this.role !== "rider") return;
+  if (!this.riderProfile) this.riderProfile = {};
   this.riderProfile.currentLocation = {
     type: "Point",
     coordinates: [lng, lat],
@@ -234,17 +305,21 @@ userSchema.methods.updateRiderLocation = function (lat, lng) {
 
 userSchema.methods.updateRiderStatus = function (status) {
   if (this.role !== "rider") return;
+  if (!this.riderProfile) this.riderProfile = {};
   this.riderProfile.status = status;
 };
 
 userSchema.methods.completeDelivery = function (earnings) {
   if (this.role !== "rider") return;
-  this.riderProfile.completedDeliveries += 1;
-  this.riderProfile.totalDeliveries += 1;
-  this.riderProfile.earnings.total += earnings;
-  this.riderProfile.earnings.today += earnings;
-  this.riderProfile.earnings.thisWeek += earnings;
-  this.riderProfile.earnings.thisMonth += earnings;
+  if (!this.riderProfile) this.riderProfile = { earnings: {} };
+  if (!this.riderProfile.earnings) this.riderProfile.earnings = {};
+  
+  this.riderProfile.completedDeliveries = (this.riderProfile.completedDeliveries || 0) + 1;
+  this.riderProfile.totalDeliveries = (this.riderProfile.totalDeliveries || 0) + 1;
+  this.riderProfile.earnings.total = (this.riderProfile.earnings.total || 0) + earnings;
+  this.riderProfile.earnings.today = (this.riderProfile.earnings.today || 0) + earnings;
+  this.riderProfile.earnings.thisWeek = (this.riderProfile.earnings.thisWeek || 0) + earnings;
+  this.riderProfile.earnings.thisMonth = (this.riderProfile.earnings.thisMonth || 0) + earnings;
 };
 
 // JWT token methods

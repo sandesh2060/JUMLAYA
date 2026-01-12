@@ -349,6 +349,8 @@ exports.login = async (req, res, next) => {
       role: user.role,
       isVerified: user.isVerified,
       isActive: user.isActive,
+      isRider: user.role === "rider",
+      riderApproved: user.riderProfile?.isApproved,
     });
 
     // Check password
@@ -372,15 +374,18 @@ exports.login = async (req, res, next) => {
       return next(new AppError("Your account has been deactivated", 403));
     }
 
-    // ✅ Check if rider is approved
-    if (user.role === "rider" && user.riderProfile?.isApproved === false) {
-      console.log("❌ Rider account pending approval");
-      return next(
-        new AppError(
-          "Your rider account is pending admin approval. Please wait for approval email.",
-          403
-        )
-      );
+    // ✅ CRITICAL FIX: REMOVED the 403 block for unapproved riders
+    // Allow riders to login regardless of approval status
+    // Restrictions are now handled in the frontend
+    
+    // Check if rider is pending approval (for logging and response info only)
+    const isRiderPendingApproval = 
+      user.role === 'rider' && 
+      user.riderProfile && 
+      user.riderProfile.isApproved === false;
+    
+    if (isRiderPendingApproval) {
+      console.log("⏳ Rider pending approval - allowing login with restrictions");
     }
 
     // Update last login
@@ -404,10 +409,12 @@ exports.login = async (req, res, next) => {
     user.verificationCode = undefined;
     user.verificationCodeExpires = undefined;
 
-    // ✅ Build response with rider profile
+    // ✅ Build response with complete rider profile
     const responseData = {
       success: true,
-      message: "Login successful",
+      message: isRiderPendingApproval 
+        ? "Login successful. Your rider account is pending approval." 
+        : "Login successful",
       data: {
         user: {
           _id: user._id,
@@ -423,7 +430,7 @@ exports.login = async (req, res, next) => {
           isActive: user.isActive,
           addresses: user.addresses || [],
           lastLogin: user.lastLogin,
-          // ✅ Include rider profile for riders
+          // ✅ Include complete rider profile for riders
           ...(user.role === "rider" && {
             riderProfile: {
               vehicleType: user.riderProfile?.vehicleType,
@@ -433,14 +440,17 @@ exports.login = async (req, res, next) => {
               rating: user.riderProfile?.rating,
               totalDeliveries: user.riderProfile?.totalDeliveries,
               completedDeliveries: user.riderProfile?.completedDeliveries,
-              isApproved: user.riderProfile?.isApproved,
+              isApproved: user.riderProfile?.isApproved, // ✅ CRITICAL for frontend
               riderCode: user.riderProfile?.riderCode,
               earnings: user.riderProfile?.earnings,
+              documents: user.riderProfile?.documents, // ✅ Document status for frontend
             },
           }),
         },
         authToken,
         refreshToken,
+        // ✅ Additional info flag for frontend
+        pendingApproval: isRiderPendingApproval,
       },
     };
 
@@ -450,6 +460,7 @@ exports.login = async (req, res, next) => {
       isAdmin: responseData.data.user.isAdmin,
       isRider: user.role === "rider",
       riderApproved: user.riderProfile?.isApproved,
+      pendingApproval: isRiderPendingApproval,
       hasToken: !!authToken,
     });
 

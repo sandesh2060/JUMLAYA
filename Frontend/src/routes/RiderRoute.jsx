@@ -1,9 +1,9 @@
 // ============================================
-// Frontend/src/routes/RiderRoute.jsx
-// Rider Route Protection
+// INDEX 3B: Frontend/src/routes/RiderRoute.jsx
+// ✅ Route Protection for Riders
 // ============================================
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import { useEffect, useState } from 'react';
 
@@ -33,19 +33,19 @@ const RiderRoute = ({ children }) => {
     );
   }
 
-  // Not authenticated - redirect to login
+  // Not authenticated
   if (!isAuthenticated) {
     toast.error('Please login to access rider dashboard');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Authenticated but not a rider - redirect to home
+  // Authenticated but not a rider
   if (!isRider) {
     toast.error('Access denied. This area is for riders only.');
     return <Navigate to="/" replace />;
   }
 
-  // Render children (RiderLayout) or Outlet
+  // Render children or Outlet
   return children || <Outlet />;
 };
 

@@ -1,212 +1,296 @@
 // ============================================
-// Frontend/src/api/rider.api.js
-// FIXED - Remove /api prefix (axios.config already has it)
+// INDEX 2A: Frontend/src/api/rider.api.js
+// ✅ ENHANCED - Complete with Better Error Handling
 // ============================================
-import api from './axios.config';
+import api from "./axios.config";
 
 export const riderAPI = {
   // ============================================
   // DASHBOARD & PROFILE
   // ============================================
-  
   getDashboard: async () => {
-    const response = await api.get('/rider/dashboard'); // ✅ FIXED: Removed /api
-    return response.data;
+    try {
+      const response = await api.get("/riders/dashboard");
+      console.log("📊 Dashboard response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Dashboard error:", error);
+      throw error;
+    }
   },
 
   getProfile: async () => {
-    const response = await api.get('/rider/profile'); // ✅ FIXED
-    return response.data;
-  },
-  
-  updateProfile: async (data) => {
-    const response = await api.put('/rider/profile', data); // ✅ FIXED
-    return response.data;
-  },
-  
-  uploadDocuments: async (formData) => {
-    const response = await api.post('/rider/documents/upload', formData, { // ✅ FIXED
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+    try {
+      const response = await api.get("/riders/profile");
+      return response.data;
+    } catch (error) {
+      console.error("❌ Profile error:", error);
+      throw error;
+    }
   },
 
-  getStatistics: async () => {
-    const response = await api.get('/rider/stats'); // ✅ FIXED
-    return response.data;
+  updateProfile: async (data) => {
+    try {
+      const response = await api.patch("/riders/profile", data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Update profile error:", error);
+      throw error;
+    }
   },
 
   // ============================================
   // LOCATION & STATUS
   // ============================================
-  
   updateLocation: async (latitude, longitude, address) => {
-    const response = await api.patch('/rider/location', { // ✅ FIXED
-      lat: latitude, 
-      lng: longitude, 
-      address 
-    });
-    return response.data;
+    try {
+      const response = await api.patch("/riders/location", {
+        lat: latitude,
+        lng: longitude,
+        address,
+      });
+      return response.data;
+    } catch (error) {
+      // Don't log to avoid console spam
+      throw error;
+    }
   },
 
   updateStatus: async (status) => {
-    const response = await api.patch('/rider/status', { status }); // ✅ FIXED
-    return response.data;
-  },
-  
-  toggleAvailability: async () => {
-    const response = await api.post('/rider/toggle-availability'); // ✅ FIXED
-    return response.data;
+    try {
+      const response = await api.patch("/riders/status", { status });
+      return response.data;
+    } catch (error) {
+      console.error("❌ Status update error:", error);
+      throw error;
+    }
   },
 
   // ============================================
-  // ORDERS
+  // FILE UPLOADS - ✅ ENHANCED WITH VALIDATION
   // ============================================
-  
+  uploadAvatar: async (file) => {
+    try {
+      if (!file) throw new Error("No file provided");
+      if (file.size > 5 * 1024 * 1024) throw new Error("Image must be less than 5MB");
+      if (!file.type.startsWith("image/")) throw new Error("Only image files allowed");
+
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const response = await api.post("/riders/avatar/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      
+      console.log("✅ Avatar uploaded:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Avatar upload error:", error);
+      throw error;
+    }
+  },
+
+  uploadDocument: async (file, documentType) => {
+    try {
+      if (!file) throw new Error("No file provided");
+      if (file.size > 5 * 1024 * 1024) throw new Error("File must be less than 5MB");
+
+      const validTypes = ['license', 'vehicleRegistration', 'insurance', 'identityProof'];
+      if (!validTypes.includes(documentType)) throw new Error("Invalid document type");
+
+      const formData = new FormData();
+      formData.append("document", file);
+      formData.append("documentType", documentType);
+
+      const response = await api.post("/riders/documents/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      
+      console.log(`✅ ${documentType} uploaded:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ ${documentType} upload error:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * ✅ FIXED: Unwrap nested data structure
+   * Backend returns: { success: true, data: { license: {...}, ... } }
+   */
+  getDocuments: async () => {
+    try {
+      const response = await api.get("/riders/documents");
+      console.log("🔍 Documents API response:", response.data);
+
+      // ✅ Unwrap nested structure
+      const documents = response.data?.data || response.data || {};
+      
+      return {
+        success: response.data?.success ?? true,
+        data: documents
+      };
+    } catch (error) {
+      console.error("❌ Get documents error:", error);
+      throw error;
+    }
+  },
+
+  deleteDocument: async (documentType) => {
+    try {
+      const response = await api.delete(`/riders/documents/${documentType}`);
+      console.log(`✅ ${documentType} deleted`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Delete ${documentType} error:`, error);
+      throw error;
+    }
+  },
+
+  // ============================================
+  // ORDERS - ✅ ENHANCED
+  // ============================================
   orders: {
     getAll: async (params = {}) => {
-      const response = await api.get('/rider/orders', { params }); // ✅ FIXED
-      return response.data;
+      try {
+        const response = await api.get("/riders/orders", { params });
+        return response.data;
+      } catch (error) {
+        console.error("❌ Get all orders error:", error);
+        throw error;
+      }
     },
 
     getActive: async () => {
-      const response = await api.get('/rider/orders/active'); // ✅ FIXED
-      return response.data;
+      try {
+        const response = await api.get("/riders/orders/active");
+        return response.data;
+      } catch (error) {
+        console.error("❌ Get active orders error:", error);
+        throw error;
+      }
     },
 
     getPending: async () => {
-      const response = await api.get('/rider/orders/pending'); // ✅ FIXED
-      return response.data;
+      try {
+        const response = await api.get("/riders/orders/pending");
+        return response.data;
+      } catch (error) {
+        console.error("❌ Get pending orders error:", error);
+        throw error;
+      }
     },
-    
-    getHistory: async (page = 1) => {
-      const response = await api.get('/rider/orders/history', { // ✅ FIXED
-        params: { page, limit: 20 } 
-      });
-      return response.data;
-    },
-    
-    getDetails: async (orderId) => {
-      const response = await api.get(`/rider/orders/${orderId}`); // ✅ FIXED
-      return response.data;
-    },
-    
-    accept: async (orderId) => {
-      const response = await api.post(`/rider/orders/${orderId}/accept`); // ✅ FIXED
-      return response.data;
-    },
-    
-    pickup: async (orderId) => {
-      const response = await api.post(`/rider/orders/${orderId}/pickup`); // ✅ FIXED
-      return response.data;
-    },
-    
-    startDelivery: async (orderId) => {
-      const response = await api.post(`/rider/orders/${orderId}/start-delivery`); // ✅ FIXED
-      return response.data;
-    },
-    
-    complete: async (orderId, data = {}) => {
-      const response = await api.post(`/rider/orders/${orderId}/deliver`, data); // ✅ FIXED
-      return response.data;
-    },
-    
-    updateStatus: async (orderId, status, note) => {
-      const response = await api.patch(`/rider/orders/${orderId}/status`, { // ✅ FIXED
-        status, 
-        note 
-      });
-      return response.data;
-    },
-    
-    reportIssue: async (orderId, issueType, description) => {
-      const response = await api.post(`/rider/orders/${orderId}/report-issue`, { // ✅ FIXED
-        issueType, 
-        description 
-      });
-      return response.data;
-    },
-  },
 
-  // ============================================
-  // NOTIFICATIONS
-  // ============================================
-  
-  notifications: {
-    getAll: async (page = 1, filter = 'all') => {
-      const response = await api.get('/rider/notifications', { // ✅ FIXED
-        params: { page, limit: 20, filter } 
-      });
-      return response.data;
+    getHistory: async (page = 1) => {
+      try {
+        const response = await api.get("/riders/orders/history", {
+          params: { page, limit: 20 },
+        });
+        return response.data;
+      } catch (error) {
+        console.error("❌ Get order history error:", error);
+        throw error;
+      }
     },
-    
-    getById: async (notificationId) => {
-      const response = await api.get(`/rider/notifications/${notificationId}`); // ✅ FIXED
-      return response.data;
+
+    getDetails: async (orderId) => {
+      try {
+        const response = await api.get(`/riders/orders/${orderId}`);
+        console.log(`📦 Order ${orderId} details:`, response.data);
+        return response.data;
+      } catch (error) {
+        console.error(`❌ Get order ${orderId} error:`, error);
+        throw error;
+      }
     },
-    
-    getUnreadCount: async () => {
-      const response = await api.get('/rider/notifications/unread-count'); // ✅ FIXED
-      return response.data;
+
+    accept: async (orderId) => {
+      try {
+        const response = await api.post(`/riders/orders/${orderId}/accept`);
+        console.log(`✅ Order ${orderId} accepted`);
+        return response.data;
+      } catch (error) {
+        console.error(`❌ Accept order ${orderId} error:`, error);
+        throw error;
+      }
     },
-    
-    markAsRead: async (notificationId) => {
-      const response = await api.put(`/rider/notifications/${notificationId}/read`); // ✅ FIXED
-      return response.data;
+
+    pickup: async (orderId) => {
+      try {
+        const response = await api.post(`/riders/orders/${orderId}/pickup`);
+        console.log(`✅ Order ${orderId} picked up`);
+        return response.data;
+      } catch (error) {
+        console.error(`❌ Pickup order ${orderId} error:`, error);
+        throw error;
+      }
     },
-    
-    markAllAsRead: async () => {
-      const response = await api.put('/rider/notifications/mark-all-read'); // ✅ FIXED
-      return response.data;
+
+    complete: async (orderId, data = {}) => {
+      try {
+        const response = await api.post(`/riders/orders/${orderId}/deliver`, data);
+        console.log(`✅ Order ${orderId} delivered`);
+        return response.data;
+      } catch (error) {
+        console.error(`❌ Complete order ${orderId} error:`, error);
+        throw error;
+      }
     },
-    
-    delete: async (notificationId) => {
-      const response = await api.delete(`/rider/notifications/${notificationId}`); // ✅ FIXED
-      return response.data;
-    },
-    
-    deleteAll: async () => {
-      const response = await api.delete('/rider/notifications'); // ✅ FIXED
-      return response.data;
-    },
-    
-    getPreferences: async () => {
-      const response = await api.get('/rider/notifications/preferences/settings'); // ✅ FIXED
-      return response.data;
-    },
-    
-    updatePreferences: async (preferences) => {
-      const response = await api.put('/rider/notifications/preferences/settings', preferences); // ✅ FIXED
-      return response.data;
+
+    updateStatus: async (orderId, status, note) => {
+      try {
+        const response = await api.patch(`/riders/orders/${orderId}/status`, {
+          status,
+          note,
+        });
+        console.log(`✅ Order ${orderId} status updated to ${status}`);
+        return response.data;
+      } catch (error) {
+        console.error(`❌ Update status ${orderId} error:`, error);
+        throw error;
+      }
     },
   },
 
   // ============================================
   // EARNINGS
   // ============================================
-  
-  getEarnings: async (period = 'all') => {
-    const response = await api.get('/rider/earnings', { // ✅ FIXED
-      params: { period } 
-    });
-    return response.data;
+  getEarnings: async (period = "all") => {
+    try {
+      const response = await api.get("/riders/earnings", { params: { period } });
+      return response.data;
+    } catch (error) {
+      console.error("❌ Get earnings error:", error);
+      throw error;
+    }
   },
-  
+
   getEarningsHistory: async (page = 1) => {
-    const response = await api.get('/rider/earnings/history', { // ✅ FIXED
-      params: { page, limit: 50 } 
-    });
-    return response.data;
+    try {
+      const response = await api.get("/riders/earnings/history", {
+        params: { page, limit: 50 },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("❌ Get earnings history error:", error);
+      throw error;
+    }
   },
 
   // ============================================
-  // NEARBY ORDERS
+  // REGISTRATION (PUBLIC)
   // ============================================
-  
-  getNearbyOrders: async () => {
-    const response = await api.get('/rider/nearby-orders'); // ✅ FIXED
-    return response.data;
+  register: async (data) => {
+    try {
+      const response = await api.post("/riders/register", data);
+      console.log("✅ Rider registered:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Registration error:", error);
+      throw error;
+    }
   },
 };
 
 export default riderAPI;
+

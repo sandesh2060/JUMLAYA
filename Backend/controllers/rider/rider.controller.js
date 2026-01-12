@@ -8,6 +8,8 @@ const Order = require('../../models/order.model');
 const User = require('../../models/user.model');
 const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/AppError');
+const { uploadImage, deleteImage, extractPublicId, FOLDERS } = require('../../config/cloudinary');
+
 
 // ============================================
 // AUTHENTICATION & REGISTRATION
@@ -817,6 +819,167 @@ exports.getEarnings = catchAsync(async (req, res, next) => {
       totalPages: Math.ceil(earningsQuery.length / limit),
       total: earningsQuery.length
     }
+  });
+});
+// ============================================
+// PROFILE PHOTO UPLOAD
+// ============================================
+exports.uploadAvatar = catchAsync(async (req, res, next) => {
+  const riderId = req.rider._id;
+  
+  if (!req.file) {
+    return next(new AppError('Please upload an image', 400));
+  }
+
+  const rider = await Rider.findById(riderId);
+  if (!rider) {
+    return next(new AppError('Rider not found', 404));
+  }
+
+  // Delete old avatar if exists
+  if (rider.documents?.profilePhoto?.url) {
+    const oldPublicId = extractPublicId(rider.documents.profilePhoto.url);
+    if (oldPublicId) {
+      await deleteImage(oldPublicId);
+    }
+  }
+
+  // Upload new avatar
+  const uploadResult = await uploadImage(req.file.buffer, {
+    folder: FOLDERS.RIDER_AVATARS,
+    preset: 'riderAvatar'
+  });
+
+  // Update rider document
+  if (!rider.documents) rider.documents = {};
+  rider.documents.profilePhoto = {
+    url: uploadResult.url,
+    uploadedAt: new Date()
+  };
+
+  await rider.save();
+
+  res.json({
+    success: true,
+    message: 'Avatar uploaded successfully',
+    data: {
+      url: uploadResult.url,
+      publicId: uploadResult.publicId
+    }
+  });
+});
+
+// ============================================
+// DOCUMENT UPLOAD (License, Vehicle Reg, etc.)
+// ============================================
+
+exports.uploadDocument = catchAsync(async (req, res, next) => {
+  const riderId = req.rider._id;
+  const { documentType } = req.body; // 'license', 'vehicleRegistration', 'insurance', 'identityProof'
+  
+  if (!req.file) {
+    return next(new AppError('Please upload a document', 400));
+  }
+
+  const validDocTypes = ['license', 'vehicleRegistration', 'insurance', 'identityProof'];
+  if (!validDocTypes.includes(documentType)) {
+    return next(new AppError('Invalid document type', 400));
+  }
+
+  const rider = await Rider.findById(riderId);
+  if (!rider) {
+    return next(new AppError('Rider not found', 404));
+  }
+
+  // Delete old document if exists
+  if (rider.documents?.[documentType]?.url) {
+    const oldPublicId = extractPublicId(rider.documents[documentType].url);
+    if (oldPublicId) {
+      await deleteImage(oldPublicId);
+    }
+  }
+
+  // Upload new document
+  const uploadResult = await uploadImage(req.file.buffer, {
+    folder: FOLDERS.RIDER_DOCUMENTS,
+    preset: 'riderDocument'
+  });
+
+  // Update rider document
+  if (!rider.documents) rider.documents = {};
+  rider.documents[documentType] = {
+    url: uploadResult.url,
+    uploadedAt: new Date(),
+    verified: false
+  };
+
+  await rider.save();
+
+  res.json({
+    success: true,
+    message: `${documentType} uploaded successfully`,
+    data: {
+      documentType,
+      url: uploadResult.url,
+      publicId: uploadResult.publicId
+    }
+  });
+});
+
+// ============================================
+// GET DOCUMENTS
+// ============================================
+
+exports.getDocuments = catchAsync(async (req, res, next) => {
+  const riderId = req.rider._id;
+
+  const rider = await Rider.findById(riderId).select('documents');
+  
+  if (!rider) {
+    return next(new AppError('Rider not found', 404));
+  }
+
+  res.json({
+    success: true,
+    data: rider.documents || {}
+  });
+});
+
+// ============================================
+// DELETE DOCUMENT
+// ============================================
+
+exports.deleteDocument = catchAsync(async (req, res, next) => {
+  const riderId = req.rider._id;
+  const { documentType } = req.params;
+
+  const validDocTypes = ['license', 'vehicleRegistration', 'insurance', 'identityProof', 'profilePhoto'];
+  if (!validDocTypes.includes(documentType)) {
+    return next(new AppError('Invalid document type', 400));
+  }
+
+  const rider = await Rider.findById(riderId);
+  if (!rider) {
+    return next(new AppError('Rider not found', 404));
+  }
+
+  // Delete from Cloudinary
+  if (rider.documents?.[documentType]?.url) {
+    const publicId = extractPublicId(rider.documents[documentType].url);
+    if (publicId) {
+      await deleteImage(publicId);
+    }
+  }
+
+  // Remove from database
+  if (rider.documents && rider.documents[documentType]) {
+    rider.documents[documentType] = undefined;
+    await rider.save();
+  }
+
+  res.json({
+    success: true,
+    message: 'Document deleted successfully'
   });
 });
 

@@ -1,5 +1,6 @@
 // ============================================
 // Backend/app.js - PRODUCTION-READY WITH PERFECT CORS
+// ✅ FIXED: Rider routes now use /api/riders (plural)
 // ============================================
 
 const express = require("express");
@@ -292,8 +293,9 @@ app.use("/api/admin/products", require("./routes/admin.product.routes"));
 app.use("/api/admin/orders", require("./routes/admin.order.routes"));
 app.use("/api/audit-logs", require("./routes/auditLog.routes"));
 
-// Rider routes
-app.use("/api/rider", require("./routes/rider.routes"));
+// ✅ FIXED: Rider routes (changed from /api/rider to /api/riders)
+app.use("/api/riders", require("./routes/rider.routes"));
+console.log("✅ Rider routes mounted at: /api/riders");
 
 // =====================================================
 // 404 HANDLER
