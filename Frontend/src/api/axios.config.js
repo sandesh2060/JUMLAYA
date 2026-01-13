@@ -1,12 +1,10 @@
 // ============================================
 // Frontend/src/api/axios.config.js
-// ✅ FIXED: Routes without /api prefix
-// (Because VITE_API_URL = http://localhost:4001/api)
+// ✅ PRODUCTION FIX: Proper FormData Handling
 // ============================================
 import axios from "axios";
 import toast from "react-hot-toast";
 
-// ✅ This already includes /api from .env
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4001/api";
 
 console.log("🔧 API Configuration:", {
@@ -16,17 +14,16 @@ console.log("🔧 API Configuration:", {
 
 // Create axios instance
 const api = axios.create({
-  baseURL: API_URL, // http://localhost:4001/api
+  baseURL: API_URL,
   timeout: 15000,
   withCredentials: true,
 });
 
 // ============================================
-// REQUEST INTERCEPTOR
+// REQUEST INTERCEPTOR - ✅ FIXED
 // ============================================
 api.interceptors.request.use(
   (config) => {
-    // ✅ UPDATED: Remove /api/ prefix from public endpoints
     const publicEndpoints = [
       "/users/register",
       "/users/login",
@@ -42,6 +39,7 @@ api.interceptors.request.use(
       config.url?.includes(endpoint)
     );
     
+    // Add auth token for non-public endpoints
     if (!isPublic) {
       const token = localStorage.getItem("authToken");
       if (token) {
@@ -51,10 +49,27 @@ api.interceptors.request.use(
       delete config.headers.Authorization;
     }
     
-    // Set Content-Type based on data type
+    // ✅ CRITICAL FIX: Proper FormData handling
     if (config.data instanceof FormData) {
+      // ✅ DO NOT set Content-Type for FormData
+      // Browser will automatically set it with correct boundary:
+      // Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
       delete config.headers["Content-Type"];
-    } else {
+      
+      // Debug log
+      if (import.meta.env.DEV) {
+        console.log("📦 FormData detected - letting browser set Content-Type with boundary");
+        // Log FormData entries (for debugging)
+        if (config.data.entries) {
+          const entries = Array.from(config.data.entries());
+          console.log("📦 FormData entries:", entries.map(([key, value]) => ({
+            key,
+            value: value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value
+          })));
+        }
+      }
+    } else if (config.data) {
+      // ✅ Only set JSON Content-Type for non-FormData
       config.headers["Content-Type"] = "application/json";
     }
     
@@ -63,9 +78,11 @@ api.interceptors.request.use(
       console.log("📤 API Request:", {
         method: config.method?.toUpperCase(),
         url: config.url,
-        fullUrl: `${API_URL}${config.url}`, // Show full URL for debugging
+        fullUrl: `${API_URL}${config.url}`,
         isPublic,
         hasToken: !!config.headers.Authorization,
+        contentType: config.headers["Content-Type"] || "auto (FormData)",
+        isFormData: config.data instanceof FormData
       });
     }
     
@@ -82,7 +99,6 @@ api.interceptors.request.use(
 // ============================================
 api.interceptors.response.use(
   (response) => {
-    // Log successful responses in development
     if (import.meta.env.DEV) {
       console.log("📥 API Response:", {
         status: response.status,
@@ -90,13 +106,11 @@ api.interceptors.response.use(
         success: response.data?.success,
       });
     }
-
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
 
-    // Log errors
     console.error("❌ API Error:", {
       status: error.response?.status,
       message: error.response?.data?.message || error.message,
@@ -104,27 +118,22 @@ api.interceptors.response.use(
       fullUrl: error.config?.url ? `${API_URL}${error.config.url}` : 'unknown',
     });
 
-    // Handle specific error cases
     if (error.response) {
       const { status, data } = error.response;
 
       switch (status) {
         case 401:
-          // ✅ UPDATED: Remove /api/ prefix
           const passwordResetPaths = ['/password/forgot', '/password/reset', '/password/resend-otp', '/password/verify-otp'];
           const isPasswordReset = passwordResetPaths.some(path => originalRequest.url?.includes(path));
           
-          if (isPasswordReset) {
-            break;
-          }
+          if (isPasswordReset) break;
           
           if (!originalRequest._retry) {
             originalRequest._retry = true;
-
             const refreshToken = localStorage.getItem("refreshToken");
+            
             if (refreshToken) {
               try {
-                // ✅ UPDATED: Remove /api/ prefix
                 const response = await axios.post(
                   `${API_URL}/users/refresh-token`,
                   { refreshToken }
@@ -132,15 +141,14 @@ api.interceptors.response.use(
 
                 const { authToken } = response.data.data;
                 localStorage.setItem("authToken", authToken);
-
                 originalRequest.headers.Authorization = `Bearer ${authToken}`;
+                
                 return api(originalRequest);
               } catch (refreshError) {
                 console.warn("🔒 Token refresh failed - Logging out");
                 localStorage.removeItem("authToken");
                 localStorage.removeItem("refreshToken");
                 localStorage.removeItem("user");
-
                 toast.error("Session expired. Please login again.");
 
                 if (!window.location.pathname.includes("/login")) {
@@ -165,20 +173,20 @@ api.interceptors.response.use(
           break;
 
         case 403:
-          console.warn("🚫 Forbidden:", data?.message || "Insufficient permissions");
+          console.warn("🚫 Forbidden:", data?.message);
           toast.error("Access denied. You do not have permission.");
           break;
 
         case 404:
-          console.warn("🔍 Not Found:", data?.message || "Resource not found");
+          console.warn("🔍 Not Found:", data?.message);
           break;
 
         case 400:
-          console.warn("⚠️ Bad Request:", data?.message || "Invalid request");
+          console.warn("⚠️ Bad Request:", data?.message);
           break;
 
         case 500:
-          console.error("💥 Server Error:", data?.message || "Internal server error");
+          console.error("💥 Server Error:", data?.message);
           toast.error("Server error. Please try again later.");
           break;
 

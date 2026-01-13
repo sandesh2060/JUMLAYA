@@ -1,6 +1,6 @@
 // ============================================
-// INDEX 2A: Frontend/src/api/rider.api.js
-// ✅ ENHANCED - Complete with Better Error Handling
+// Frontend/src/api/rider.api.js
+// ✅ FIXED - Correct Upload Endpoint
 // ============================================
 import api from "./axios.config";
 
@@ -51,7 +51,6 @@ export const riderAPI = {
       });
       return response.data;
     } catch (error) {
-      // Don't log to avoid console spam
       throw error;
     }
   },
@@ -67,7 +66,7 @@ export const riderAPI = {
   },
 
   // ============================================
-  // FILE UPLOADS - ✅ ENHANCED WITH VALIDATION
+  // FILE UPLOADS - ✅ FIXED ENDPOINT
   // ============================================
   uploadAvatar: async (file) => {
     try {
@@ -90,40 +89,51 @@ export const riderAPI = {
     }
   },
 
+  // ✅ FIXED: Use document-specific endpoint
   uploadDocument: async (file, documentType) => {
     try {
       if (!file) throw new Error("No file provided");
       if (file.size > 5 * 1024 * 1024) throw new Error("File must be less than 5MB");
 
-      const validTypes = ['license', 'vehicleRegistration', 'insurance', 'identityProof'];
-      if (!validTypes.includes(documentType)) throw new Error("Invalid document type");
+      const validTypes = ['license', 'vehicleRegistration', 'insurance', 'identityProof', 'profilePhoto'];
+      if (!validTypes.includes(documentType)) {
+        throw new Error(`Invalid document type: ${documentType}`);
+      }
+
+      console.log(`📤 Uploading ${documentType}:`, {
+        fileName: file.name,
+        fileSize: `${(file.size / 1024).toFixed(2)} KB`,
+        fileType: file.type
+      });
 
       const formData = new FormData();
       formData.append("document", file);
-      formData.append("documentType", documentType);
 
-      const response = await api.post("/riders/documents/upload", formData, {
+      // ✅ FIXED: Include documentType in URL path
+      const endpoint = `/riders/documents/${documentType}/upload`;
+      console.log(`📤 Upload endpoint: ${endpoint}`);
+
+      const response = await api.post(endpoint, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       
-      console.log(`✅ ${documentType} uploaded:`, response.data);
+      console.log(`✅ ${documentType} uploaded successfully:`, response.data);
       return response.data;
     } catch (error) {
-      console.error(`❌ ${documentType} upload error:`, error);
+      console.error(`❌ ${documentType} upload error:`, {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   },
 
-  /**
-   * ✅ FIXED: Unwrap nested data structure
-   * Backend returns: { success: true, data: { license: {...}, ... } }
-   */
   getDocuments: async () => {
     try {
       const response = await api.get("/riders/documents");
       console.log("🔍 Documents API response:", response.data);
 
-      // ✅ Unwrap nested structure
       const documents = response.data?.data || response.data || {};
       
       return {
@@ -148,7 +158,7 @@ export const riderAPI = {
   },
 
   // ============================================
-  // ORDERS - ✅ ENHANCED
+  // ORDERS
   // ============================================
   orders: {
     getAll: async (params = {}) => {
@@ -293,4 +303,3 @@ export const riderAPI = {
 };
 
 export default riderAPI;
-

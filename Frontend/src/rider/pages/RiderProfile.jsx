@@ -91,27 +91,73 @@ const RiderProfile = () => {
     }
   };
 
-  const handleDocumentUpload = async (e, documentType) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('File must be less than 5MB');
-      return;
-    }
+// ============================================
+// REPLACE ONLY THESE TWO FUNCTIONS in RiderProfile.jsx
+// Lines 98-125
+// ============================================
 
-    try {
-      setUploading(true);
-      await riderAPI.uploadDocument(file, documentType);
-      toast.success(`${documentType} uploaded successfully!`);
-      await fetchDocuments();
-    } catch (error) {
-      console.error('Upload failed:', error);
-      toast.error(error.response?.data?.message || 'Failed to upload document');
-    } finally {
-      setUploading(false);
+// ✅ FIXED: Extract file from event first
+const handleDocumentUpload = async (event, documentType) => {
+  // ✅ Extract file from event
+  const file = event.target.files?.[0]
+  
+  console.log('🔍 RiderProfile - Document Upload:', {
+    documentType,
+    hasEvent: !!event,
+    hasFile: !!file,
+    fileName: file?.name,
+    fileSize: file?.size,
+    fileType: file?.type
+  })
+  
+  if (!file) {
+    console.error('❌ No file in event')
+    toast.error('Please select a file')
+    return
+  }
+  
+  try {
+    setUploading(prev => ({ ...prev, [documentType]: true }))
+    
+    // ✅ Now pass the actual FILE, not the event
+    const response = await riderAPI.uploadDocument(file, documentType)
+    
+    console.log('✅ Upload response:', response)
+    
+    // ✅ Enhanced success message based on re-upload status
+    if (response.data?.isReUpload) {
+      if (response.data.previousStatus === 'verified') {
+        toast.success(
+          `${documentType} re-uploaded! Previous verification cleared. Admin will re-verify your new document.`,
+          { duration: 5000, icon: '🔄' }
+        )
+      } else if (response.data.previousStatus === 'rejected') {
+        toast.success(
+          `${documentType} re-uploaded! Your new document has been submitted for admin verification.`,
+          { duration: 5000, icon: '✅' }
+        )
+      } else {
+        toast.success(`${documentType} updated successfully!`, { duration: 4000 })
+      }
+    } else {
+      toast.success(response.data?.message || 'Document uploaded successfully')
     }
-  };
+    
+    // Refresh documents
+    await fetchDocuments()
+    
+    // Clear file input
+    event.target.value = ''
+    
+  } catch (error) {
+    console.error('❌ Document upload error:', error)
+    toast.error(error.response?.data?.message || 'Failed to upload document')
+  } finally {
+    setUploading(prev => ({ ...prev, [documentType]: false }))
+  }
+}
+
 
   const handleDeleteDocument = async (documentType) => {
     if (!confirm(`Are you sure you want to delete this ${documentType}?`)) return;
@@ -443,7 +489,7 @@ const DocumentUpload = ({ label, documentType, document, onUpload, onDelete, upl
 
         {hasDocument ? (
           <div className="space-y-3">
-            {/* 🎨 ENHANCED THUMBNAIL PREVIEW */}
+            {/* Thumbnail Preview */}
             <div 
               className="relative w-full aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-lg overflow-hidden cursor-pointer group shadow-sm hover:shadow-md transition-all"
               onClick={() => setShowPreview(true)}
@@ -454,7 +500,6 @@ const DocumentUpload = ({ label, documentType, document, onUpload, onDelete, upl
                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 loading="lazy"
               />
-              {/* Overlay on hover */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
                   <span className="text-white text-xs font-medium flex items-center gap-1">
@@ -469,7 +514,6 @@ const DocumentUpload = ({ label, documentType, document, onUpload, onDelete, upl
                   )}
                 </div>
               </div>
-              {/* Verified Badge Overlay */}
               {isVerified && (
                 <div className="absolute top-2 right-2 bg-green-500 text-white p-1.5 rounded-full shadow-lg">
                   <Check className="w-3 h-3" />
@@ -529,23 +573,23 @@ const DocumentUpload = ({ label, documentType, document, onUpload, onDelete, upl
           </button>
         )}
 
+        {/* ✅ CRITICAL FIX: Pass event, not just file */}
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.pdf"
           onChange={onUpload}
           className="hidden"
         />
       </div>
 
-      {/* 🖼️ FULLSCREEN IMAGE PREVIEW MODAL */}
+      {/* Fullscreen Preview Modal */}
       {showPreview && hasDocument && (
         <div 
           className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setShowPreview(false)}
         >
           <div className="relative max-w-5xl max-h-[90vh] w-full">
-            {/* Close Button */}
             <button
               onClick={() => setShowPreview(false)}
               className="absolute -top-14 right-0 text-white hover:text-gray-300 transition-colors bg-white/10 hover:bg-white/20 p-2 rounded-lg backdrop-blur-sm"
@@ -553,7 +597,6 @@ const DocumentUpload = ({ label, documentType, document, onUpload, onDelete, upl
               <X className="w-6 h-6" />
             </button>
             
-            {/* Image */}
             <img 
               src={document.url} 
               alt={label}
@@ -561,7 +604,6 @@ const DocumentUpload = ({ label, documentType, document, onUpload, onDelete, upl
               onClick={(e) => e.stopPropagation()}
             />
             
-            {/* Info Overlay */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent text-white p-6 rounded-b-xl">
               <div className="flex items-start justify-between">
                 <div>
@@ -591,7 +633,192 @@ const DocumentUpload = ({ label, documentType, document, onUpload, onDelete, upl
     </>
   );
 };
+// ============================================
+// Document Status Display Component
+// ============================================
+const DocumentStatusBadge = ({ document, documentType }) => {
+  if (!document?.url) {
+    return (
+      <span className="px-3 py-1 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
+        Not Uploaded
+      </span>
+    )
+  }
 
+  if (document.verified === true) {
+    return (
+      <div className="space-y-2">
+        <span className="px-3 py-1 text-sm font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full flex items-center gap-2">
+          <CheckCircle size={16} />
+          Verified
+        </span>
+        {document.verifiedAt && (
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Verified on {new Date(document.verifiedAt).toLocaleDateString()}
+          </p>
+        )}
+        <button
+          onClick={() => handleReUpload(documentType)}
+          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Upload new version
+        </button>
+      </div>
+    )
+  }
+
+  if (document.verified === false) {
+    return (
+      <div className="space-y-2">
+        <span className="px-3 py-1 text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full flex items-center gap-2">
+          <XCircle size={16} />
+          Rejected
+        </span>
+        {document.rejectionReason && (
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">
+              Reason:
+            </p>
+            <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+              {document.rejectionReason}
+            </p>
+          </div>
+        )}
+        <button
+          onClick={() => handleReUpload(documentType)}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition-colors"
+        >
+          Upload Corrected Document
+        </button>
+      </div>
+    )
+  }
+
+  // Pending verification
+  return (
+    <div className="space-y-2">
+      <span className="px-3 py-1 text-sm font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full flex items-center gap-2">
+        <Clock size={16} />
+        Pending Verification
+      </span>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        Uploaded on {new Date(document.uploadedAt).toLocaleDateString()}
+      </p>
+      <button
+        onClick={() => handleReUpload(documentType)}
+        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+      >
+        Upload different document
+      </button>
+    </div>
+  )
+}
+
+// ============================================
+// Complete Document Upload Card Component
+// ============================================
+const DocumentUploadCard = ({ documentType, label, required, document, onUpload }) => {
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB')
+      return
+    }
+
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+    if (!validTypes.includes(file.type)) {
+      toast.error('Only JPG, PNG, and PDF files are allowed')
+      return
+    }
+
+    setUploading(true)
+    try {
+      await onUpload(file, documentType)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  return (
+    <div className="border-2 border-gray-200 dark:border-gray-700 rounded-lg p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            {label}
+            {required && <span className="text-red-500">*</span>}
+          </h3>
+        </div>
+        <DocumentStatusBadge document={document} documentType={documentType} />
+      </div>
+
+      {document?.url && (
+        <div className="mb-4">
+          <img
+            src={document.url}
+            alt={label}
+            className="w-full h-48 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
+          />
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,application/pdf"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="w-full px-4 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+      >
+        {uploading ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Uploading...
+          </>
+        ) : document?.url ? (
+          <>
+            <Upload size={20} />
+            {document.verified === false ? 'Upload Corrected Document' : 'Replace Document'}
+          </>
+        ) : (
+          <>
+            <Upload size={20} />
+            Upload {label}
+          </>
+        )}
+      </button>
+
+      {document?.verified === false && (
+        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
+            ℹ️ Your previous document was rejected. Please upload a corrected version for admin re-verification.
+          </p>
+        </div>
+      )}
+
+      {document?.verified === true && (
+        <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">
+            ⚠️ Re-uploading will clear your current verification. Admin will need to re-verify your new document.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 const StatCard = ({ label, value, color }) => {
   const colors = {
     green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',

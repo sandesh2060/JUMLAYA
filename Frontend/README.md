@@ -17,7 +17,7 @@ JUMLAYA-OFFICIAL/
 │   │   │   ├── 📄 admin.settings.controller.js
 │   │   │   └── 📄 admin.user.controller.js
 │   │   │
-│   │   ├── 📂 rider/
+│   │   ├── 📂 rider/ 
 │   │   │   ├── 📄 rider.controller.js
 │   │   │   ├── 📄 rider.notification.controller.js
 │   │   │   └── 📄 rider.order.controller.js

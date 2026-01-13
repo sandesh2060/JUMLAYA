@@ -1,90 +1,61 @@
-// Backend/models/user.model.js - FIXED WITH DOCUMENTS FIELD
+// path: Backend/models/user.model.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
+// ✅ PRODUCTION-READY Document Schema
+const DocumentSchema = new mongoose.Schema({
+  url: { type: String },
+  uploadedAt: { type: Date },
+  verified: { type: Boolean, default: null }, // null = pending, true = verified, false = rejected
+  verifiedAt: { type: Date },
+  verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  rejectionReason: { type: String },
+  rejectedAt: { type: Date },
+  
+  // ✅ Version tracking for re-uploads
+  version: { type: Number, default: 1 },
+  previousVersions: [{
+    url: String,
+    uploadedAt: Date,
+    verified: Boolean,
+    verifiedAt: Date,
+    rejectionReason: String,
+    version: Number
+  }],
+  
+  // ✅ Admin notes
+  adminNotes: [{
+    note: String,
+    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    addedAt: { type: Date, default: Date.now }
+  }]
+}, { _id: false, minimize: false });
+
 const userSchema = new mongoose.Schema(
   {
-    firstname: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 2,
-      maxlength: 50,
-    },
-    lastname: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 2,
-      maxlength: 50,
-    },
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      minlength: 3,
-      maxlength: 30,
-      match: [
-        /^[a-zA-Z0-9_]+$/,
-        "Username can only contain letters, numbers, and underscores",
-      ],
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
-    },
-    phone: {
-      type: String,
-      required: true,
-      match: [/^[0-9]{10,15}$/, "Please provide a valid phone number"],
-    },
+    firstname: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
+    lastname: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
+    username: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    phone: { type: String, required: true },
     password: { type: String, required: true, minlength: 8, select: false },
-    role: {
-      type: String,
-      enum: ["customer", "admin", "vendor", "rider"],
-      default: "customer",
-    },
+    role: { type: String, enum: ["customer", "admin", "vendor", "rider"], default: "customer" },
     avatar: { type: String, default: "" },
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
 
-    // Rider-specific fields
     riderProfile: {
-      vehicleType: {
-        type: String,
-        enum: ["bike", "scooter", "bicycle", "car"],
-      },
+      vehicleType: { type: String, enum: ["bike", "scooter", "bicycle", "car"] },
       vehicleNumber: String,
       vehicleBrand: String,
       vehicleModel: String,
       licenseNumber: String,
-      status: {
-        type: String,
-        enum: ["offline", "active", "on_delivery", "inactive"],
-        default: "offline",
-      },
-      rating: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 5,
-      },
-      totalDeliveries: {
-        type: Number,
-        default: 0,
-      },
-      completedDeliveries: {
-        type: Number,
-        default: 0,
-      },
+      status: { type: String, enum: ["offline", "active", "on_delivery", "inactive"], default: "offline" },
+      rating: { type: Number, default: 0, min: 0, max: 5 },
+      totalDeliveries: { type: Number, default: 0 },
+      completedDeliveries: { type: Number, default: 0 },
       earnings: {
         total: { type: Number, default: 0 },
         today: { type: Number, default: 0 },
@@ -92,62 +63,24 @@ const userSchema = new mongoose.Schema(
         thisMonth: { type: Number, default: 0 },
       },
       currentLocation: {
-        type: {
-          type: String,
-          enum: ["Point"],
-          default: "Point",
-        },
+        type: { type: String, enum: ["Point"], default: "Point" },
         coordinates: [Number],
         lastUpdated: Date,
       },
-      isApproved: {
-        type: Boolean,
-        default: false,
-      },
-      approvedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
+      isApproved: { type: Boolean, default: false },
+      approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       approvedAt: Date,
       riderCode: String,
       
-      // ✅ ADDED: Documents field for storing uploaded files
+      // ✅ Enhanced documents with full tracking
       documents: {
-        license: {
-          url: String,
-          uploadedAt: Date,
-          verified: { type: Boolean, default: false },
-          verifiedAt: Date,
-          verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-        },
-        vehicleRegistration: {
-          url: String,
-          uploadedAt: Date,
-          verified: { type: Boolean, default: false },
-          verifiedAt: Date,
-          verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-        },
-        insurance: {
-          url: String,
-          uploadedAt: Date,
-          verified: { type: Boolean, default: false },
-          verifiedAt: Date,
-          verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-        },
-        identityProof: {
-          url: String,
-          uploadedAt: Date,
-          verified: { type: Boolean, default: false },
-          verifiedAt: Date,
-          verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-        },
-        profilePhoto: {
-          url: String,
-          uploadedAt: Date
-        }
+        license: { type: DocumentSchema, default: () => ({ verified: null, version: 1 }) },
+        vehicleRegistration: { type: DocumentSchema, default: () => ({ verified: null, version: 1 }) },
+        insurance: { type: DocumentSchema, default: () => ({ verified: null, version: 1 }) },
+        identityProof: { type: DocumentSchema, default: () => ({ verified: null, version: 1 }) },
+        profilePhoto: { type: DocumentSchema, default: () => ({ verified: null, version: 1 }) }
       },
       
-      // ✅ ADDED: Verification details
       verification: {
         isVerified: { type: Boolean, default: false },
         verifiedAt: Date,
@@ -159,7 +92,6 @@ const userSchema = new mongoose.Schema(
         rejectedAt: Date
       },
       
-      // ✅ ADDED: Additional rider fields
       phoneNumber: String,
       alternatePhone: String,
       stats: {
@@ -174,11 +106,8 @@ const userSchema = new mongoose.Schema(
     verificationCodeExpires: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
-    
-    // Password Reset OTP Fields
     resetPasswordOTP: String,
     resetPasswordOTPExpires: Date,
-    
     refreshToken: String,
     lastLogin: Date,
 
@@ -226,20 +155,24 @@ const userSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  { 
+    timestamps: true, 
+    toJSON: { virtuals: true }, 
+    toObject: { virtuals: true },
+    minimize: false // ✅ IMPORTANT: Don't remove empty objects
+  }
 );
 
-// ✅ INDEXES (removed duplicates)
-// Index for rider location queries
+// Indexes
 userSchema.index({ 'riderProfile.currentLocation.coordinates': '2dsphere' });
 userSchema.index({ 'riderProfile.status': 1 });
+userSchema.index({ 'riderProfile.isApproved': 1 });
 
 // Virtual full name
 userSchema.virtual("fullName").get(function () {
   return `${this.firstname} ${this.lastname}`;
 });
 
-// Virtual for rider name compatibility
 userSchema.virtual("name").get(function () {
   return `${this.firstname} ${this.lastname}`;
 });
@@ -258,14 +191,13 @@ userSchema.pre("save", async function (next) {
     const riderCode = `RDR${String(count + 1).padStart(6, "0")}`;
     
     if (!this.riderProfile) {
-      this.riderProfile = {};
+      this.riderProfile = { documents: {} };
     }
     this.riderProfile.riderCode = riderCode;
   }
   next();
 });
 
-// Pre-save hook to handle address validation
 userSchema.pre("save", function (next) {
   if (this.isModified('cart') && !this.isModified('addresses')) {
     this.$__.skipAddressValidation = true;
@@ -283,7 +215,6 @@ userSchema.pre("save", function (next) {
   next();
 });
 
-// Safe cart item removal method
 userSchema.methods.removeCartItemSafe = async function (productId) {
   if (!this.cart) return;
   this.cart = this.cart.filter(
@@ -292,7 +223,6 @@ userSchema.methods.removeCartItemSafe = async function (productId) {
   await this.save({ validateBeforeSave: false });
 };
 
-// Rider methods
 userSchema.methods.updateRiderLocation = function (lat, lng) {
   if (this.role !== "rider") return;
   if (!this.riderProfile) this.riderProfile = {};
@@ -322,7 +252,6 @@ userSchema.methods.completeDelivery = function (earnings) {
   this.riderProfile.earnings.thisMonth = (this.riderProfile.earnings.thisMonth || 0) + earnings;
 };
 
-// JWT token methods
 userSchema.methods.generateAuthToken = function () {
   return jwt.sign(
     { id: this._id, email: this.email, role: this.role },
@@ -337,12 +266,10 @@ userSchema.methods.generateRefreshToken = function () {
   });
 };
 
-// Compare password
 userSchema.methods.comparePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-// OTP methods
 userSchema.methods.createVerificationCode = function () {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.verificationCode = crypto.createHash("sha256").update(otp).digest("hex");
@@ -350,7 +277,6 @@ userSchema.methods.createVerificationCode = function () {
   return otp;
 };
 
-// Password reset token (old method - kept for backward compatibility)
 userSchema.methods.createPasswordResetToken = function () {
   const token = crypto.randomBytes(32).toString("hex");
   this.passwordResetToken = crypto

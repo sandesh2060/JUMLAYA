@@ -84,11 +84,25 @@ exports.registerRider = catchAsync(async (req, res, next) => {
 // DASHBOARD
 // ============================================
 
+// ============================================
+// DASHBOARD - FIXED VERSION
+// ============================================
+
 exports.getDashboard = catchAsync(async (req, res, next) => {
   const riderId = req.rider._id;
 
+  // ✅ FIX: Get user info from req.user (from JWT auth middleware)
+  const userId = req.user?.id || req.user?._id;
+  
+  // Get user details
+  const user = await User.findById(userId).select('firstname lastname phone email riderProfile');
+  
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  // Get rider details
   const rider = await Rider.findById(riderId)
-    .populate('user', 'name email')
     .populate('currentOrders');
 
   if (!rider) {
@@ -98,7 +112,7 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
   // ✅ Only show unassigned 'Processing' orders (no rider assigned)
   const pendingOrders = await Order.find({
     orderStatus: 'Processing',
-    rider: null, // ✅ CRITICAL: Only orders without a rider
+    rider: null,
   })
     .populate('user', 'name phone email')
     .limit(10)
@@ -155,17 +169,20 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
     }
   ]);
 
+  // ✅ FIXED: Build proper rider info from User model
   res.json({
     success: true,
     data: {
       rider: {
         id: rider._id,
-        riderCode: rider.riderCode,
-        name: rider.user.name,
-        phone: rider.phoneNumber,
-        vehicleType: rider.vehicleType,
+        riderCode: user.riderProfile?.riderCode || rider.riderCode,
+        name: `${user.firstname} ${user.lastname}`, // ✅ FIX: From User model
+        phone: user.phone, // ✅ FIX: From User model
+        vehicleType: user.riderProfile?.vehicleType || rider.vehicleType,
+        vehicleNumber: user.riderProfile?.vehicleNumber || rider.vehicleNumber,
         currentLocation: rider.currentLocation,
-        isVerified: rider.verification?.isVerified || false
+        isVerified: rider.verification?.isVerified || false,
+        isApproved: user.riderProfile?.isApproved || false
       },
       status: rider.status,
       stats: {
@@ -180,7 +197,7 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
         acceptanceRate: rider.stats?.acceptanceRate || 0,
         onTimeRate: rider.stats?.onTimeDeliveryRate || 0
       },
-      orders: pendingOrders, // ✅ Only unassigned orders
+      orders: pendingOrders,
       currentOrders: rider.currentOrders || []
     }
   });

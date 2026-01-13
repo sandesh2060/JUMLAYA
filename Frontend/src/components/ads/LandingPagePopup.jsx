@@ -1,5 +1,5 @@
 // Frontend/src/components/ads/LandingPagePopup.jsx
-// ✅ FIXED: Responsive, scrollable, prevents background scroll
+// ✅ FIXED: Perfect responsive image styling
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Clock, ArrowRight, Leaf, Sparkles } from "lucide-react";
@@ -14,14 +14,12 @@ const LandingPagePopup = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ✅ FIX: Lock/unlock body scroll when popup opens/closes
+  // Lock/unlock body scroll
   useEffect(() => {
     if (isVisible) {
-      // Prevent body scroll
       document.body.style.overflow = 'hidden';
       document.body.style.paddingRight = `${window.innerWidth - document.documentElement.clientWidth}px`;
     } else {
-      // Restore body scroll
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
     }
@@ -40,13 +38,11 @@ const LandingPagePopup = () => {
 
     const userRole = user.role?.toLowerCase();
     if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'rider' || user.isAdmin === true) {
-      console.log("🚫 Admin/Rider detected - No ads will be shown");
       return;
     }
 
     const adShownThisSession = sessionStorage.getItem("adShownThisSession");
     if (!adShownThisSession) {
-      console.log("🎯 Fetching active ad for customer...");
       fetchActiveAd();
     }
   }, [user]);
@@ -55,15 +51,11 @@ const LandingPagePopup = () => {
     try {
       const response = await adsAPI.getActiveAd();
       if (response.success && response.data.ad) {
-        console.log("✅ Active ad found:", response.data.ad);
         setAd(response.data.ad);
-
         setTimeout(() => {
-          console.log("🎬 Showing popup...");
           setIsVisible(true);
           startCountdown(response.data.ad);
         }, 500);
-
         sessionStorage.setItem("adShownThisSession", "true");
       }
     } catch (error) {
@@ -158,7 +150,7 @@ const LandingPagePopup = () => {
             {/* Background gradient */}
             <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50 to-lime-50 dark:from-gray-900 dark:via-green-900/20 dark:to-emerald-900/20 opacity-60" />
 
-            {/* Floating particles - hidden on mobile for performance */}
+            {/* Floating particles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none hidden sm:block">
               {[...Array(10)].map((_, i) => (
                 <div
@@ -177,7 +169,7 @@ const LandingPagePopup = () => {
               ))}
             </div>
 
-            {/* Close button - responsive positioning */}
+            {/* Close button */}
             <button
               onClick={handleClose}
               className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full shadow-lg hover:scale-110 hover:rotate-90 transition-all duration-300 group border-2 border-green-200 dark:border-green-700"
@@ -186,7 +178,7 @@ const LandingPagePopup = () => {
               <X className="w-5 h-5 sm:w-6 sm:h-6 text-green-700 dark:text-green-400 group-hover:text-red-500 transition-colors" />
             </button>
 
-            {/* Countdown timer - responsive */}
+            {/* Countdown timer */}
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-green-50/95 dark:bg-green-900/95 backdrop-blur-sm rounded-full shadow-lg border-2 border-green-200 dark:border-green-700">
               <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 dark:text-green-400 animate-pulse" />
               <span className="text-xs sm:text-sm font-semibold text-green-800 dark:text-green-300">
@@ -194,77 +186,100 @@ const LandingPagePopup = () => {
               </span>
             </div>
 
-            {/* Content - Responsive Grid */}
+            {/* Content Grid */}
             <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-0">
-              {/* Left side - Image */}
-              <div className="relative overflow-hidden bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 min-h-[250px] sm:min-h-[350px] lg:min-h-[500px]">
-                <div className="absolute inset-0">
-                  {ad.posterImage && (
-                    <img
-                      src={ad.posterImage}
-                      alt={ad.title}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-green-900/60 via-transparent to-transparent" />
-                </div>
-
-                {/* Type badge - responsive */}
-                <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
-                  <div className={`px-3 py-2 sm:px-6 sm:py-3 bg-gradient-to-r ${typeBadge.gradient} rounded-full shadow-xl`}>
-                    <span className="text-white font-bold text-xs sm:text-sm tracking-wider flex items-center gap-1 sm:gap-2">
-                      <span className="text-base sm:text-xl">{typeBadge.emoji}</span>
-                      <span className="hidden sm:inline">{typeBadge.label}</span>
-                    </span>
+              {/* ✅ LEFT SIDE - PERFECT IMAGE CONTAINER */}
+              <div className="relative w-full bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30">
+                {/* ✅ Aspect ratio container - maintains proportions */}
+                <div className="relative w-full" style={{ paddingTop: '100%' }}>
+                  {/* ✅ Image positioned absolutely within container */}
+                  <div className="absolute inset-0 w-full h-full">
+                    {ad.posterImage ? (
+                      <img
+                        src={ad.posterImage}
+                        alt={ad.title}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                        style={{
+                          objectFit: 'cover',
+                          objectPosition: 'center'
+                        }}
+                        loading="eager"
+                        onError={(e) => {
+                          console.error('Image failed to load:', ad.posterImage);
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      // Fallback gradient if no image
+                      <div className="absolute inset-0 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600 flex items-center justify-center">
+                        <Leaf className="w-24 h-24 text-white/30" />
+                      </div>
+                    )}
+                    
+                    {/* Gradient overlay for better text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   </div>
                 </div>
 
-                {/* Organic badge - responsive */}
-                <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-                  <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full p-2 sm:p-3 shadow-lg border-2 border-green-400">
-                    <Leaf className="w-5 h-5 sm:w-8 sm:h-8 text-green-600 dark:text-green-400" />
+                {/* Overlay elements on top of image */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {/* Type badge */}
+                  <div className="absolute top-4 left-4 sm:top-6 sm:left-6 pointer-events-auto">
+                    <div className={`px-3 py-2 sm:px-6 sm:py-3 bg-gradient-to-r ${typeBadge.gradient} rounded-full shadow-2xl border-2 border-white/20`}>
+                      <span className="text-white font-bold text-xs sm:text-sm tracking-wider flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+                        <span className="text-base sm:text-xl">{typeBadge.emoji}</span>
+                        <span className="hidden sm:inline">{typeBadge.label}</span>
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Discount badge - responsive */}
-                {ad.discount > 0 && (
-                  <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-green-400 rounded-xl sm:rounded-2xl blur-lg sm:blur-xl opacity-50 animate-pulse" />
-                      <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-2xl border-2 sm:border-4 border-white/30">
-                        <div className="text-white text-center">
-                          <div className="text-3xl sm:text-5xl font-black leading-none">
-                            {ad.discount}%
+                  {/* Organic badge */}
+                  <div className="absolute top-4 right-4 sm:top-6 sm:right-6 pointer-events-auto">
+                    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full p-2 sm:p-3 shadow-2xl border-2 border-green-400">
+                      <Leaf className="w-5 h-5 sm:w-8 sm:h-8 text-green-600 dark:text-green-400" />
+                    </div>
+                  </div>
+
+                  {/* Discount badge */}
+                  {ad.discount > 0 && (
+                    <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 pointer-events-auto">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-green-400 rounded-xl sm:rounded-2xl blur-lg sm:blur-xl opacity-60 animate-pulse" />
+                        <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-2xl border-2 sm:border-4 border-white/30">
+                          <div className="text-white text-center">
+                            <div className="text-3xl sm:text-5xl font-black leading-none drop-shadow-lg">
+                              {ad.discount}%
+                            </div>
+                            <div className="text-sm sm:text-lg font-bold mt-0.5 sm:mt-1 drop-shadow">OFF</div>
                           </div>
-                          <div className="text-sm sm:text-lg font-bold mt-0.5 sm:mt-1">OFF</div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* Right side - Content (scrollable on small screens) */}
+              {/* RIGHT SIDE - Content */}
               <div className="relative flex flex-col justify-center p-6 sm:p-8 lg:p-12 bg-white dark:bg-gray-900 max-h-[50vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
-                {/* Leaf decoration - hidden on small screens */}
+                {/* Leaf decoration */}
                 <div className="absolute top-8 right-8 text-green-200 dark:text-green-800 opacity-30 animate-spin-slow hidden lg:block">
                   <Leaf className="w-16 h-16 lg:w-20 lg:h-20" />
                 </div>
 
                 <div className="relative space-y-4 sm:space-y-6">
-                  {/* Title - responsive text */}
+                  {/* Title */}
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-gray-900 dark:text-white leading-tight">
                     <span className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
                       {ad.title}
                     </span>
                   </h1>
 
-                  {/* Description - responsive text */}
+                  {/* Description */}
                   <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-gray-600 dark:text-gray-300 leading-relaxed">
                     {ad.description}
                   </p>
 
-                  {/* Feature badges - responsive */}
+                  {/* Feature badges */}
                   <div className="flex flex-wrap gap-2 sm:gap-3">
                     <div className="px-2 py-1 sm:px-3 sm:py-1.5 bg-green-100 dark:bg-green-900/30 rounded-full text-xs sm:text-sm font-semibold text-green-700 dark:text-green-300 flex items-center gap-1">
                       <Leaf className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -278,7 +293,7 @@ const LandingPagePopup = () => {
                     </div>
                   </div>
 
-                  {/* Coupon code - responsive */}
+                  {/* Coupon code */}
                   {ad.couponCode && (
                     <div className="inline-flex flex-col gap-2">
                       <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium flex items-center gap-2">
@@ -296,7 +311,7 @@ const LandingPagePopup = () => {
                     </div>
                   )}
 
-                  {/* CTA Button - responsive */}
+                  {/* CTA Button */}
                   <button
                     onClick={handleCTAClick}
                     className="group relative inline-flex items-center justify-center gap-2 sm:gap-3 px-6 py-3 sm:px-8 sm:py-5 w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-sm sm:text-base lg:text-lg rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 overflow-hidden"
@@ -307,7 +322,7 @@ const LandingPagePopup = () => {
                     <ArrowRight className="relative w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
 
-                  {/* Trust indicators - responsive */}
+                  {/* Trust indicators */}
                   <div className="flex flex-wrap gap-3 sm:gap-4 pt-2 sm:pt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />

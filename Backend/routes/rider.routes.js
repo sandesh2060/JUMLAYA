@@ -1,6 +1,6 @@
 // ============================================
-// INDEX 1B: Backend/routes/rider.routes.js
-// ✅ CRITICAL FIX: Document routes BEFORE dynamic order routes
+// Backend/routes/rider.routes.js
+// ✅ COMPLETE ROUTE CONFIGURATION
 // ============================================
 const express = require("express");
 const router = express.Router();
@@ -46,7 +46,7 @@ const { isVerifiedRider } = require("../middlewares/rider.middleware");
 router.post("/register", registerRider);
 
 // ============================================
-// PROTECTED ROUTES
+// PROTECTED ROUTES (All require authentication)
 // ============================================
 router.use(protect);
 router.use(restrictTo("rider", "admin"));
@@ -65,34 +65,59 @@ router.patch("/status", updateStatus);
 router.patch("/location", updateLocation);
 
 // ============================================
-// ✅ FILE UPLOADS - CRITICAL: BEFORE ORDER ROUTES
+// ✅ FILE UPLOADS - FIXED ORDER AND LOGGING
 // ============================================
+
+// Avatar upload route
 router.post(
   "/avatar/upload",
+  (req, res, next) => {
+    console.log('🔵 Avatar upload route hit');
+    next();
+  },
   uploadSingle("avatar"),
   handleUploadError,
   uploadAvatar
 );
 
+// ✅ CRITICAL: Document upload with detailed logging
 router.post(
-  "/documents/upload",
+  "/documents/:documentType/upload",
+  (req, res, next) => {
+    console.log('🔵 Document upload route hit:', {
+      documentType: req.params.documentType,
+      contentType: req.headers['content-type'],
+      method: req.method
+    });
+    next();
+  },
   uploadSingle("document"),
   handleUploadError,
+  (req, res, next) => {
+    console.log('🔵 After multer middleware:', {
+      hasFile: !!req.file,
+      file: req.file
+    });
+    next();
+  },
   uploadDocument
 );
 
+// Get documents
 router.get("/documents", getDocuments);
+
+// Delete document
 router.delete("/documents/:documentType", deleteDocument);
 
 // ============================================
-// ORDERS - SPECIFIC ROUTES FIRST, THEN DYNAMIC
+// ORDERS - SPECIFIC ROUTES FIRST
 // ============================================
 router.get("/orders/pending", getPendingOrders);
 router.get("/orders/active", getActiveOrders);
 router.get("/orders/history", getOrderHistory);
 router.get("/orders", getOrders);
 
-// ✅ Dynamic routes LAST
+// Dynamic routes LAST
 router.get("/orders/:orderId", getOrderDetails);
 router.post("/orders/:orderId/accept", acceptOrder);
 router.patch("/orders/:orderId/status", updateOrderStatus);

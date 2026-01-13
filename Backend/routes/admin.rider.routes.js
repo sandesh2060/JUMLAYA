@@ -11,7 +11,8 @@ const {
   getRiderStats,
   approveRider,
   rejectRider,
-  verifyDocument
+  verifyDocument,
+  getDocumentHistory 
 } = require('../controllers/admin/admin.rider.controller');
 
 const { protect, restrictTo } = require('../middlewares/auth.middleware');
@@ -60,6 +61,7 @@ router.get('/:id', getRider);
  * @access  Admin
  */
 router.patch('/:id/documents/:documentType/verify', verifyDocument);
+router.get('/:id/documents/:documentType/history', getDocumentHistory);
 
 // ============================================
 // RIDER APPROVAL/REJECTION
