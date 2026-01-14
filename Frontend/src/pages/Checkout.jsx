@@ -15,10 +15,12 @@ import {
   Map,
   Navigation,
   Search,
+  Clock,
 } from "lucide-react";
+import { deliveryFeeAPI } from "@api/deliveryFee.api";
 import { useCart } from "@hooks/useCart";
 import { addressAPI } from "@api/address.api";
-import publicSettingsAPI from '@/api/publicSettings.api'
+import publicSettingsAPI from "@/api/publicSettings.api";
 import { orderAPI } from "@api/order.api";
 import toast from "react-hot-toast";
 import MapPicker from "../components/map/MapPicker";
@@ -30,19 +32,19 @@ const formatPrice = (price) => `Rs. ${price?.toLocaleString() || 0}`;
 // With this:
 const getImageUrl = (path) => {
   if (!path) return "/placeholder.png";
-  
+
   // If it's already a full URL, return as is
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
-  
+
   // Get base URL without /api suffix
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4001/api";
-  const baseUrl = apiUrl.replace(/\/api$/, '');
-  
+  const baseUrl = apiUrl.replace(/\/api$/, "");
+
   // Ensure path starts with /
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
   return `${baseUrl}${cleanPath}`;
 };
 
@@ -65,7 +67,7 @@ const Checkout = () => {
   const [taxSettings, setTaxSettings] = useState({
     enabled: true,
     rate: 13,
-    includeInPrice: false
+    includeInPrice: false,
   });
 
   // Map states
@@ -76,6 +78,9 @@ const Checkout = () => {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [deliveryFeeEstimate, setDeliveryFeeEstimate] = useState(null);
+  const [loadingDeliveryFee, setLoadingDeliveryFee] = useState(false);
+  const [deliveryFeeError, setDeliveryFeeError] = useState(null);
 
   const [newAddress, setNewAddress] = useState({
     label: "home",
@@ -97,27 +102,37 @@ const Checkout = () => {
     fetchAddresses();
   }, []);
   useEffect(() => {
-  const fetchTaxSettings = async () => {
-    try {
-      const response = await publicSettingsAPI.getTaxSettings();
-      if (response.success) {
-        setTaxSettings(response.data);
+    const fetchTaxSettings = async () => {
+      try {
+        const response = await publicSettingsAPI.getTaxSettings();
+        if (response.success) {
+          setTaxSettings(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching tax settings:", error);
       }
-    } catch (error) {
-      console.error('Error fetching tax settings:', error);
+    };
+
+    fetchTaxSettings();
+  }, []);
+  useEffect(() => {
+    if (!cartLoading && (!cart || !cart.items || cart.items.length === 0)) {
+      if (!orderPlaced) {
+        toast.error("Your cart is empty");
+        navigate("/cart");
+      }
     }
-  };
-  
-  fetchTaxSettings();
-}, []);
-useEffect(() => {
-  if (!cartLoading && (!cart || !cart.items || cart.items.length === 0)) {
-    if (!orderPlaced) {
-      toast.error("Your cart is empty");
-      navigate("/cart");
+  }, [cart, cartLoading, navigate, orderPlaced]);
+  useEffect(() => {
+    if (selectedAddress && cart?.subtotal) {
+      const address = addresses.find((a) => a._id === selectedAddress);
+      if (address) {
+        estimateDeliveryFee(address);
+      }
+    } else {
+      setDeliveryFeeEstimate(null);
     }
-  }
-}, [cart, cartLoading, navigate, orderPlaced]);
+  }, [selectedAddress, addresses, cart?.subtotal]);
 
   useEffect(() => {
     if (!cartLoading && (!cart || !cart.items || cart.items.length === 0)) {
@@ -128,22 +143,79 @@ useEffect(() => {
     }
   }, [cart, cartLoading, navigate, orderPlaced]);
 
- const fetchAddresses = async () => {
-  try {
-    const response = await addressAPI.getAll();
-    const addressList = response.data?.addresses || [];
-    setAddresses(addressList);
-    const defaultAddr = addressList.find((a) => a.isDefault);
-    if (defaultAddr) {
-      setSelectedAddress(defaultAddr._id);
+  const fetchAddresses = async () => {
+    try {
+      const response = await addressAPI.getAll();
+      const addressList = response.data?.addresses || [];
+      setAddresses(addressList);
+      const defaultAddr = addressList.find((a) => a.isDefault);
+      if (defaultAddr) {
+        setSelectedAddress(defaultAddr._id);
+      }
+    } catch (error) {
+      console.error("❌ Failed to load addresses:", error);
+      toast.error("Failed to load addresses");
     }
-  } catch (error) {
-    console.error("❌ Failed to load addresses:", error);
-    toast.error("Failed to load addresses");
-  }
-};
+  };
 
+  const estimateDeliveryFee = async (address) => {
+    if (!address?.coordinates?.latitude || !address?.coordinates?.longitude) {
+      console.log(
+        "⚠️ No coordinates in address, skipping delivery fee estimation"
+      );
+      setDeliveryFeeEstimate(null);
+      return;
+    }
 
+    setLoadingDeliveryFee(true);
+    setDeliveryFeeError(null);
+
+    try {
+      console.log("🚚 Estimating delivery fee for:", address.coordinates);
+
+      // ⭐ Pass cart subtotal to check for free delivery (>= Rs. 5000)
+      const orderTotal = cart?.subtotal || 0;
+
+      const response = await deliveryFeeAPI.estimateFee(
+        address.coordinates.latitude,
+        address.coordinates.longitude,
+        orderTotal // Pass order total for free delivery check
+      );
+
+      const estimate = response.data || response;
+
+      setDeliveryFeeEstimate({
+        fee: estimate.deliveryFee,
+        originalFee: estimate.originalFee || estimate.deliveryFee,
+        distance: estimate.distance,
+        tier: estimate.tier,
+        calculation: estimate.calculation,
+        riderAvailable: estimate.riderAvailable,
+        estimatedTime: estimate.estimatedDeliveryTime,
+        freeDelivery: estimate.freeDelivery || false,
+        freeDeliveryThreshold: estimate.freeDeliveryThreshold || 5000,
+      });
+
+      console.log("✅ Delivery fee estimated:", estimate);
+
+      // Show notification
+      if (estimate.freeDelivery) {
+        toast.success(
+          `🎉 FREE Delivery! Order above Rs. ${estimate.freeDeliveryThreshold}`
+        );
+      } else {
+        toast.success(
+          `📍 Delivery fee: Rs. ${estimate.deliveryFee} (${estimate.distance} km)`
+        );
+      }
+    } catch (error) {
+      console.error("❌ Delivery fee estimation error:", error);
+      setDeliveryFeeError("Could not estimate delivery fee");
+      toast.error("Could not estimate delivery fee");
+    } finally {
+      setLoadingDeliveryFee(false);
+    }
+  };
 
   // ============================================
   // MAP FUNCTIONS
@@ -518,22 +590,22 @@ useEffect(() => {
             Redirecting to orders page in 3 seconds...
           </div>
 
-        <div className="space-y-3">
-  <button
-    key="view-order"
-    onClick={() => navigate("/orders")}
-    className="w-full px-6 py-3.5 rounded-xl font-semibold bg-green-600 hover:bg-green-700 text-white shadow-lg transition-colors"
-  >
-    View Order Now
-  </button>
-  <button
-    key="continue-shopping"
-    onClick={() => navigate("/")}
-    className="w-full px-6 py-3.5 rounded-xl font-semibold border-2 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 border-gray-300 text-gray-900 hover:bg-gray-100 transition-colors"
-  >
-    Continue Shopping
-  </button>
-</div>
+          <div className="space-y-3">
+            <button
+              key="view-order"
+              onClick={() => navigate("/orders")}
+              className="w-full px-6 py-3.5 rounded-xl font-semibold bg-green-600 hover:bg-green-700 text-white shadow-lg transition-colors"
+            >
+              View Order Now
+            </button>
+            <button
+              key="continue-shopping"
+              onClick={() => navigate("/")}
+              className="w-full px-6 py-3.5 rounded-xl font-semibold border-2 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 border-gray-300 text-gray-900 hover:bg-gray-100 transition-colors"
+            >
+              Continue Shopping
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1093,83 +1165,239 @@ useEffect(() => {
               </div>
             </div>
           </div>
+          {deliveryFeeEstimate && (
+            <div className="dark:bg-gray-800 bg-white rounded-xl shadow-md p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Truck
+                  className="text-green-600 dark:text-green-400"
+                  size={24}
+                />
+                <h2 className="text-xl font-bold dark:text-gray-100 text-gray-900">
+                  Delivery Information
+                </h2>
+              </div>
 
-          {/* Order Summary */}
-          {/* Order Summary */}
-    <div className="lg:col-span-1">
-      <div className="dark:bg-gray-800 bg-white rounded-xl shadow-md p-6 sticky top-8">
-        <h2 className="text-xl font-bold mb-4 dark:text-gray-100 text-gray-900">
-          Order Summary
-        </h2>
+              <div className="space-y-3">
+                {/* Delivery Fee */}
+                <div
+                  className={`p-4 rounded-lg border-2 ${
+                    deliveryFeeEstimate.freeDelivery
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-600"
+                      : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-semibold dark:text-gray-100 text-gray-900">
+                      Delivery Fee
+                    </span>
+                    {deliveryFeeEstimate.freeDelivery ? (
+                      <div className="flex items-center gap-2">
+                        {deliveryFeeEstimate.originalFee > 0 && (
+                          <span className="text-sm line-through text-gray-500 dark:text-gray-400">
+                            Rs. {deliveryFeeEstimate.originalFee}
+                          </span>
+                        )}
+                        <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          FREE 🎉
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        Rs. {deliveryFeeEstimate.fee}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm dark:text-gray-400 text-gray-600">
+                    📍 Distance: {deliveryFeeEstimate.distance} km
+                  </p>
+                  <p className="text-sm dark:text-gray-400 text-gray-600">
+                    💳 {deliveryFeeEstimate.calculation}
+                  </p>
 
-        <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
-          {cart?.items?.map((item) => (
-            <div key={item._id} className="flex gap-3">
-              <img
-                src={getImageUrl(item.product?.images?.[0])}
-                alt={item.product?.name}
-                className="w-16 h-16 object-cover rounded-lg"
-              />
-              <div className="flex-1">
-                <p className="font-semibold text-sm dark:text-gray-100 text-gray-900">
-                  {item.product?.name}
-                </p>
-                <p className="text-sm dark:text-gray-400 text-gray-600">
-                  Qty: {item.quantity}
-                </p>
-                <p className="text-sm font-semibold dark:text-gray-100 text-gray-900">
-                  {formatPrice(item.priceSnapshot || item.product?.price)}
-                </p>
+                  {/* Free Delivery Progress Bar */}
+                  {!deliveryFeeEstimate.freeDelivery &&
+                    deliveryFeeEstimate.freeDeliveryThreshold &&
+                    cart?.subtotal > 0 && (
+                      <div className="mt-3">
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Add Rs.{" "}
+                            {deliveryFeeEstimate.freeDeliveryThreshold -
+                              cart.subtotal}{" "}
+                            more for FREE delivery
+                          </span>
+                          <span className="font-semibold text-gray-700 dark:text-gray-300">
+                            Rs. {cart.subtotal} /{" "}
+                            {deliveryFeeEstimate.freeDeliveryThreshold}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${Math.min(
+                                (cart.subtotal /
+                                  deliveryFeeEstimate.freeDeliveryThreshold) *
+                                  100,
+                                100
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                </div>
+
+                {/* Estimated Delivery Time */}
+                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <div className="flex items-center gap-2">
+                    <Clock
+                      className="text-blue-600 dark:text-blue-400"
+                      size={20}
+                    />
+                    <span className="font-medium dark:text-gray-100 text-gray-900">
+                      Estimated Delivery
+                    </span>
+                  </div>
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">
+                    {deliveryFeeEstimate.estimatedTime}
+                  </span>
+                </div>
+
+                {/* Rider Availability */}
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  {deliveryFeeEstimate.riderAvailable ? (
+                    <>
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium dark:text-gray-300 text-gray-700">
+                        Riders available in your area
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="text-orange-500" size={16} />
+                      <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                        Limited rider availability - using estimated fee
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+          )}
 
-        <div className="border-t dark:border-gray-700 pt-4 space-y-2">
-          <div className="flex justify-between dark:text-gray-400 text-gray-600">
-            <span>Subtotal</span>
-            <span>{formatPrice(cart?.subtotal)}</span>
-          </div>
-          
-          {/* Dynamic Tax Rate from Backend */}
-          {taxSettings.enabled && (
-            <div className="flex justify-between dark:text-gray-400 text-gray-600">
-              <span>Tax ({taxSettings.rate}%)</span>
-              <span>{formatPrice(cart?.tax)}</span>
+          {/* Loading State for Delivery Fee */}
+          {loadingDeliveryFee && (
+            <div className="dark:bg-gray-800 bg-white rounded-xl shadow-md p-6">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
+                <span className="dark:text-gray-400 text-gray-600">
+                  Calculating delivery fee...
+                </span>
+              </div>
             </div>
           )}
-          
-          <div className="flex justify-between dark:text-gray-400 text-gray-600">
-            <span>Shipping</span>
-            <span>{formatPrice(cart?.shippingFee)}</span>
-          </div>
-          {cart?.discount > 0 && (
-            <div className="flex justify-between text-green-600 dark:text-green-400">
-              <span>Discount</span>
-              <span>-{formatPrice(cart?.discount)}</span>
+
+          {/* Order Summary */}
+          <div className="lg:col-span-1">
+            <div className="dark:bg-gray-800 bg-white rounded-xl shadow-md p-6 sticky top-8">
+              <h2 className="text-xl font-bold mb-4 dark:text-gray-100 text-gray-900">
+                Order Summary
+              </h2>
+
+              <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                {cart?.items?.map((item) => (
+                  <div key={item._id} className="flex gap-3">
+                    <img
+                      src={getImageUrl(item.product?.images?.[0])}
+                      alt={item.product?.name}
+                      className="w-16 h-16 object-cover rounded-lg"
+                    />
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm dark:text-gray-100 text-gray-900">
+                        {item.product?.name}
+                      </p>
+                      <p className="text-sm dark:text-gray-400 text-gray-600">
+                        Qty: {item.quantity}
+                      </p>
+                      <p className="text-sm font-semibold dark:text-gray-100 text-gray-900">
+                        {formatPrice(item.priceSnapshot || item.product?.price)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t dark:border-gray-700 pt-4 space-y-2">
+                <div className="flex justify-between dark:text-gray-400 text-gray-600">
+                  <span>Subtotal</span>
+                  <span>{formatPrice(cart?.subtotal)}</span>
+                </div>
+
+                {/* Tax */}
+                {taxSettings.enabled && (
+                  <div className="flex justify-between dark:text-gray-400 text-gray-600">
+                    <span>Tax ({taxSettings.rate}%)</span>
+                    <span>{formatPrice(cart?.tax)}</span>
+                  </div>
+                )}
+
+                {/* Dynamic Shipping Fee */}
+                <div className="flex justify-between dark:text-gray-400 text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <span>Shipping</span>
+                    {deliveryFeeEstimate && (
+                      <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-0.5 rounded">
+                        {deliveryFeeEstimate.distance} km
+                      </span>
+                    )}
+                  </div>
+                  <span>
+                    {deliveryFeeEstimate
+                      ? formatPrice(deliveryFeeEstimate.fee)
+                      : formatPrice(cart?.shippingFee)}
+                  </span>
+                </div>
+
+                {/* Discount */}
+                {cart?.discount > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span>Discount</span>
+                    <span>-{formatPrice(cart?.discount)}</span>
+                  </div>
+                )}
+
+                {/* Total */}
+                <div className="border-t dark:border-gray-700 pt-2 flex justify-between font-bold text-lg dark:text-gray-100 text-gray-900">
+                  <span>Total</span>
+                  <span>
+                    {deliveryFeeEstimate
+                      ? formatPrice(
+                          (cart?.subtotal || 0) +
+                            (cart?.tax || 0) +
+                            deliveryFeeEstimate.fee -
+                            (cart?.discount || 0)
+                        )
+                      : formatPrice(cart?.total)}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handlePlaceOrder}
+                disabled={loading || !selectedAddress}
+                className="w-full mt-6 py-3.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
+              >
+                {loading ? "Placing Order..." : "Place Order"}
+              </button>
+
+              {!selectedAddress && (
+                <p className="text-red-600 dark:text-red-400 text-sm text-center mt-2">
+                  Please select a shipping address
+                </p>
+              )}
             </div>
-          )}
-          <div className="border-t dark:border-gray-700 pt-2 flex justify-between font-bold text-lg dark:text-gray-100 text-gray-900">
-            <span>Total</span>
-            <span>{formatPrice(cart?.total)}</span>
           </div>
-        </div>
-
-        <button
-          onClick={handlePlaceOrder}
-          disabled={loading || !selectedAddress}
-          className="w-full mt-6 py-3.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
-        >
-          {loading ? "Placing Order..." : "Place Order"}
-        </button>
-
-        {!selectedAddress && (
-          <p className="text-red-600 dark:text-red-400 text-sm text-center mt-2">
-            Please select a shipping address
-          </p>
-        )}
-      </div>
-    </div>
         </div>
       </div>
     </div>

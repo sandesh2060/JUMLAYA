@@ -1,4 +1,5 @@
-// Backend/models/rider.model.js - FIXED DUPLICATE INDEXES
+// Backend/models/rider.model.js - UPDATED WITH LIVE LOCATION
+
 const mongoose = require('mongoose');
 
 const riderSchema = new mongoose.Schema({
@@ -6,12 +7,12 @@ const riderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true, // ✅ This creates an index automatically - removed duplicate
+    unique: true,
   },
   
   riderCode: {
     type: String,
-    unique: true, // ✅ This creates an index automatically - removed duplicate
+    unique: true,
     required: true,
     uppercase: true,
     trim: true,
@@ -95,7 +96,7 @@ const riderSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    index: true, // ✅ Keep only this
+    index: true,
   },
 
   alternatePhone: {
@@ -113,7 +114,7 @@ const riderSchema = new mongoose.Schema({
     type: String,
     enum: ['offline', 'active', 'on_delivery', 'inactive', 'suspended'],
     default: 'offline',
-    index: true, // ✅ Keep only this
+    index: true,
   },
 
   availability: {
@@ -123,6 +124,7 @@ const riderSchema = new mongoose.Schema({
     totalOnlineHours: { type: Number, default: 0 }
   },
 
+  // ==================== LIVE LOCATION TRACKING ====================
   currentLocation: {
     type: {
       type: String,
@@ -130,12 +132,50 @@ const riderSchema = new mongoose.Schema({
       default: 'Point'
     },
     coordinates: {
-      type: [Number],
-      default: [0, 0]
+      type: [Number], // [longitude, latitude]
+      default: [85.3240, 27.7172] // Default to Kathmandu
     },
     address: String,
     lastUpdated: { type: Date, default: Date.now }
   },
+
+  // Real-time navigation data
+  heading: {
+    type: Number, // Direction in degrees (0-360)
+    min: 0,
+    max: 360,
+    default: 0
+  },
+
+  speed: {
+    type: Number, // Speed in km/h
+    min: 0,
+    default: 0
+  },
+
+  // Location history for tracking (limited to last 50 points)
+  locationHistory: [{
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: [Number]
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    speed: Number,
+    heading: Number
+  }],
+
+  // Last known location update timestamp
+  lastLocationUpdate: {
+    type: Date
+  },
+  // ================================================================
 
   homeLocation: {
     type: {
@@ -182,7 +222,7 @@ const riderSchema = new mongoose.Schema({
     acceptanceRate: { type: Number, default: 100 },
     onTimeDeliveryRate: { type: Number, default: 100 },
     averageDeliveryTime: { type: Number, default: 0 },
-    totalDistance: { type: Number, default: 0 },
+    totalDistance: { type: Number, default: 0 }, // Total distance traveled
     todayDeliveries: { type: Number, default: 0 },
     todayEarnings: { type: Number, default: 0 },
     weeklyDeliveries: { type: Number, default: 0 },
@@ -357,11 +397,11 @@ const riderSchema = new mongoose.Schema({
 });
 
 // ============ INDEXES ============
-// ✅ FIXED: Removed duplicate indexes
-riderSchema.index({ 'currentLocation.coordinates': '2dsphere' }); // Geospatial queries
+riderSchema.index({ 'currentLocation.coordinates': '2dsphere' }); // For nearby rider queries
 riderSchema.index({ 'verification.isVerified': 1, status: 1 });
 riderSchema.index({ createdAt: -1 });
 riderSchema.index({ 'rating.average': -1 });
+riderSchema.index({ status: 1, 'verification.isVerified': 1 }); // For finding available riders
 
 // ============ VIRTUALS ============
 riderSchema.virtual('fullName').get(function() {
@@ -394,15 +434,83 @@ riderSchema.statics.generateRiderCode = async function() {
   return code;
 };
 
-riderSchema.methods.updateLocation = function(lat, lng) {
+// ==================== LIVE LOCATION METHODS ====================
+/**
+ * Update rider's current location with history tracking
+ */
+riderSchema.methods.updateLocation = async function(lat, lng, heading, speed) {
+  // Update current location
   this.currentLocation = {
     type: 'Point',
     coordinates: [lng, lat],
     lastUpdated: new Date()
   };
+  
+  this.lastLocationUpdate = new Date();
   this.activity.lastLocationUpdate = new Date();
+  
+  // Update heading and speed if provided
+  if (heading !== undefined) this.heading = heading;
+  if (speed !== undefined) this.speed = speed;
+
+  // Add to location history (limit to last 50 points)
+  if (this.locationHistory.length >= 50) {
+    this.locationHistory.shift();
+  }
+  
+  this.locationHistory.push({
+    location: {
+      type: 'Point',
+      coordinates: [lng, lat]
+    },
+    timestamp: new Date(),
+    speed: speed || this.speed,
+    heading: heading || this.heading
+  });
+
   return this.save();
 };
+
+/**
+ * Calculate distance traveled today
+ */
+riderSchema.methods.calculateTodayDistance = function() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const todayHistory = this.locationHistory.filter(
+    loc => new Date(loc.timestamp) >= today
+  );
+  
+  let totalDistance = 0;
+  for (let i = 1; i < todayHistory.length; i++) {
+    const prev = todayHistory[i - 1].location.coordinates;
+    const curr = todayHistory[i].location.coordinates;
+    totalDistance += this.calculateDistanceBetween(
+      prev[1], prev[0], curr[1], curr[0]
+    );
+  }
+  
+  return totalDistance;
+};
+
+/**
+ * Calculate distance between two points (Haversine)
+ */
+riderSchema.methods.calculateDistanceBetween = function(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+// ================================================================
 
 riderSchema.methods.updateStatus = function(newStatus) {
   this.status = newStatus;

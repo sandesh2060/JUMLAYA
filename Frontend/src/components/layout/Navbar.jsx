@@ -195,47 +195,53 @@ export default function Navbar() {
       <nav className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 transition-colors duration-200">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16 lg:h-18">
-           {/* ✅ FIXED LOGO - WORKS WITH CLOUDINARY */}
-<Link
-  to="/"
-  className="flex items-center gap-2 group flex-shrink-0 mr-2 sm:mr-4"
->
-  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-    {settingsLoading ? (
-      // Loading skeleton
-      <div className="w-full h-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg" />
-    ) : (
-      <img
-        src={(() => {
-          // ✅ FIX: Handle Cloudinary URLs properly
-          const logoUrl = settings?.storeLogo || settings?.logo;
-          
-          // If no logo URL, use fallback
-          if (!logoUrl) {
-            return import.meta.env.VITE_LOGO_URL || "/images/logo.png";
-          }
-          
-          // ✅ If it's a Cloudinary URL (starts with http/https), use it directly
-          if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
-            return logoUrl;
-          }
-          
-          // Otherwise, use the getImageUrl helper for local paths
-          return getImageUrl(logoUrl);
-        })()}
-        alt={settings?.storeName || t("navbar.brandName")}
-        className="w-full h-full object-contain rounded-lg"
-        onError={(e) => {
-          console.error('❌ Logo failed to load:', e.target.src);
-          e.target.src = import.meta.env.VITE_LOGO_URL || "/images/logo.png";
-        }}
-      />
-    )}
-  </div>
-  <span className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent hidden xs:inline whitespace-nowrap">
-    {settings?.storeName || t("navbar.brandName")}
-  </span>
-</Link>
+            {/* ✅ FIXED LOGO - WORKS WITH CLOUDINARY */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 group flex-shrink-0 mr-2 sm:mr-4"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+                {settingsLoading ? (
+                  // Loading skeleton
+                  <div className="w-full h-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg" />
+                ) : (
+                  <img
+                    src={(() => {
+                      // ✅ FIX: Handle Cloudinary URLs properly
+                      const logoUrl = settings?.storeLogo || settings?.logo;
+
+                      // If no logo URL, use fallback
+                      if (!logoUrl) {
+                        return (
+                          import.meta.env.VITE_LOGO_URL || "/images/logo.png"
+                        );
+                      }
+
+                      // ✅ If it's a Cloudinary URL (starts with http/https), use it directly
+                      if (
+                        logoUrl.startsWith("http://") ||
+                        logoUrl.startsWith("https://")
+                      ) {
+                        return logoUrl;
+                      }
+
+                      // Otherwise, use the getImageUrl helper for local paths
+                      return getImageUrl(logoUrl);
+                    })()}
+                    alt={settings?.storeName || t("navbar.brandName")}
+                    className="w-full h-full object-contain rounded-lg"
+                    onError={(e) => {
+                      console.error("❌ Logo failed to load:", e.target.src);
+                      e.target.src =
+                        import.meta.env.VITE_LOGO_URL || "/images/logo.png";
+                    }}
+                  />
+                )}
+              </div>
+              <span className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent hidden xs:inline whitespace-nowrap">
+                {settings?.storeName || t("navbar.brandName")}
+              </span>
+            </Link>
 
             {/* Desktop Navigation Links */}
             <div className="hidden lg:flex items-center space-x-4 xl:space-x-6">
@@ -265,7 +271,9 @@ export default function Navbar() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyPress}
-                onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                onFocus={() =>
+                  searchResults.length > 0 && setShowDropdown(true)
+                }
                 placeholder={t("search")}
                 className="w-full px-3 py-2 pl-9 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent focus:border-green-500 text-sm transition-all"
               />
@@ -320,7 +328,10 @@ export default function Navbar() {
                 className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                 aria-label="Search"
               >
-                <Search size={20} className="text-gray-700 dark:text-gray-300" />
+                <Search
+                  size={20}
+                  className="text-gray-700 dark:text-gray-300"
+                />
               </button>
 
               {/* Theme Toggle */}
@@ -341,7 +352,10 @@ export default function Navbar() {
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-1"
                   aria-label="Language"
                 >
-                  <Globe size={20} className="text-gray-700 dark:text-gray-300" />
+                  <Globe
+                    size={20}
+                    className="text-gray-700 dark:text-gray-300"
+                  />
                   <span className="text-xs font-medium hidden lg:inline">
                     {currentLanguage?.toUpperCase() || "EN"}
                   </span>
@@ -356,13 +370,18 @@ export default function Navbar() {
                           setShowLanguageMenu(false);
                         }}
                         className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                          currentLanguage === lang.code ? "bg-green-50 dark:bg-gray-700" : ""
+                          currentLanguage === lang.code
+                            ? "bg-green-50 dark:bg-gray-700"
+                            : ""
                         }`}
                       >
                         <span className="text-2xl">{lang.flag}</span>
                         <span className="text-sm font-medium">{lang.name}</span>
                         {currentLanguage === lang.code && (
-                          <CheckCircle size={16} className="ml-auto text-green-600" />
+                          <CheckCircle
+                            size={16}
+                            className="ml-auto text-green-600"
+                          />
                         )}
                       </button>
                     ))}
@@ -392,7 +411,10 @@ export default function Navbar() {
                 disabled={cartLoading}
                 aria-label="Cart"
               >
-                <ShoppingCart size={20} className="text-gray-700 dark:text-gray-300" />
+                <ShoppingCart
+                  size={20}
+                  className="text-gray-700 dark:text-gray-300"
+                />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
                     {cartCount > 99 ? "99+" : cartCount}
@@ -486,7 +508,10 @@ export default function Navbar() {
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors group"
                           >
                             <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
-                              <item.icon size={18} className="text-green-600 dark:text-green-400" />
+                              <item.icon
+                                size={18}
+                                className="text-green-600 dark:text-green-400"
+                              />
                             </div>
                             <div className="flex-1 text-left min-w-0">
                               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -496,7 +521,10 @@ export default function Navbar() {
                                 {item.desc}
                               </p>
                             </div>
-                            <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+                            <ChevronRight
+                              size={16}
+                              className="text-gray-400 flex-shrink-0"
+                            />
                           </button>
                         ))}
                       </div>
@@ -507,7 +535,10 @@ export default function Navbar() {
                           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         >
                           <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-                            <LogOut size={18} className="text-red-600 dark:text-red-400" />
+                            <LogOut
+                              size={18}
+                              className="text-red-600 dark:text-red-400"
+                            />
                           </div>
                           <p className="text-sm font-medium text-red-600 dark:text-red-400">
                             {t("nav.logout")}
@@ -560,7 +591,11 @@ export default function Navbar() {
                   {searchResults.map((product) => (
                     <button
                       key={product._id}
-                      onClick={() => handleSelectProduct(product.slug)}
+                      onMouseDown={(e) => {
+                        // ✅ CHANGED: from onClick to onMouseDown
+                        e.preventDefault(); // ✅ ADDED: prevent default behavior
+                        handleSelectProduct(product.slug);
+                      }}
                       className="w-full text-left px-3 py-3 hover:bg-green-50 dark:hover:bg-gray-700 flex items-center gap-3 border-b last:border-b-0 transition-colors"
                     >
                       <img
@@ -570,7 +605,9 @@ export default function Navbar() {
                         onError={(e) => (e.target.src = "/placeholder.png")}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{product.name}</p>
+                        <p className="text-sm font-medium truncate">
+                          {product.name}
+                        </p>
                         <p className="text-xs text-green-600">
                           {t("currency")} {product.price}
                         </p>
@@ -658,11 +695,10 @@ export default function Navbar() {
           animation: slide-in 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
         .animate-slide-down {
-          animation: slide-down 0.2s ease
-;        }
+          animation: slide-down 0.2s ease;
+        }
         .animate-fade-in {
-          animation: fade-in 0.2s ease
-;
+          animation: fade-in 0.2s ease;
         }
       `}</style>
     </>

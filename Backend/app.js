@@ -1,6 +1,7 @@
 // ============================================
 // Backend/app.js - PRODUCTION-READY WITH PERFECT CORS
-// ✅ FIXED: Rider routes now use /api/riders (plural)
+// ✅ COMPLETE: All routes properly mounted
+// ✅ FIXED: Rider order routes added separately
 // ============================================
 
 const express = require("express");
@@ -16,8 +17,6 @@ const app = express();
 
 const isProduction = process.env.NODE_ENV === "production";
 const isDevelopment = process.env.NODE_ENV === "development";
-const adminSettingsRoutes = require('./routes/admin.settings.routes');
-
 
 // =====================================================
 // TRUST PROXY (for production deployments)
@@ -63,7 +62,6 @@ app.use(helmet({
 }));
 
 app.use(mongoSanitize());
-
 
 // =====================================================
 // CORS CONFIGURATION (PERFECT FOR DEVELOPMENT & PRODUCTION)
@@ -264,15 +262,19 @@ app.get("/api/health", (req, res) => {
 // API ROUTES
 // =====================================================
 
-// Public routes
+// ✅ PUBLIC ROUTES (No authentication required)
 app.use("/api/public/settings", require("./routes/publicSettings.routes"));
 app.use("/api/users", require("./routes/user.routes"));
 app.use("/api/products", require("./routes/product.routes"));
 app.use("/api/otp", require("./routes/otp.routes"));
 app.use("/api/password", require("./routes/password.routes"));
+app.use("/api/categories", require("./routes/category.routes"));
+app.use("/api/ads", require("./routes/ads.routes"));
+
+// ✅ USER ROUTES (Authentication required)
 app.use("/api/orders", require("./routes/order.routes"));
 app.use("/api/cart", require("./routes/cart.routes"));
-app.use("/api/categories", require("./routes/category.routes"));
+app.use('/api/delivery', require('./routes/delivery.routes'));
 app.use("/api/reviews", require("./routes/review.routes"));
 app.use("/api/addresses", require("./routes/address.routes"));
 app.use("/api/esewa", require("./routes/esewa.routes"));
@@ -280,10 +282,8 @@ app.use("/api/wishlist", require("./routes/wishlist.routes"));
 app.use("/api/coupons", require("./routes/coupon.routes"));
 app.use("/api/notifications", require("./routes/notification.routes"));
 app.use("/api/products", require("./routes/product.review.routes"));
-app.use("/api/ads", require("./routes/ads.routes"));
 
-// Admin routes
-app.use('/api/admin/settings', adminSettingsRoutes);
+// ✅ ADMIN ROUTES (Admin authentication required)
 app.use("/api/settings", require("./routes/settings.routes"));
 app.use("/api/admin/settings", require("./routes/admin.settings.routes"));
 app.use("/api/admin/dashboard", require("./routes/admin.dashboard.routes"));
@@ -293,9 +293,42 @@ app.use("/api/admin/products", require("./routes/admin.product.routes"));
 app.use("/api/admin/orders", require("./routes/admin.order.routes"));
 app.use("/api/audit-logs", require("./routes/auditLog.routes"));
 
-// ✅ FIXED: Rider routes (changed from /api/rider to /api/riders)
+// ✅ RIDER ROUTES (Rider authentication required)
+// Main rider routes
 app.use("/api/riders", require("./routes/rider.routes"));
-console.log("✅ Rider routes mounted at: /api/riders");
+console.log("✅ Rider main routes mounted at: /api/riders");
+
+// ✅ CRITICAL FIX: Rider order routes (separate mounting)
+app.use("/api/rider/orders", require("./routes/rider.order.routes"));
+console.log("✅ Rider order routes mounted at: /api/rider/orders");
+
+// ✅ Rider notification routes (if exists)
+try {
+  app.use("/api/rider/notifications", require("./routes/rider.notification.routes"));
+  console.log("✅ Rider notification routes mounted at: /api/rider/notifications");
+} catch (err) {
+  console.log("ℹ️  Rider notification routes not found (optional)");
+}
+
+// ✅ Rider location routes (if exists - for live tracking)
+try {
+  app.use("/api/rider/location", require("./routes/rider.location.routes"));
+  console.log("✅ Rider location routes mounted at: /api/rider/location");
+} catch (err) {
+  console.log("ℹ️  Rider location routes not found (optional)");
+}
+
+// =====================================================
+// ROUTE SUMMARY (Development Only)
+// =====================================================
+if (isDevelopment) {
+  console.log("\n📋 Routes Summary:");
+  console.log("   Public: /api/public/settings, /api/users, /api/products");
+  console.log("   User: /api/orders, /api/cart, /api/wishlist");
+  console.log("   Admin: /api/admin/*");
+  console.log("   Rider: /api/riders, /api/rider/orders, /api/rider/notifications");
+  console.log("");
+}
 
 // =====================================================
 // 404 HANDLER
@@ -304,7 +337,17 @@ app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.method} ${req.originalUrl} not found`,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    ...(isDevelopment ? {
+      hint: "Check the route path and HTTP method",
+      availableRoutes: [
+        "/api/health",
+        "/api/riders",
+        "/api/rider/orders",
+        "/api/users",
+        "/api/products"
+      ]
+    } : {})
   });
 });
 

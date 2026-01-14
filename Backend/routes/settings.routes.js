@@ -1,167 +1,466 @@
+// ============================================
+// Backend/routes/settings.routes.js
+// Perfect Settings Routes - Public Access
+// ============================================
 
-// ============================================
-// settings.routes.js - Public Settings Routes
-// Path: Backend/routes/settings.routes.js
-// ✅ UPDATED VERSION WITH CLOUDINARY LOGO SUPPORT
-// ============================================
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const Settings = require("../models/settings.model");
+const Settings = require('../models/settings.model');
 
-// ============================================
+// ==========================================
 // PUBLIC SETTINGS ENDPOINT
-// ============================================
+// ==========================================
 
-// GET /api/settings - Get public settings (no auth required)
-router.get("/", async (req, res) => {
+/**
+ * @route   GET /api/settings
+ * @desc    Get public settings (no authentication required)
+ * @access  Public
+ */
+router.get('/', async (req, res) => {
   try {
-    console.log("📦 Fetching public settings");
+    console.log('📦 Fetching public settings');
 
-    let settings = await Settings.findOne().lean();
+    let settings = await Settings.getSettings();
     
-    // Only select public fields
-    if (settings) {
-      // Only expose public fields (deep copy to avoid mutation)
-      settings = {
-        _id: settings._id,
-        storeName: settings.storeName,
-        storeLogo: settings.storeLogo || "", // ✅ ADDED: Cloudinary logo URL
-        storeEmail: settings.storeEmail,
-        storePhone: settings.storePhone,
-        storeAddress: settings.storeAddress,
-        supportEmail: settings.supportEmail, // ✅ ADDED: Support email
-        supportPhone: settings.supportPhone, // ✅ ADDED: Support phone
-        currency: settings.currency,
-        currencyCode: settings.currencyCode,
-        taxRate: settings.taxRate,
-        shippingFee: settings.shippingFee,
-        freeShippingThreshold: settings.freeShippingThreshold,
-        minOrderAmount: settings.minOrderAmount,
-        maxOrderAmount: settings.maxOrderAmount,
-        paymentMethods: settings.paymentMethods,
-        socialMedia: settings.socialMedia,
-        logo: settings.logo, // Legacy logo field (keep for backward compatibility)
-        favicon: settings.favicon,
-        aboutUs: settings.aboutUs,
-        returnPolicy: settings.returnPolicy,
-        privacyPolicy: settings.privacyPolicy,
-        termsAndConditions: settings.termsAndConditions,
-        shippingPolicy: settings.shippingPolicy,
-        workingHours: settings.workingHours,
-        notifications: settings.notifications,
-        seo: settings.seo,
-        maintenanceMode: settings.maintenanceMode,
-      };
-      
-      console.log("✅ Public settings fetched");
-      console.log("🖼️ Logo URL:", settings.storeLogo || settings.logo || "No logo set");
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Settings not found'
+      });
     }
 
-    // Create default settings if none exist
-    if (!settings) {
-      console.log("⚠️ No settings found, creating default settings in database");
+    // Only expose public fields
+    const publicSettings = {
+      _id: settings._id,
+      storeName: settings.storeName,
+      storeLogo: settings.storeLogo || '',
+      favicon: settings.favicon || '',
+      storeEmail: settings.storeEmail,
+      storePhone: settings.storePhone,
+      storeAddress: settings.storeAddress,
+      storeLocation: settings.storeLocation,
+      supportEmail: settings.supportEmail,
+      supportPhone: settings.supportPhone,
       
-      // Create default settings in database
-      const defaultSettings = await Settings.create({
-        storeName: "JUMLAYA",
-        storeLogo: "", // ✅ ADDED: Empty by default, admin will upload
-        storeEmail: "info@jumlaya.com",
-        storePhone: "+977-9800000000",
-        storeAddress: "Kathmandu, Nepal",
-        supportEmail: "support@jumlaya.com", // ✅ ADDED
-        supportPhone: "+977-9800000000", // ✅ ADDED
-        currency: "रु",
-        currencyCode: "NPR",
-        taxRate: 13,
-        shippingFee: 100,
-        freeShippingThreshold: 2000,
-        minOrderAmount: 100,
-        maxOrderAmount: 100000,
-        paymentMethods: {
-          cod: { enabled: true, name: "Cash on Delivery" },
-          esewa: { enabled: false, merchantId: "" },
-          khalti: { enabled: false, publicKey: "" },
-          bankTransfer: { enabled: false, accountDetails: "" },
-        },
-        socialMedia: {
-          facebook: "",
-          instagram: "",
-          twitter: "",
-          youtube: "",
-          tiktok: ""
-        },
-        logo: "/logo.png", // Legacy field
-        favicon: "/favicon.ico",
-        aboutUs: "",
-        returnPolicy: "Items can be returned within 7 days of delivery in original condition.",
-        privacyPolicy: "",
-        termsAndConditions: "",
-        shippingPolicy: "Free shipping on orders above रु 2000. Standard delivery takes 3-5 business days.",
-        workingHours: {},
-        notifications: {
-          emailNotifications: true,
-          orderNotifications: true,
-          lowStockAlerts: true,
-          customerMessages: false
-        },
-        seo: {
-          metaTitle: "JUMLAYA - Online Shopping in Nepal",
-          metaDescription: "Shop the latest products online in Nepal",
-          metaKeywords: "online shopping, nepal, ecommerce",
-          ogImage: ""
-        },
-        maintenanceMode: {
-          enabled: false,
-          message: "We are currently under maintenance. Please check back soon.",
-        },
-      });
+      // Currency & Tax
+      currency: settings.currency,
+      currencyCode: settings.currencyCode,
+      currencySymbol: settings.currencySymbol,
+      taxRate: settings.taxRate,
+      taxEnabled: settings.taxEnabled,
+      
+      // Order Limits
+      minOrderAmount: settings.minOrderAmount,
+      maxOrderAmount: settings.maxOrderAmount,
+      
+      // Delivery Settings
+      deliverySettings: {
+        shippingFee: settings.deliverySettings?.shippingFee || 100,
+        freeShippingThreshold: settings.deliverySettings?.freeShippingThreshold || 2000,
+        freeDeliveryDistance: settings.deliverySettings?.freeDeliveryDistance || 5,
+        maxDeliveryDistance: settings.deliverySettings?.maxDeliveryDistance || 50,
+        perKmCharge: settings.deliverySettings?.perKmCharge || 20,
+        estimatedDeliveryDays: settings.deliverySettings?.estimatedDeliveryDays || { min: 3, max: 5 }
+      },
+      
+      // Payment Methods (only enabled ones)
+      paymentMethods: settings.getEnabledPaymentMethods(),
+      
+      // Social Media
+      socialMedia: settings.socialMedia,
+      
+      // Business Hours
+      businessHours: settings.businessHours,
+      isStoreOpen: settings.isStoreOpen,
+      
+      // Content Pages
+      content: {
+        aboutUs: settings.content?.aboutUs || '',
+        returnPolicy: settings.content?.returnPolicy || '',
+        privacyPolicy: settings.content?.privacyPolicy || '',
+        termsAndConditions: settings.content?.termsAndConditions || '',
+        shippingPolicy: settings.content?.shippingPolicy || '',
+        faq: settings.content?.faq || ''
+      },
+      
+      // SEO
+      seo: {
+        metaTitle: settings.seo?.metaTitle || '',
+        metaDescription: settings.seo?.metaDescription || '',
+        metaKeywords: settings.seo?.metaKeywords || [],
+        ogImage: settings.seo?.ogImage || '',
+        siteName: settings.seo?.siteName || '',
+        twitterHandle: settings.seo?.twitterHandle || ''
+      },
+      
+      // Maintenance Mode
+      maintenanceMode: {
+        enabled: settings.maintenanceMode?.enabled || false,
+        message: settings.maintenanceMode?.message || ''
+      }
+    };
+    
+    console.log('✅ Public settings fetched');
+    console.log('🖼️ Logo URL:', publicSettings.storeLogo || 'No logo set');
+    console.log('🏪 Store open:', publicSettings.isStoreOpen);
 
-      // Return the created settings
-      settings = {
-        _id: defaultSettings._id,
-        storeName: defaultSettings.storeName,
-        storeLogo: defaultSettings.storeLogo,
-        storeEmail: defaultSettings.storeEmail,
-        storePhone: defaultSettings.storePhone,
-        storeAddress: defaultSettings.storeAddress,
-        supportEmail: defaultSettings.supportEmail,
-        supportPhone: defaultSettings.supportPhone,
-        currency: defaultSettings.currency,
-        currencyCode: defaultSettings.currencyCode,
-        taxRate: defaultSettings.taxRate,
-        shippingFee: defaultSettings.shippingFee,
-        freeShippingThreshold: defaultSettings.freeShippingThreshold,
-        minOrderAmount: defaultSettings.minOrderAmount,
-        maxOrderAmount: defaultSettings.maxOrderAmount,
-        paymentMethods: defaultSettings.paymentMethods,
-        socialMedia: defaultSettings.socialMedia,
-        logo: defaultSettings.logo,
-        favicon: defaultSettings.favicon,
-        aboutUs: defaultSettings.aboutUs,
-        returnPolicy: defaultSettings.returnPolicy,
-        privacyPolicy: defaultSettings.privacyPolicy,
-        termsAndConditions: defaultSettings.termsAndConditions,
-        shippingPolicy: defaultSettings.shippingPolicy,
-        workingHours: defaultSettings.workingHours,
-        notifications: defaultSettings.notifications,
-        seo: defaultSettings.seo,
-        maintenanceMode: defaultSettings.maintenanceMode,
-      };
-      
-      console.log("✅ Default settings created and returned");
+    res.json({
+      success: true,
+      message: 'Settings retrieved successfully',
+      data: publicSettings
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching public settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch settings',
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// GET STORE LOCATION
+// ==========================================
+
+/**
+ * @route   GET /api/settings/location
+ * @desc    Get store location details
+ * @access  Public
+ */
+router.get('/location', async (req, res) => {
+  try {
+    console.log('📍 Fetching store location');
+    
+    const settings = await Settings.findOne({ isActive: true })
+      .select('storeLocation storeAddress storeName');
+    
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store location not found'
+      });
     }
 
     res.json({
       success: true,
-      message: "Settings retrieved successfully",
-      data: settings,
+      message: 'Store location retrieved successfully',
+      data: {
+        storeName: settings.storeName,
+        storeAddress: settings.storeAddress,
+        storeLocation: settings.storeLocation
+      }
     });
+    
   } catch (error) {
-    console.error("❌ Error fetching public settings:", error);
+    console.error('❌ Error fetching store location:', error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch settings",
-      error: error.message,
+      message: 'Failed to fetch store location',
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// GET DELIVERY SETTINGS
+// ==========================================
+
+/**
+ * @route   GET /api/settings/delivery
+ * @desc    Get delivery settings
+ * @access  Public
+ */
+router.get('/delivery', async (req, res) => {
+  try {
+    console.log('🚚 Fetching delivery settings');
+    
+    const settings = await Settings.findOne({ isActive: true })
+      .select('deliverySettings');
+    
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery settings not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Delivery settings retrieved successfully',
+      data: {
+        deliverySettings: settings.deliverySettings || {
+          shippingFee: 100,
+          freeShippingThreshold: 2000,
+          freeDeliveryDistance: 5,
+          maxDeliveryDistance: 50,
+          perKmCharge: 20,
+          estimatedDeliveryDays: { min: 3, max: 5 }
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching delivery settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch delivery settings',
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// GET PAYMENT METHODS
+// ==========================================
+
+/**
+ * @route   GET /api/settings/payment-methods
+ * @desc    Get enabled payment methods
+ * @access  Public
+ */
+router.get('/payment-methods', async (req, res) => {
+  try {
+    console.log('💳 Fetching payment methods');
+    
+    const settings = await Settings.findOne({ isActive: true });
+    
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Settings not found'
+      });
+    }
+
+    const enabledPaymentMethods = settings.getEnabledPaymentMethods();
+
+    res.json({
+      success: true,
+      message: 'Payment methods retrieved successfully',
+      data: {
+        paymentMethods: enabledPaymentMethods
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching payment methods:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payment methods',
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// GET BUSINESS HOURS
+// ==========================================
+
+/**
+ * @route   GET /api/settings/business-hours
+ * @desc    Get business hours and check if store is open
+ * @access  Public
+ */
+router.get('/business-hours', async (req, res) => {
+  try {
+    console.log('🕐 Fetching business hours');
+    
+    const settings = await Settings.findOne({ isActive: true })
+      .select('businessHours');
+    
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business hours not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Business hours retrieved successfully',
+      data: {
+        businessHours: settings.businessHours,
+        isStoreOpen: settings.isStoreOpen
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching business hours:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch business hours',
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// GET SPECIFIC CONTENT PAGE
+// ==========================================
+
+/**
+ * @route   GET /api/settings/content/:page
+ * @desc    Get specific content page (about-us, return-policy, etc.)
+ * @access  Public
+ */
+router.get('/content/:page', async (req, res) => {
+  try {
+    const { page } = req.params;
+    const validPages = ['aboutUs', 'returnPolicy', 'privacyPolicy', 'termsAndConditions', 'shippingPolicy', 'faq'];
+    
+    if (!validPages.includes(page)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid page requested'
+      });
+    }
+    
+    console.log(`📄 Fetching content page: ${page}`);
+    
+    const settings = await Settings.findOne({ isActive: true })
+      .select('content');
+    
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Content not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Content retrieved successfully',
+      data: {
+        page,
+        content: settings.content?.[page] || ''
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching content page:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch content',
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// CALCULATE DELIVERY CHARGE
+// ==========================================
+
+/**
+ * @route   POST /api/settings/calculate-delivery
+ * @desc    Calculate delivery charge based on distance and order amount
+ * @access  Public
+ */
+router.post('/calculate-delivery', async (req, res) => {
+  try {
+    const { distanceInKm, orderAmount } = req.body;
+    
+    if (!distanceInKm || !orderAmount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Distance and order amount are required'
+      });
+    }
+    
+    console.log(`🚚 Calculating delivery charge for ${distanceInKm}km, order: Rs ${orderAmount}`);
+    
+    const settings = await Settings.findOne({ isActive: true });
+    
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Settings not found'
+      });
+    }
+
+    const deliveryCharge = settings.calculateDeliveryCharge(
+      parseFloat(distanceInKm),
+      parseFloat(orderAmount)
+    );
+    
+    const isDeliveryAvailable = settings.isDeliveryAvailable(parseFloat(distanceInKm));
+
+    if (deliveryCharge === null) {
+      return res.json({
+        success: false,
+        message: 'Delivery not available for this location',
+        data: {
+          isDeliveryAvailable: false,
+          distanceInKm: parseFloat(distanceInKm),
+          maxDeliveryDistance: settings.deliverySettings.maxDeliveryDistance
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Delivery charge calculated successfully',
+      data: {
+        isDeliveryAvailable,
+        deliveryCharge,
+        distanceInKm: parseFloat(distanceInKm),
+        orderAmount: parseFloat(orderAmount),
+        isFreeShipping: deliveryCharge === 0,
+        estimatedDeliveryDays: settings.deliverySettings.estimatedDeliveryDays
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error calculating delivery charge:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to calculate delivery charge',
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// CHECK STORE STATUS
+// ==========================================
+
+/**
+ * @route   GET /api/settings/status
+ * @desc    Check if store is open and maintenance mode
+ * @access  Public
+ */
+router.get('/status', async (req, res) => {
+  try {
+    console.log('🔍 Checking store status');
+    
+    const settings = await Settings.findOne({ isActive: true })
+      .select('maintenanceMode businessHours');
+    
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store status not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Store status retrieved successfully',
+      data: {
+        isStoreOpen: settings.isStoreOpen,
+        maintenanceMode: {
+          enabled: settings.maintenanceMode?.enabled || false,
+          message: settings.maintenanceMode?.message || ''
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error checking store status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check store status',
+      error: error.message
     });
   }
 });

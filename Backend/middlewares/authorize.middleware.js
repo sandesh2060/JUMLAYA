@@ -1,4 +1,8 @@
-// Backend/middlewares/authorize.middleware.js - FIXED VERSION
+// ============================================
+// Backend/middlewares/authorize.middleware.js
+// ✅ FIXED: Added restrictTo as alias for authorize
+// ============================================
+
 const AppError = require("../utils/AppError");
 
 // Middleware to check if user has required role
@@ -51,9 +55,15 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
-// Export both
+// ✅ Create restrictTo as an alias for authorize (for compatibility)
+const restrictTo = (...allowedRoles) => {
+  return authorize(...allowedRoles);
+};
+
+// Export all functions
 module.exports = {
   authorize,
+  restrictTo,  // ✅ ADDED: Now restrictTo is available
   adminOnly
 };
 

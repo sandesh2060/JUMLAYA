@@ -5,6 +5,7 @@
 // ============================================
 
 const Order = require('../../models/order.model');
+const Rider = require('../../models/rider.model');
 const riderService = require('../../services/rider.service');
 const notificationService = require('../../services/notification.service');
 const catchAsync = require('../../utils/catchAsync');
@@ -15,22 +16,48 @@ const { successResponse } = require('../../utils/response');
 const { notifyRiderAcceptedOrder } = require('../../utils/notificationHelper');
 
 // ==========================================
-// GET ACTIVE ORDERS
+// GET ACTIVE ORDERS (FOR NAVIGATION)
+// @route GET /api/rider/orders/active
 // ==========================================
 exports.getActiveOrders = catchAsync(async (req, res, next) => {
-  const rider = await riderService.getRiderByUserId(req.user._id);
+  const riderId = req.user._id;
+
+  // Find rider - supports both service and direct model query
+  let rider;
+  try {
+    rider = await riderService.getRiderByUserId(riderId);
+  } catch (err) {
+    rider = await Rider.findOne({ user: riderId });
+  }
   
   if (!rider) {
-    return next(new AppError('Rider not found', 404));
+    return next(new AppError('Rider profile not found', 404));
   }
 
-  const activeOrders = await riderService.getRiderActiveOrders(rider._id);
+  // Get orders that are actively being delivered
+  const activeOrders = await Order.find({
+    rider: rider._id,
+    status: { 
+      $in: ['confirmed', 'preparing', 'picked_up', 'out_for_delivery'] 
+    }
+  })
+  .populate('user', 'firstname lastname name phone avatar')
+  .populate('restaurant', 'name location phone address')
+  .populate('deliveryAddress')
+  .populate('items.product', 'name price images')
+  .sort({ createdAt: -1 })
+  .limit(5); // Limit to 5 active orders
 
-  successResponse(res, activeOrders, 'Active orders fetched successfully');
+  res.status(200).json({
+    status: 'success',
+    results: activeOrders.length,
+    data: activeOrders
+  });
 });
 
 // ==========================================
 // GET ORDER HISTORY
+// @route GET /api/rider/orders/history
 // ==========================================
 exports.getOrderHistory = catchAsync(async (req, res, next) => {
   const { page = 1, limit = 20 } = req.query;
@@ -48,33 +75,48 @@ exports.getOrderHistory = catchAsync(async (req, res, next) => {
 
 // ==========================================
 // GET ORDER DETAILS
+// @route GET /api/rider/orders/:orderId
 // ==========================================
 exports.getOrderDetails = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
+  const riderId = req.user._id;
 
-  const rider = await riderService.getRiderByUserId(req.user._id);
+  // Find rider - supports both methods
+  let rider;
+  try {
+    rider = await riderService.getRiderByUserId(riderId);
+  } catch (err) {
+    rider = await Rider.findOne({ user: riderId });
+  }
   
   if (!rider) {
-    return next(new AppError('Rider not found', 404));
+    return next(new AppError('Rider profile not found', 404));
   }
 
   const order = await Order.findOne({
     _id: orderId,
     rider: rider._id
   })
-    .populate('user', 'name email phone')
-    .populate('items.product')
-    .populate('deliveryAddress');
+  .populate('user', 'firstname lastname name email phone avatar')
+  .populate('restaurant', 'name phone location address')
+  .populate('deliveryAddress')
+  .populate('items.product', 'name price images');
 
   if (!order) {
-    return next(new AppError('Order not found or not assigned to you', 404));
+    return next(new AppError('Order not found or access denied', 404));
   }
 
-  successResponse(res, order, 'Order details fetched successfully');
+  res.status(200).json({
+    status: 'success',
+    data: {
+      order
+    }
+  });
 });
 
 // ==========================================
 // ACCEPT ORDER - WITH ADMIN NOTIFICATION
+// @route POST /api/rider/orders/:orderId/accept
 // ==========================================
 exports.acceptOrder = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
@@ -144,6 +186,7 @@ exports.acceptOrder = catchAsync(async (req, res, next) => {
 
 // ==========================================
 // UPDATE ORDER STATUS
+// @route PATCH /api/rider/orders/:orderId/status
 // ==========================================
 exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
@@ -206,6 +249,7 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
 
 // ==========================================
 // MARK ORDER AS PICKED UP
+// @route POST /api/rider/orders/:orderId/pickup
 // ==========================================
 exports.pickupOrder = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
@@ -241,8 +285,8 @@ exports.pickupOrder = catchAsync(async (req, res, next) => {
       order.user,
       'order_picked_up',
       'Order Picked Up',
-      `Your order #${order.orderNumber} has been picked up by ${req.user.name}`,
-      { orderId: order._id, riderName: req.user.name }
+      `Your order #${order.orderNumber} has been picked up by ${req.user.name || req.user.firstname}`,
+      { orderId: order._id, riderName: req.user.name || req.user.firstname }
     );
   } catch (notifError) {
     console.error('❌ Notification error:', notifError);
@@ -253,6 +297,7 @@ exports.pickupOrder = catchAsync(async (req, res, next) => {
 
 // ==========================================
 // START DELIVERY (OUT FOR DELIVERY)
+// @route POST /api/rider/orders/:orderId/start-delivery
 // ==========================================
 exports.startDelivery = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
@@ -298,6 +343,7 @@ exports.startDelivery = catchAsync(async (req, res, next) => {
 
 // ==========================================
 // COMPLETE DELIVERY
+// @route POST /api/rider/orders/:orderId/complete
 // ==========================================
 exports.completeDelivery = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
@@ -351,7 +397,7 @@ exports.completeDelivery = catchAsync(async (req, res, next) => {
     await notificationService.notifyAllAdmins(
       'order_delivered',
       'Delivery Completed',
-      `Order #${order.orderNumber} delivered by ${req.user.name}`,
+      `Order #${order.orderNumber} delivered by ${req.user.name || req.user.firstname}`,
       { orderId: order._id, riderId: rider._id }
     );
   } catch (notifError) {
@@ -363,6 +409,7 @@ exports.completeDelivery = catchAsync(async (req, res, next) => {
 
 // ==========================================
 // REPORT ISSUE WITH ORDER
+// @route POST /api/rider/orders/:orderId/report-issue
 // ==========================================
 exports.reportIssue = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
@@ -399,7 +446,7 @@ exports.reportIssue = catchAsync(async (req, res, next) => {
     await notificationService.notifyAllAdmins(
       'system_notification',
       'Order Issue Reported',
-      `Rider ${req.user.name} reported an issue with order #${order.orderNumber}: ${issueType}`,
+      `Rider ${req.user.name || req.user.firstname} reported an issue with order #${order.orderNumber}: ${issueType}`,
       { orderId: order._id, riderId: rider._id, issueType, description }
     );
   } catch (notifError) {

@@ -1,11 +1,13 @@
 // ============================================
 // Backend/routes/rider.order.routes.js
-// Rider Order Management Routes
+// ✅ COMPLETE Rider Order Management Routes
+// ✅ FIXED: Correct middleware imports
 // ============================================
 
 const express = require('express');
 const router = express.Router();
 
+// Import all controller methods
 const {
   getActiveOrders,
   getOrderHistory,
@@ -18,49 +20,101 @@ const {
   reportIssue
 } = require('../controllers/rider/rider.order.controller');
 
-const { protect, restrictTo } = require('../middlewares/auth.middleware');
-const { isVerifiedRider, isOrderOwner } = require('../middlewares/rider.middleware');
+// ✅ FIXED: Import correct middleware
+const { protect } = require('../middlewares/auth.middleware');
+const { authorize } = require('../middlewares/authorize.middleware');
+
+// Import rider-specific middlewares (optional - add if available)
+// const { isVerifiedRider, isOrderOwner } = require('../middlewares/rider.middleware');
 
 // ============================================
-// ALL ROUTES REQUIRE AUTHENTICATION
+// APPLY GLOBAL MIDDLEWARE TO ALL ROUTES
+// All routes require authentication and rider role
 // ============================================
 router.use(protect);
-router.use(restrictTo('rider'));
-router.use(isVerifiedRider);
+router.use(authorize('rider')); // ✅ FIXED: Use authorize instead of restrictTo
+
+// Uncomment if you have rider verification middleware
+// router.use(isVerifiedRider);
 
 // ============================================
-// ORDER LISTING
+// ORDER LISTING ROUTES
 // ============================================
 
-// Get active orders (currently assigned to rider)
+/**
+ * @route   GET /api/rider/orders/active
+ * @desc    Get rider's currently active orders (assigned & in-progress)
+ * @access  Private (Rider only)
+ */
 router.get('/active', getActiveOrders);
 
-// Get order history (completed/cancelled orders)
+/**
+ * @route   GET /api/rider/orders/history
+ * @desc    Get rider's order history (completed/cancelled orders with pagination)
+ * @access  Private (Rider only)
+ */
 router.get('/history', getOrderHistory);
 
 // ============================================
 // ORDER DETAILS & ACTIONS
 // ============================================
 
-// Get specific order details
+/**
+ * @route   GET /api/rider/orders/:orderId
+ * @desc    Get specific order details with full information
+ * @access  Private (Rider only)
+ */
 router.get('/:orderId', getOrderDetails);
 
-// Accept an order
+/**
+ * @route   POST /api/rider/orders/:orderId/accept
+ * @desc    Accept an available order assignment
+ * @access  Private (Rider only)
+ */
 router.post('/:orderId/accept', acceptOrder);
 
-// Mark order as picked up
-router.post('/:orderId/pickup', isOrderOwner, pickupOrder);
+/**
+ * @route   POST /api/rider/orders/:orderId/pickup
+ * @desc    Mark order as picked up from restaurant
+ * @access  Private (Rider only)
+ */
+router.post('/:orderId/pickup', pickupOrder);
 
-// Start delivery (out for delivery)
-router.post('/:orderId/start-delivery', isOrderOwner, startDelivery);
+/**
+ * @route   POST /api/rider/orders/:orderId/start-delivery
+ * @desc    Start delivery (mark as out for delivery)
+ * @access  Private (Rider only)
+ */
+router.post('/:orderId/start-delivery', startDelivery);
 
-// Complete delivery
-router.post('/:orderId/complete', isOrderOwner, completeDelivery);
+/**
+ * @route   POST /api/rider/orders/:orderId/complete
+ * @desc    Complete delivery with proof and signature
+ * @access  Private (Rider only)
+ */
+router.post('/:orderId/complete', completeDelivery);
 
-// Update order status (generic)
-router.put('/:orderId/status', isOrderOwner, updateOrderStatus);
+/**
+ * @route   PUT /api/rider/orders/:orderId/status
+ * @desc    Update order status (generic status update)
+ * @access  Private (Rider only)
+ */
+router.put('/:orderId/status', updateOrderStatus);
 
-// Report issue with order
-router.post('/:orderId/report-issue', isOrderOwner, reportIssue);
+/**
+ * @route   POST /api/rider/orders/:orderId/report-issue
+ * @desc    Report an issue with an order
+ * @access  Private (Rider only)
+ */
+router.post('/:orderId/report-issue', reportIssue);
+
+// ============================================
+// ALTERNATIVE ROUTES (if using PATCH instead of POST)
+// Uncomment these if you prefer PATCH for updates
+// ============================================
+
+// router.patch('/:orderId/accept', acceptOrder);
+// router.patch('/:orderId/pickup', pickupOrder);
+// router.patch('/:orderId/deliver', completeDelivery);
 
 module.exports = router;

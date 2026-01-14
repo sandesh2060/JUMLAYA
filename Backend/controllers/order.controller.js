@@ -1,6 +1,6 @@
 // ============================================
 // Backend/controllers/order.controller.js
-// ✅ FIXED: Orders start as "Pending", riders notified when "Processing"
+// ✅ UPDATED: Dynamic delivery fee based on distance
 // ============================================
 const Order = require('../models/order.model');
 const Product = require('../models/product.model');
@@ -13,6 +13,7 @@ const AppError = require('../utils/AppError');
 const { successResponse } = require('../utils/response');
 const { generateOrderId } = require('../utils/generateOrderId');
 const { generateInvoicePDF } = require('../utils/invoiceGenerator');
+const deliveryFeeService = require('../services/deliveryFee.service'); // ✅ NEW
 const {
   notifyOrderPlaced,
   notifyOrderConfirmed,
@@ -23,19 +24,16 @@ const {
   notifyOrderDelivered,
   notifyPaymentReceived
 } = require('../utils/notificationHelper');
-
-// ✅ IMPORT RIDER NOTIFICATION HELPER
 const {
   notifyRidersNewDelivery
 } = require('../utils/riderNotificationHelper');
 
 const mongoose = require('mongoose');
 
-// Helper to get user ID
 const getUserId = (req) => req.user.id || req.user._id;
 
 // ==========================================
-// CREATE ORDER - ✅ FIXED: Starts as "Pending"
+// CREATE ORDER - ✅ WITH DYNAMIC DELIVERY FEE
 // ==========================================
 exports.createOrder = catchAsync(async (req, res, next) => {
   const userId = getUserId(req);
@@ -129,18 +127,70 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     }
   }
 
-  // Calculate prices
+  // Calculate items price
   const itemsPrice = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const taxPrice = Math.round(itemsPrice * 0.13);
-  const shippingPrice = itemsPrice >= 2000 ? 0 : 100;
+
+  // ✅ CALCULATE DYNAMIC DELIVERY FEE BASED ON DISTANCE
+  // ⭐ FREE DELIVERY LOGIC: Orders >= Rs. 5000 get free delivery
+  // 🔧 TO CHANGE: Modify the threshold in deliveryFee.service.js (line 130)
+  
+  let shippingPrice = 100; // Default
+  let deliveryDistance = 0;
+  let nearestRiderInfo = null;
+  let isFreeDelivery = false;
+
+  if (shippingAddress.coordinates?.latitude && shippingAddress.coordinates?.longitude) {
+    try {
+      console.log('🚚 Calculating delivery fee for coordinates:', shippingAddress.coordinates);
+      
+      const deliveryLocation = {
+        latitude: shippingAddress.coordinates.latitude,
+        longitude: shippingAddress.coordinates.longitude
+      };
+
+      // ⭐ Pass itemsPrice to check for free delivery eligibility
+      const feeCalculation = await deliveryFeeService.calculateDeliveryFee(
+        deliveryLocation, 
+        null, 
+        itemsPrice // Pass order total to check free delivery threshold
+      );
+      
+      shippingPrice = feeCalculation.fee; // Will be 0 if free delivery applies
+      deliveryDistance = feeCalculation.distance;
+      isFreeDelivery = feeCalculation.freeDelivery || false;
+      
+      console.log(`✅ Delivery fee calculated: Rs. ${shippingPrice} for ${deliveryDistance} km`);
+      if (isFreeDelivery) {
+        console.log(`🎉 FREE DELIVERY applied! Order total: Rs. ${itemsPrice} (threshold: Rs. ${feeCalculation.freeDeliveryThreshold})`);
+      }
+      console.log(`   Tier: ${feeCalculation.tier}`);
+      console.log(`   Calculation: ${feeCalculation.calculation}`);
+      console.log(`   ETA: ${feeCalculation.estimatedDeliveryTime}`);
+
+      nearestRiderInfo = feeCalculation;
+    } catch (error) {
+      console.error('⚠️ Error calculating delivery fee, using default:', error);
+      // Fall back to old logic: Free shipping if order >= 2000
+      shippingPrice = itemsPrice >= 2000 ? 0 : 100;
+      isFreeDelivery = itemsPrice >= 2000;
+    }
+  } else {
+    // No coordinates - use old logic
+    console.log('⚠️ No coordinates in address, using default shipping calculation');
+    // 🔧 OLD LOGIC: Free if >= Rs. 2000 (kept for backward compatibility)
+    shippingPrice = itemsPrice >= 2000 ? 0 : 100;
+    isFreeDelivery = itemsPrice >= 2000;
+  }
+
   const discountAmount = 0;
   const totalPrice = itemsPrice + taxPrice + shippingPrice - discountAmount;
 
   // Generate order ID
   const orderId = await generateOrderId();
 
-  // ✅ FIXED: Create order with "Pending" status
-  const order = await Order.create({
+  // ✅ Create order with delivery distance tracking
+  const orderData = {
     orderId,
     user: userId,
     items: orderItems,
@@ -163,10 +213,30 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     discountAmount,
     totalPrice,
     couponCode: couponCode || undefined,
-    orderStatus: 'Pending' // ✅ FIXED: Start as Pending
-  });
+    orderStatus: 'Pending'
+  };
+
+  // ✅ Add location data if coordinates exist
+  if (shippingAddress.coordinates?.latitude && shippingAddress.coordinates?.longitude) {
+    orderData.location = {
+      type: 'Point',
+      coordinates: [
+        shippingAddress.coordinates.longitude,
+        shippingAddress.coordinates.latitude
+      ],
+      address: `${shippingAddress.addressLine1}, ${shippingAddress.city}`,
+      landmark: shippingAddress.landmark || '',
+      instructions: shippingAddress.deliveryInstructions || ''
+    };
+  }
+
+  const order = await Order.create(orderData);
 
   console.log('✅ Order created:', order.orderId);
+  if (deliveryDistance > 0) {
+    console.log(`   Delivery distance: ${deliveryDistance} km`);
+    console.log(`   Delivery fee: Rs. ${shippingPrice}`);
+  }
 
   // Update product stock
   for (const item of orderItems) {
@@ -186,15 +256,13 @@ exports.createOrder = catchAsync(async (req, res, next) => {
 
   await shippingAddress.markAsUsed();
 
-  // ✅ SEND CUSTOMER NOTIFICATION WITH EMAIL
+  // ✅ Send customer notification
   try {
     await notifyOrderPlaced(userId, order);
     console.log('✅ Customer order placed notification sent');
   } catch (notifError) {
     console.error('❌ Customer notification error:', notifError);
   }
-
-  // ✅ REMOVED: Don't notify riders yet - wait until admin confirms
 
   // Generate payment URL if needed
   let paymentUrl = null;
@@ -212,14 +280,24 @@ exports.createOrder = catchAsync(async (req, res, next) => {
       orderStatus: order.orderStatus,
       items: order.items,
       shippingAddress: order.shippingAddress,
-      createdAt: order.createdAt
+      createdAt: order.createdAt,
+      // ✅ Include delivery info
+      deliveryInfo: deliveryDistance > 0 ? {
+        distance: deliveryDistance,
+        fee: shippingPrice,
+        originalFee: nearestRiderInfo?.originalFee || shippingPrice,
+        freeDelivery: isFreeDelivery,
+        freeDeliveryThreshold: nearestRiderInfo?.freeDeliveryThreshold || 5000,
+        estimatedTime: nearestRiderInfo?.estimatedDeliveryTime || '45-60 min',
+        riderAvailable: nearestRiderInfo?.riderAvailable || false
+      } : null
     },
     paymentUrl
   }, 'Order placed successfully', 201);
 });
 
 // ==========================================
-// ✅ NEW: CONFIRM ORDER - Admin/System confirms and notifies riders
+// ✅ CONFIRM ORDER - Admin confirms and notifies riders
 // ==========================================
 exports.confirmOrder = catchAsync(async (req, res, next) => {
   const { id } = req.params;
@@ -235,12 +313,11 @@ exports.confirmOrder = catchAsync(async (req, res, next) => {
     return next(new AppError('Only pending orders can be confirmed', 400));
   }
 
-  // Update order status to Processing
   order.orderStatus = 'Processing';
   order.addStatusHistory('Processing', 'Order confirmed and ready for delivery', adminId);
   await order.save();
 
-  // ✅ NOTIFY ALL ACTIVE RIDERS ABOUT NEW DELIVERY
+  // ✅ Notify all active riders
   try {
     await notifyRidersNewDelivery(order);
     console.log('✅ All active riders notified about order:', order.orderId);
@@ -248,7 +325,7 @@ exports.confirmOrder = catchAsync(async (req, res, next) => {
     console.error('❌ Rider notification error:', riderNotifError);
   }
 
-  // ✅ NOTIFY CUSTOMER
+  // ✅ Notify customer
   try {
     await notifyOrderConfirmed(order.user, order);
     console.log('✅ Customer notified about order confirmation');
@@ -260,7 +337,7 @@ exports.confirmOrder = catchAsync(async (req, res, next) => {
 });
 
 // ==========================================
-// ✅ NEW: ASSIGN ORDER TO RIDER
+// ✅ ASSIGN ORDER TO RIDER
 // ==========================================
 exports.assignOrderToRider = catchAsync(async (req, res, next) => {
   const { id } = req.params;
@@ -285,11 +362,10 @@ exports.assignOrderToRider = catchAsync(async (req, res, next) => {
     return next(new AppError('Order cannot be assigned at this stage', 400));
   }
 
-  // Assign rider using model method
   order.assignRider(riderId, adminId);
   await order.save();
 
-  // ✅ NOTIFY RIDER
+  // ✅ Notify rider
   try {
     const Notification = require('../models/notification.model');
     await Notification.create({
