@@ -21,6 +21,7 @@ import {
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import settingsAPI from "@/admin/api/settings.api";
+import StoreLocationPicker from '../components/StoreLocationPicker';
 
 const AdminSettings = () => {
   const { user } = useAuth();
@@ -758,6 +759,48 @@ const AdminSettings = () => {
                 </div>
               </form>
             )}
+            {/* Store Location Section - ADD THIS */}
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Store Location
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Set your store's location for delivery distance calculations
+              </p>
+
+              {/* Import and use the StoreLocationPicker component */}
+              <StoreLocationPicker
+                initialLocation={
+                  storeForm.storeLocation || {
+                    latitude: 27.6745,
+                    longitude: 85.324,
+                    address: "",
+                    landmark: "",
+                  }
+                }
+                onLocationChange={(newLocation) => {
+                  setStoreForm({
+                    ...storeForm,
+                    storeLocation: newLocation,
+                  });
+                }}
+                onSave={async (location) => {
+                  try {
+                    const response = await settingsAPI.updateStoreLocation(
+                      location
+                    );
+                    if (response.success) {
+                      toast.success("Store location updated successfully!");
+                      await fetchSettings();
+                    }
+                  } catch (error) {
+                    console.error("Error updating location:", error);
+                    toast.error(error.message || "Failed to update location");
+                    throw error;
+                  }
+                }}
+              />
+            </div>
 
             {/* Business Tab */}
             {activeTab === "business" && (

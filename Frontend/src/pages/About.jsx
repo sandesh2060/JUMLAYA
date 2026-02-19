@@ -289,7 +289,7 @@ const About = () => {
           </div>
           <div className="relative">
             <img 
-              src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=600&fit=crop" 
+              src="https://res.cloudinary.com/dszy3sf5c/image/upload/v1768400921/WhatsApp_Image_2026-01-12_at_3.03.23_PM_dicbpp.jpg" 
               alt="Organic farming"
               className="rounded-lg shadow-xl w-full transform hover:scale-105 transition-transform duration-500"
             />
