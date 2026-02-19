@@ -213,7 +213,7 @@ export default function Navbar() {
                       // If no logo URL, use fallback
                       if (!logoUrl) {
                         return (
-                          import.meta.env.VITE_LOGO_URL || "/images/logo.png"
+                          import.meta.env.VITE_LOGO_URL || "https://res.cloudinary.com/dszy3sf5c/image/upload/v1768103236/jumlaya/logos/fruxj6vjv8tcoi5tt19k.png"
                         );
                       }
 
