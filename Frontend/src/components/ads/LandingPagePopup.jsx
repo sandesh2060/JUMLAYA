@@ -1,14 +1,30 @@
 // Frontend/src/components/ads/LandingPagePopup.jsx
-// ✅ Auto-detects image ratio — portrait/square = side-by-side, landscape = stacked
-import { useState, useEffect } from "react";
+// ✅ Guest: once per tab session (not on refresh)
+// ✅ Logged-in customer: once per login session
+// ✅ Admin/Rider: never shown
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Clock, ArrowRight, Leaf, Sparkles } from "lucide-react";
 import { adsAPI } from "@/api/ads.api";
 import { useAuth } from "@/context/AuthContext";
 
-// ── Reusable content block ────────────────────────────────────────────────────
+// ── Session key helpers ───────────────────────────────────────────────────────
+const GUEST_KEY   = "ad_shown_guest";       // for non-logged-in users
+const userKey = (id) => `ad_shown_user_${id}`; // per-user key
+
+const hasShownAd = (user) => {
+  if (!user) return sessionStorage.getItem(GUEST_KEY) === "true";
+  return sessionStorage.getItem(userKey(user._id)) === "true";
+};
+
+const markAdShown = (user) => {
+  if (!user) sessionStorage.setItem(GUEST_KEY, "true");
+  else sessionStorage.setItem(userKey(user._id), "true");
+};
+
+// ── Content Block ─────────────────────────────────────────────────────────────
 const ContentBlock = ({ ad, onCTA, compact = false }) => (
-  <div className={`space-y-${compact ? "3" : "4"}`}>
+  <div className={compact ? "space-y-3" : "space-y-4"}>
     <h2 className={`font-black text-gray-900 dark:text-white leading-tight ${compact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"}`}>
       <span className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
         {ad.title}
@@ -62,15 +78,16 @@ const ContentBlock = ({ ad, onCTA, compact = false }) => (
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const LandingPagePopup = () => {
-  const [ad, setAd]             = useState(null);
+  const [ad, setAd]               = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [countdown, setCountdown] = useState(8);
   const [isClosing, setIsClosing] = useState(false);
-  const [imgRatio, setImgRatio]   = useState(null); // "portrait" | "landscape" | "square" | null
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const [imgRatio, setImgRatio]   = useState(null);
+  const hasFetched                = useRef(false); // prevent double-fetch in StrictMode
+  const navigate                  = useNavigate();
+  const { user, loading }         = useAuth();
 
-  // Lock body scroll when open
+  // Lock body scroll
   useEffect(() => {
     if (isVisible) {
       document.body.style.overflow = "hidden";
@@ -85,22 +102,39 @@ const LandingPagePopup = () => {
     };
   }, [isVisible]);
 
+  // ── Core logic: decide whether to show ad ────────────────────────────────
   useEffect(() => {
-    if (!user) { sessionStorage.removeItem("adShownThisSession"); return; }
-    const role = user.role?.toLowerCase();
-    if (role === "admin" || role === "superadmin" || role === "rider" || user.isAdmin) return;
-    if (!sessionStorage.getItem("adShownThisSession")) fetchActiveAd();
-  }, [user]);
+    // Wait for auth to finish loading
+    if (loading) return;
+    // Never show to admin/rider
+    if (user) {
+      const role = user.role?.toLowerCase();
+      if (role === "admin" || role === "superadmin" || role === "rider" || user.isAdmin) return;
+    }
+    // Already shown this session? Skip
+    if (hasShownAd(user)) return;
+    // Prevent double fetch (React StrictMode)
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    fetchActiveAd();
+  }, [user, loading]);
 
   const fetchActiveAd = async () => {
     try {
       const res = await adsAPI.getActiveAd();
       if (res.success && res.data.ad) {
         setAd(res.data.ad);
-        setTimeout(() => { setIsVisible(true); startCountdown(res.data.ad); }, 500);
-        sessionStorage.setItem("adShownThisSession", "true");
+        // Mark shown BEFORE displaying so refresh won't trigger it again
+        markAdShown(user);
+        setTimeout(() => {
+          setIsVisible(true);
+          startCountdown(res.data.ad);
+        }, 600);
       }
-    } catch (e) { console.error("❌ Failed to fetch ad:", e); }
+    } catch (e) {
+      console.error("❌ Failed to fetch ad:", e);
+    }
   };
 
   const startCountdown = (adData) => {
@@ -117,7 +151,12 @@ const LandingPagePopup = () => {
 
   const handleClose = () => {
     setIsClosing(true);
-    setTimeout(() => { setIsVisible(false); setAd(null); setIsClosing(false); setImgRatio(null); }, 300);
+    setTimeout(() => {
+      setIsVisible(false);
+      setAd(null);
+      setIsClosing(false);
+      setImgRatio(null);
+    }, 300);
   };
 
   const handleCTAClick = async () => {
@@ -131,13 +170,12 @@ const LandingPagePopup = () => {
     handleClose();
   };
 
-  // Detect ratio once image loads
   const handleImageLoad = (e) => {
     const { naturalWidth: w, naturalHeight: h } = e.target;
     const r = w / h;
-    if (r > 1.25)      setImgRatio("landscape");
-    else if (r < 0.8)  setImgRatio("portrait");
-    else               setImgRatio("square");
+    if (r > 1.25)     setImgRatio("landscape");
+    else if (r < 0.8) setImgRatio("portrait");
+    else              setImgRatio("square");
   };
 
   if (!isVisible || !ad) return null;
@@ -156,7 +194,6 @@ const LandingPagePopup = () => {
   const isLandscape = imgRatio === "landscape";
   const isPortrait  = imgRatio === "portrait";
 
-  // Image overlays (type badge + discount) — reused in both layouts
   const ImageOverlays = () => (
     <>
       <div className="absolute top-12 left-3 z-10">
@@ -179,21 +216,16 @@ const LandingPagePopup = () => {
 
   return (
     <div className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-300 ${isVisible && !isClosing ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
 
-      {/* Scroll container */}
       <div className="relative z-10 w-full h-full flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
         <div
           className={`relative w-full my-auto transition-all duration-500 ${isVisible && !isClosing ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
-          style={{ maxWidth: isLandscape ? "640px" : isPortrait ? "820px" : "840px" }}
+          style={{ maxWidth: isLandscape ? "640px" : "860px" }}
         >
-          {/* Card */}
           <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
-
-            {/* Close button */}
-            <button
-              onClick={handleClose}
+            {/* Close */}
+            <button onClick={handleClose}
               className="absolute top-3 right-3 z-30 w-9 h-9 flex items-center justify-center bg-white/95 dark:bg-gray-800 rounded-full shadow-lg hover:scale-110 hover:rotate-90 transition-all duration-200 border border-gray-200 dark:border-gray-700"
               aria-label="Close"
             >
@@ -206,15 +238,12 @@ const LandingPagePopup = () => {
               <span className="text-xs font-bold text-green-800 dark:text-green-300">{countdown}s</span>
             </div>
 
-            {/* ══════════════════════════════════════════
-                LANDSCAPE → Stacked: image top, content bottom
-            ══════════════════════════════════════════ */}
+            {/* LANDSCAPE → stacked */}
             {isLandscape ? (
               <div className="flex flex-col">
                 <div className="relative w-full bg-green-50 dark:bg-green-900/20">
                   <img
-                    src={ad.posterImage}
-                    alt={ad.title}
+                    src={ad.posterImage} alt={ad.title}
                     onLoad={handleImageLoad}
                     onError={(e) => { e.target.style.display = "none"; }}
                     className="w-full block"
@@ -227,28 +256,17 @@ const LandingPagePopup = () => {
                   <ContentBlock ad={ad} onCTA={handleCTAClick} compact />
                 </div>
               </div>
-
             ) : (
-            /* ══════════════════════════════════════════
-                PORTRAIT / SQUARE / UNKNOWN
-                → Side by side on sm+, stacked on mobile
-            ══════════════════════════════════════════ */
+              /* PORTRAIT / SQUARE → side by side */
               <div className="flex flex-col sm:flex-row">
-                {/* Image */}
-                <div
-                  className="relative flex-shrink-0 bg-green-50 dark:bg-green-900/20 w-full sm:w-auto"
-                  style={{ minWidth: 0 }}
-                >
+                <div className="relative flex-shrink-0 bg-green-50 dark:bg-green-900/20 w-full sm:w-auto">
                   {ad.posterImage ? (
                     <img
-                      src={ad.posterImage}
-                      alt={ad.title}
+                      src={ad.posterImage} alt={ad.title}
                       onLoad={handleImageLoad}
                       onError={(e) => { e.target.style.display = "none"; }}
-                      className="block w-full sm:w-auto sm:h-full"
+                      className="block w-full sm:w-auto"
                       style={{
-                        // Mobile: full width natural height (never crops)
-                        // Desktop: constrain width so content panel has enough room
                         maxWidth: "100%",
                         maxHeight: isPortrait ? "480px" : "400px",
                         objectFit: "contain",
@@ -264,8 +282,6 @@ const LandingPagePopup = () => {
                   )}
                   <ImageOverlays />
                 </div>
-
-                {/* Content */}
                 <div className="flex-1 flex flex-col justify-center p-5 sm:p-7 lg:p-9 min-w-0">
                   <ContentBlock ad={ad} onCTA={handleCTAClick} />
                 </div>
