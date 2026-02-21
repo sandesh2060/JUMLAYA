@@ -16,9 +16,6 @@ import ProtectedRoute from "@/routes/ProtectedRoute";
 import AdminRoute from "@/routes/AdminRoute";
 import RiderRoute from "@/routes/RiderRoute";
 
-// ============ COMPONENTS ============
-import LandingPagePopup from "@/components/ads/LandingPagePopup";
-
 // ============ CUSTOMER PAGES ============
 import Home from "@/pages/Home";
 import About from "@/pages/About";
@@ -60,7 +57,7 @@ import RiderOrderDetails from "@/rider/pages/RiderOrderDetails";
 import RiderEarnings from "@/rider/pages/RiderEarnings";
 import RiderProfile from "@/rider/pages/RiderProfile";
 import RiderNavigation from "@/rider/pages/RiderNavigation";
-import RiderNotifications from '@/rider/pages/RiderNotifications';
+import RiderNotifications from "@/rider/pages/RiderNotifications";
 
 // ============================================
 // 🔒 HOME PAGE SECURITY - Auto Role Redirect
@@ -70,29 +67,15 @@ const SecureHome = () => {
 
   if (user) {
     const userRole = user.role?.toLowerCase();
-
-    // 🚫 Redirect ADMIN to admin dashboard
-    if (
-      userRole === "admin" ||
-      userRole === "superadmin" ||
-      user.isAdmin === true
-    ) {
-      console.log(
-        "🔒 Admin detected on home page, redirecting to /admin/dashboard"
-      );
+    if (userRole === "admin" || userRole === "superadmin" || user.isAdmin === true) {
       return <Navigate to="/admin/dashboard" replace />;
     }
-
-    // 🚫 Redirect RIDER to rider dashboard
     if (userRole === "rider") {
-      console.log(
-        "🔒 Rider detected on home page, redirecting to /rider/dashboard"
-      );
       return <Navigate to="/rider/dashboard" replace />;
     }
   }
 
-  // ✅ Customer or guest - allow access to home
+  // ✅ Customer or guest — Home already contains LandingPagePopup
   return <Home />;
 };
 
@@ -117,18 +100,11 @@ const CustomerLayout = () => {
 const AlreadyLoggedIn = () => {
   const { user } = useAuth();
 
-  // 🔒 Auto-redirect based on role
   if (user) {
     const userRole = user.role?.toLowerCase();
-
-    if (
-      userRole === "admin" ||
-      userRole === "superadmin" ||
-      user.isAdmin === true
-    ) {
+    if (userRole === "admin" || userRole === "superadmin" || user.isAdmin === true) {
       return <Navigate to="/admin/dashboard" replace />;
     }
-
     if (userRole === "rider") {
       return <Navigate to="/rider/dashboard" replace />;
     }
@@ -139,18 +115,8 @@ const AlreadyLoggedIn = () => {
       <div className="text-center max-w-md px-4">
         <div className="mb-6">
           <div className="mx-auto h-20 w-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <svg
-              className="h-10 w-10 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
+            <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
         </div>
@@ -158,20 +124,13 @@ const AlreadyLoggedIn = () => {
           You're Already Logged In
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mb-8">
-          Please log out before creating a new account or accessing the login
-          page.
+          Please log out before creating a new account or accessing the login page.
         </p>
         <div className="space-y-3">
-          <a
-            href="/"
-            className="block w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105"
-          >
+          <a href="/" className="block w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105">
             Go to Home
           </a>
-          <a
-            href="/profile"
-            className="block w-full px-6 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-          >
+          <a href="/profile" className="block w-full px-6 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
             View Profile
           </a>
         </div>
@@ -204,131 +163,76 @@ const LoadingScreen = () => {
 function App() {
   const { user, loading } = useAuth();
 
-  // Show loading screen while checking auth
-  if (loading) {
-    return <LoadingScreen />;
-  }
+  if (loading) return <LoadingScreen />;
 
   return (
-    <>
-      {/* ✅ LANDING PAGE POPUP AD - Shows on login */}
-      <LandingPagePopup />
+    <Routes>
+      {/* ============================================ */}
+      {/* ADMIN ROUTES */}
+      {/* ============================================ */}
+      <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="products" element={<AdminProducts />} />
+        <Route path="products/create" element={<AdminProductForm />} />
+        <Route path="products/:id" element={<AdminProductDetail />} />
+        <Route path="products/:id/edit" element={<AdminProductForm />} />
+        <Route path="orders" element={<AdminOrders />} />
+        <Route path="orders/:id" element={<OrderDetail />} />
+        <Route path="customers" element={<AdminCustomers />} />
+        <Route path="customers/:id" element={<CustomerDetail />} />
+        <Route path="riders" element={<RiderManagement />} />
+        <Route path="ads" element={<AdminAds />} />
+        <Route path="settings" element={<AdminSettings />} />
+        <Route path="audit-logs" element={<AuditLogViewer />} />
+      </Route>
 
-      <Routes>
-        {/* ============================================ */}
-        {/* ADMIN ROUTES - Separate Layout */}
-        {/* ============================================ */}
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
+      {/* ============================================ */}
+      {/* RIDER ROUTES */}
+      {/* ============================================ */}
+      <Route path="/rider" element={<RiderRoute><RiderLayout /></RiderRoute>}>
+        <Route index element={<Navigate to="/rider/dashboard" replace />} />
+        <Route path="dashboard" element={<RiderDashboard />} />
+        <Route path="orders" element={<RiderOrders />} />
+        <Route path="orders/:orderId" element={<RiderOrderDetails />} />
+        <Route path="earnings" element={<RiderEarnings />} />
+        <Route path="profile" element={<RiderProfile />} />
+        <Route path="navigation" element={<RiderNavigation />} />
+        <Route path="notifications" element={<RiderNotifications />} />
+      </Route>
 
-          {/* Product Management */}
-          <Route path="products" element={<AdminProducts />} />
-          <Route path="products/create" element={<AdminProductForm />} />
-          <Route path="products/:id" element={<AdminProductDetail />} />
-          <Route path="products/:id/edit" element={<AdminProductForm />} />
+      {/* ============================================ */}
+      {/* CUSTOMER ROUTES */}
+      {/* ============================================ */}
+      <Route element={<CustomerLayout />}>
+        {/* Public */}
+        <Route path="/" element={<SecureHome />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/products/:id" element={<ProductDetails />} />
 
-          {/* Order Management */}
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="orders/:id" element={<OrderDetail />} />
+        {/* Auth */}
+        <Route path="/login"    element={!user ? <Login />    : <AlreadyLoggedIn />} />
+        <Route path="/register" element={!user ? <Register /> : <AlreadyLoggedIn />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password"  element={<ResetPassword />} />
 
-          {/* Customer Management */}
-          <Route path="customers" element={<AdminCustomers />} />
-          <Route path="customers/:id" element={<CustomerDetail />} />
-
-          {/* Rider Management */}
-          <Route path="riders" element={<RiderManagement />} />
-
-          {/* ✅ Landing Page Ads Route */}
-          <Route path="ads" element={<AdminAds />} />
-
-          {/* Settings */}
-          <Route path="settings" element={<AdminSettings />} />
-          {/* Audit Logs */}
-          <Route path="audit-logs" element={<AuditLogViewer />} />
+        {/* Protected */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/cart"      element={<Cart />} />
+          <Route path="/checkout"  element={<Checkout />} />
+          <Route path="/wishlist"  element={<Wishlist />} />
+          <Route path="/orders"    element={<Orders />} />
+          <Route path="/orders/:id" element={<OrderDetailsPage />} />
+          <Route path="/profile"   element={<Profile />} />
+          <Route path="/profile/settings" element={<ProfileSettings />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
 
-        {/* ============================================ */}
-        {/* RIDER ROUTES - Separate Layout */}
-        {/* ============================================ */}
-        <Route
-          path="/rider"
-          element={
-            <RiderRoute>
-              <RiderLayout />
-            </RiderRoute>
-          }
-        >
-          <Route index element={<Navigate to="/rider/dashboard" replace />} />
-          <Route path="dashboard" element={<RiderDashboard />} />
-          <Route path="orders" element={<RiderOrders />} />
-          <Route path="orders/:orderId" element={<RiderOrderDetails />} />
-          <Route path="earnings" element={<RiderEarnings />} />
-          <Route path="profile" element={<RiderProfile />} />
-          <Route path="navigation" element={<RiderNavigation />} />
-          <Route path="notifications" element={<RiderNotifications />} />
-        </Route>
-
-        {/* ============================================ */}
-        {/* CUSTOMER ROUTES - WITH Navbar/Footer */}
-        {/* ============================================ */}
-        <Route element={<CustomerLayout />}>
-          {/* ========== PUBLIC ROUTES ========== */}
-          {/* 🔒 SECURED HOME - Auto-redirects based on role */}
-          <Route path="/" element={<SecureHome />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/products/:id" element={<ProductDetails />} />
-
-          {/* ========== AUTH ROUTES ========== */}
-          {/* Login - Redirect if already logged in */}
-          <Route
-            path="/login"
-            element={!user ? <Login /> : <AlreadyLoggedIn />}
-          />
-
-          {/* Register - Redirect if already logged in */}
-          <Route
-            path="/register"
-            element={!user ? <Register /> : <AlreadyLoggedIn />}
-          />
-
-          {/* Password Reset Routes - Public */}
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-
-          {/* ========== PROTECTED CUSTOMER ROUTES ========== */}
-          <Route element={<ProtectedRoute />}>
-            {/* Shopping */}
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-
-            {/* Orders */}
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/orders/:id" element={<OrderDetailsPage />} />
-
-            {/* Profile */}
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/settings" element={<ProfileSettings />} />
-
-            {/* Notifications */}
-            <Route path="/notifications" element={<Notifications />} />
-          </Route>
-
-          {/* ========== 404 NOT FOUND ========== */}
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
-    </>
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
   );
 }
 
