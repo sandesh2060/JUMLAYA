@@ -1,8 +1,9 @@
 // ============================================
-// RegisterForm.jsx - PHONE NUMBER FIX
-// Path: Frontend/src/components/auth/RegisterForm.jsx
+// Frontend/src/components/auth/RegisterForm.jsx
+// 🚫 OTP FLOW DISABLED TEMPORARILY
+// To re-enable: search for "RE-ENABLE OTP" comments
 // ============================================
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useLanguage } from "@hooks/useLanguage"
 import { authAPI } from "@api/auth.api"
@@ -10,7 +11,9 @@ import { Button } from "@components/common/Button"
 import { User, Mail, Phone, Lock, Eye, EyeOff, Bike, ShoppingBag } from "lucide-react"
 import toast from "react-hot-toast"
 
-export const RegisterForm = ({ onOTPRequired }) => {
+// 🚫 OTP DISABLED: prop removed
+// RE-ENABLE OTP: add back { onOTPRequired } prop
+export const RegisterForm = () => {
   const { t } = useLanguage()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -81,7 +84,6 @@ export const RegisterForm = ({ onOTPRequired }) => {
     }
 
     try {
-      // ✅ FIX: Clean phone number (remove all non-digits)
       const cleanedPhone = formData.phone.replace(/\D/g, '')
       
       const registrationData = {
@@ -89,7 +91,7 @@ export const RegisterForm = ({ onOTPRequired }) => {
         lastname: formData.lastname,
         username: formData.username,
         email: formData.email,
-        phone: cleanedPhone, // ✅ Send digits only
+        phone: cleanedPhone,
         password: formData.password,
         role: formData.role
       }
@@ -103,17 +105,18 @@ export const RegisterForm = ({ onOTPRequired }) => {
         }
       }
 
-      console.log('📝 Registration data:', registrationData)
-
       const response = await authAPI.register(registrationData)
 
       if (response.success) {
+        // 🚫 OTP DISABLED: redirect to login directly
+        // RE-ENABLE OTP: replace lines below with: onOTPRequired(formData.email)
         if (formData.role === 'rider') {
           toast.success("Rider registration submitted! Awaiting admin approval.")
         } else {
-          toast.success("Registration successful! Please verify your email.")
+          toast.success("Registration successful! Please login.")
         }
-        onOTPRequired(formData.email)
+        navigate('/login')
+
       } else {
         setError(response.message || "Registration failed")
       }
@@ -149,12 +152,8 @@ export const RegisterForm = ({ onOTPRequired }) => {
           }`} size={32} />
           <p className={`font-semibold ${
             formData.role === 'customer' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
-          }`}>
-            Customer
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Shop products
-          </p>
+          }`}>Customer</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Shop products</p>
         </button>
 
         <button
@@ -171,12 +170,8 @@ export const RegisterForm = ({ onOTPRequired }) => {
           }`} size={32} />
           <p className={`font-semibold ${
             formData.role === 'rider' ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'
-          }`}>
-            Delivery Rider
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Earn money
-          </p>
+          }`}>Delivery Rider</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Earn money</p>
         </button>
       </div>
 
@@ -186,29 +181,17 @@ export const RegisterForm = ({ onOTPRequired }) => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t('firstName') || 'First Name'}
           </label>
-          <input
-            type="text" 
-            name="firstname" 
-            value={formData.firstname} 
-            onChange={handleChange} 
-            required
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500"
-            placeholder="John"
-          />
+          <input type="text" name="firstname" value={formData.firstname} onChange={handleChange} required
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="John" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t('lastName') || 'Last Name'}
           </label>
-          <input
-            type="text" 
-            name="lastname" 
-            value={formData.lastname} 
-            onChange={handleChange} 
-            required
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500"
-            placeholder="Doe"
-          />
+          <input type="text" name="lastname" value={formData.lastname} onChange={handleChange} required
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="Doe" />
         </div>
       </div>
 
@@ -218,15 +201,9 @@ export const RegisterForm = ({ onOTPRequired }) => {
         </label>
         <div className="relative">
           <User size={18} className="absolute left-3 top-3 text-gray-400 dark:text-gray-500" />
-          <input
-            type="text" 
-            name="username" 
-            value={formData.username} 
-            onChange={handleChange} 
-            required
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-            placeholder="johndoe"
-          />
+          <input type="text" name="username" value={formData.username} onChange={handleChange} required
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="johndoe" />
         </div>
       </div>
 
@@ -236,15 +213,9 @@ export const RegisterForm = ({ onOTPRequired }) => {
         </label>
         <div className="relative">
           <Mail size={18} className="absolute left-3 top-3 text-gray-400 dark:text-gray-500" />
-          <input
-            type="email" 
-            name="email" 
-            value={formData.email} 
-            onChange={handleChange} 
-            required
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-            placeholder="you@example.com"
-          />
+          <input type="email" name="email" value={formData.email} onChange={handleChange} required
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="you@example.com" />
         </div>
       </div>
 
@@ -254,75 +225,39 @@ export const RegisterForm = ({ onOTPRequired }) => {
         </label>
         <div className="relative">
           <Phone size={18} className="absolute left-3 top-3 text-gray-400 dark:text-gray-500" />
-          <input
-            type="tel" 
-            name="phone" 
-            value={formData.phone} 
-            onChange={handleChange} 
-            required
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-            placeholder="9841234567"
-          />
+          <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="9841234567" />
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Enter 10-15 digits (no spaces or symbols)
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Enter 10-15 digits</p>
       </div>
 
       {/* Rider-specific fields */}
       {formData.role === 'rider' && (
         <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg space-y-3">
-          <h3 className="font-semibold text-green-800 dark:text-green-300 mb-3">
-            🚴‍♂️ Rider Details
-          </h3>
-          
+          <h3 className="font-semibold text-green-800 dark:text-green-300 mb-3">🚴‍♂️ Rider Details</h3>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Vehicle Type
-            </label>
-            <select
-              name="vehicleType"
-              value={riderDetails.vehicleType}
-              onChange={handleRiderDetailsChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            >
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vehicle Type</label>
+            <select name="vehicleType" value={riderDetails.vehicleType} onChange={handleRiderDetailsChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               <option value="bike">Bike</option>
               <option value="scooter">Scooter</option>
               <option value="bicycle">Bicycle</option>
               <option value="car">Car</option>
             </select>
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Vehicle Number *
-            </label>
-            <input
-              type="text"
-              name="vehicleNumber"
-              value={riderDetails.vehicleNumber}
-              onChange={handleRiderDetailsChange}
-              required
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vehicle Number *</label>
+            <input type="text" name="vehicleNumber" value={riderDetails.vehicleNumber} onChange={handleRiderDetailsChange} required
               placeholder="BA-12-PA-3456"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-            />
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              License Number *
-            </label>
-            <input
-              type="text"
-              name="licenseNumber"
-              value={riderDetails.licenseNumber}
-              onChange={handleRiderDetailsChange}
-              required
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">License Number *</label>
+            <input type="text" name="licenseNumber" value={riderDetails.licenseNumber} onChange={handleRiderDetailsChange} required
               placeholder="DL-123456"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-            />
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
           </div>
-
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-3 text-sm text-blue-800 dark:text-blue-300">
             <p className="font-medium mb-1">⚠️ Note:</p>
             <p>Your rider account will need admin approval before you can start accepting deliveries.</p>
@@ -336,26 +271,15 @@ export const RegisterForm = ({ onOTPRequired }) => {
         </label>
         <div className="relative">
           <Lock size={18} className="absolute left-3 top-3 text-gray-400 dark:text-gray-500" />
-          <input
-            type={showPassword ? "text" : "password"} 
-            name="password" 
-            value={formData.password} 
-            onChange={handleChange} 
-            required
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-            placeholder="••••••••"
-          />
-          <button 
-            type="button" 
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-          >
+          <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} required
+            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="••••••••" />
+          <button type="button" onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {t('passwordHint') || 'Min 8 characters'}
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('passwordHint') || 'Min 8 characters'}</p>
       </div>
 
       <div>
@@ -364,34 +288,22 @@ export const RegisterForm = ({ onOTPRequired }) => {
         </label>
         <div className="relative">
           <Lock size={18} className="absolute left-3 top-3 text-gray-400 dark:text-gray-500" />
-          <input
-            type={showConfirmPassword ? "text" : "password"} 
-            name="confirmPassword" 
-            value={formData.confirmPassword} 
-            onChange={handleChange} 
-            required
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-            placeholder="••••••••"
-          />
-          <button 
-            type="button" 
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-          >
+          <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required
+            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="••••••••" />
+          <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
             {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
       </div>
 
-      <Button 
-        type="submit" 
-        disabled={loading}
+      <Button type="submit" disabled={loading}
         className={`w-full ${
           formData.role === 'rider'
             ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600'
             : 'bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-600'
-        } text-white py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-      >
+        } text-white py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}>
         {loading ? (t('loading') || "Creating account...") : 
          formData.role === 'rider' ? "Register as Rider 🚴‍♂️" : 
          (t('register') || "Create Account")}
