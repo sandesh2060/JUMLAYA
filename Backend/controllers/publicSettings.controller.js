@@ -18,7 +18,7 @@ const sendSuccess = (res, statusCode, message, data) => {
 };
 
 /**
- * ✅ FIXED: Get all public settings with flat structure
+ * ✅ FIXED: Get all public settings with correct field names
  */
 exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
   let settings = await Settings.findOne({ isActive: true });
@@ -50,11 +50,17 @@ exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
         youtube: '',
         tiktok: ''
       },
+      // ✅ FIX: Always send both field names for compatibility, fallback to local logo
+      storeLogo: '/logo.png',
       logo: '/logo.png',
       favicon: '/favicon.ico',
       aboutUs: 'JUMLAYA is your trusted online shopping destination in Nepal.'
     });
   }
+
+  // ✅ FIX: Use settings.storeLogo (correct model field name)
+  // Fall back to local /logo.png if Cloudinary URL is missing or empty
+  const resolvedLogo = settings.storeLogo || '/logo.png';
 
   const publicSettings = {
     storeName: settings.storeName,
@@ -64,22 +70,24 @@ exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
     currency: settings.currency,
     currencyCode: settings.currencyCode,
     taxRate: settings.taxRate > 100 ? 13 : settings.taxRate,
-    shippingFee: settings.shippingFee,
-    freeShippingThreshold: settings.freeShippingThreshold,
+    shippingFee: settings.deliverySettings?.shippingFee || settings.shippingFee || 100,
+    freeShippingThreshold: settings.deliverySettings?.freeShippingThreshold || settings.freeShippingThreshold || 2000,
     minOrderAmount: settings.minOrderAmount,
     maxOrderAmount: settings.maxOrderAmount,
     paymentMethods: settings.paymentMethods,
     socialMedia: settings.socialMedia,
-    logo: settings.logo,
-    favicon: settings.favicon,
-    aboutUs: settings.aboutUs,
-    returnPolicy: settings.returnPolicy,
-    privacyPolicy: settings.privacyPolicy,
-    termsAndConditions: settings.termsAndConditions,
-    shippingPolicy: settings.shippingPolicy
+    // ✅ FIX: Send both field names so Navbar works regardless of which it checks
+    storeLogo: resolvedLogo,
+    logo: resolvedLogo,
+    favicon: settings.favicon || '/favicon.ico',
+    aboutUs: settings.content?.aboutUs || settings.aboutUs || '',
+    returnPolicy: settings.content?.returnPolicy || settings.returnPolicy || '',
+    privacyPolicy: settings.content?.privacyPolicy || settings.privacyPolicy || '',
+    termsAndConditions: settings.content?.termsAndConditions || settings.termsAndConditions || '',
+    shippingPolicy: settings.content?.shippingPolicy || settings.shippingPolicy || ''
   };
 
-  console.log('✅ Public settings fetched, taxRate:', publicSettings.taxRate);
+  console.log('✅ Public settings fetched, storeLogo:', publicSettings.storeLogo);
   sendSuccess(res, 200, 'Public settings fetched successfully', publicSettings);
 });
 
@@ -87,7 +95,7 @@ exports.getAllPublicSettings = catchAsync(async (req, res, next) => {
  * Get About Us information
  */
 exports.getAboutUs = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('storeName aboutUs socialMedia');
+  const settings = await Settings.findOne().select('storeName content aboutUs socialMedia');
   
   if (!settings) {
     return sendSuccess(res, 200, 'About us fetched successfully', {
@@ -105,7 +113,7 @@ exports.getAboutUs = catchAsync(async (req, res, next) => {
 
   sendSuccess(res, 200, 'About us fetched successfully', {
     storeName: settings.storeName || 'JUMLAYA',
-    aboutUs: settings.aboutUs || '',
+    aboutUs: settings.content?.aboutUs || settings.aboutUs || '',
     socialMedia: settings.socialMedia || {}
   });
 });
@@ -114,9 +122,9 @@ exports.getAboutUs = catchAsync(async (req, res, next) => {
  * Get delivery settings
  */
 exports.getDeliverySettings = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('delivery');
+  const settings = await Settings.findOne().select('deliverySettings');
   
-  if (!settings || !settings.delivery) {
+  if (!settings || !settings.deliverySettings) {
     return sendSuccess(res, 200, 'Delivery settings fetched successfully', {
       enabled: true,
       freeShippingThreshold: 2000,
@@ -125,16 +133,16 @@ exports.getDeliverySettings = catchAsync(async (req, res, next) => {
     });
   }
 
-  sendSuccess(res, 200, 'Delivery settings fetched successfully', settings.delivery);
+  sendSuccess(res, 200, 'Delivery settings fetched successfully', settings.deliverySettings);
 });
 
 /**
  * Get payment settings
  */
 exports.getPaymentSettings = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('payment');
+  const settings = await Settings.findOne().select('paymentMethods');
   
-  if (!settings || !settings.payment) {
+  if (!settings || !settings.paymentMethods) {
     return sendSuccess(res, 200, 'Payment settings fetched successfully', {
       methods: ['cash_on_delivery', 'esewa', 'khalti'],
       cashOnDeliveryEnabled: true,
@@ -143,14 +151,14 @@ exports.getPaymentSettings = catchAsync(async (req, res, next) => {
     });
   }
 
-  sendSuccess(res, 200, 'Payment settings fetched successfully', settings.payment);
+  sendSuccess(res, 200, 'Payment settings fetched successfully', settings.paymentMethods);
 });
 
 /**
  * Get general settings
  */
 exports.getGeneralSettings = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('storeName storeEmail storePhone storeAddress currency timezone');
+  const settings = await Settings.findOne().select('storeName storeEmail storePhone storeAddress currency');
   
   if (!settings) {
     return sendSuccess(res, 200, 'General settings fetched successfully', {
@@ -168,7 +176,7 @@ exports.getGeneralSettings = catchAsync(async (req, res, next) => {
     storePhone: settings.storePhone,
     storeAddress: settings.storeAddress,
     currency: settings.currency,
-    timezone: settings.timezone
+    timezone: 'Asia/Kathmandu'
   });
 });
 
@@ -176,9 +184,9 @@ exports.getGeneralSettings = catchAsync(async (req, res, next) => {
  * Get store hours
  */
 exports.getStoreHours = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('storeHours');
+  const settings = await Settings.findOne().select('businessHours');
   
-  if (!settings || !settings.storeHours) {
+  if (!settings || !settings.businessHours) {
     return sendSuccess(res, 200, 'Store hours fetched successfully', {
       monday: { open: '09:00', close: '21:00', isOpen: true },
       tuesday: { open: '09:00', close: '21:00', isOpen: true },
@@ -190,14 +198,14 @@ exports.getStoreHours = catchAsync(async (req, res, next) => {
     });
   }
 
-  sendSuccess(res, 200, 'Store hours fetched successfully', settings.storeHours);
+  sendSuccess(res, 200, 'Store hours fetched successfully', settings.businessHours);
 });
 
 /**
  * Get contact information
  */
 exports.getContactInfo = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('storeName storeEmail storePhone storeAddress supportEmail supportPhone storeHoursText socialMedia');
+  const settings = await Settings.findOne().select('storeName storeEmail storePhone storeAddress supportEmail supportPhone socialMedia');
   
   if (!settings) {
     return sendSuccess(res, 200, 'Contact info fetched successfully', {
@@ -219,7 +227,7 @@ exports.getContactInfo = catchAsync(async (req, res, next) => {
     storeAddress: settings.storeAddress,
     supportEmail: settings.supportEmail,
     supportPhone: settings.supportPhone,
-    storeHoursText: settings.storeHoursText || 'Mon - Sat: 9AM - 6PM',
+    storeHoursText: 'Mon - Sat: 9AM - 6PM',
     socialMedia: settings.socialMedia || {}
   });
 });
@@ -248,9 +256,9 @@ exports.getSocialLinks = catchAsync(async (req, res, next) => {
  * Get minimum order value
  */
 exports.getMinimumOrder = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('minimumOrderValue minOrderAmount');
+  const settings = await Settings.findOne().select('minOrderAmount');
   
-  const minimumOrder = settings?.minimumOrderValue || settings?.minOrderAmount || 200;
+  const minimumOrder = settings?.minOrderAmount || 200;
   
   sendSuccess(res, 200, 'Minimum order fetched successfully', {
     value: minimumOrder,
@@ -262,7 +270,7 @@ exports.getMinimumOrder = catchAsync(async (req, res, next) => {
  * Get tax settings
  */
 exports.getTaxSettings = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('tax taxRate');
+  const settings = await Settings.findOne().select('taxRate taxEnabled');
   
   if (!settings) {
     return sendSuccess(res, 200, 'Tax settings fetched successfully', {
@@ -272,31 +280,23 @@ exports.getTaxSettings = catchAsync(async (req, res, next) => {
     });
   }
 
-  const taxRate = settings.taxRate || settings.tax?.rate || 13;
+  const taxRate = settings.taxRate || 13;
   const correctedTaxRate = taxRate > 100 ? 13 : taxRate;
 
-  if (settings.tax) {
-    sendSuccess(res, 200, 'Tax settings fetched successfully', {
-      enabled: settings.tax.enabled,
-      rate: correctedTaxRate,
-      includeInPrice: settings.tax.includeInPrice
-    });
-  } else {
-    sendSuccess(res, 200, 'Tax settings fetched successfully', {
-      enabled: true,
-      rate: correctedTaxRate,
-      includeInPrice: false
-    });
-  }
+  sendSuccess(res, 200, 'Tax settings fetched successfully', {
+    enabled: settings.taxEnabled !== false,
+    rate: correctedTaxRate,
+    includeInPrice: false
+  });
 });
 
 /**
  * Get terms and conditions
  */
 exports.getTermsAndConditions = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('termsAndConditions');
+  const settings = await Settings.findOne().select('content');
   
-  if (!settings || !settings.termsAndConditions) {
+  if (!settings || !settings.content?.termsAndConditions) {
     return sendSuccess(res, 200, 'Terms and conditions fetched successfully', {
       content: 'Terms and conditions content goes here.',
       lastUpdated: new Date()
@@ -304,7 +304,7 @@ exports.getTermsAndConditions = catchAsync(async (req, res, next) => {
   }
 
   sendSuccess(res, 200, 'Terms and conditions fetched successfully', {
-    content: settings.termsAndConditions,
+    content: settings.content.termsAndConditions,
     lastUpdated: settings.updatedAt
   });
 });
@@ -313,9 +313,9 @@ exports.getTermsAndConditions = catchAsync(async (req, res, next) => {
  * Get privacy policy
  */
 exports.getPrivacyPolicy = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('privacyPolicy');
+  const settings = await Settings.findOne().select('content');
   
-  if (!settings || !settings.privacyPolicy) {
+  if (!settings || !settings.content?.privacyPolicy) {
     return sendSuccess(res, 200, 'Privacy policy fetched successfully', {
       content: 'Privacy policy content goes here.',
       lastUpdated: new Date()
@@ -323,7 +323,7 @@ exports.getPrivacyPolicy = catchAsync(async (req, res, next) => {
   }
 
   sendSuccess(res, 200, 'Privacy policy fetched successfully', {
-    content: settings.privacyPolicy,
+    content: settings.content.privacyPolicy,
     lastUpdated: settings.updatedAt
   });
 });
@@ -332,43 +332,37 @@ exports.getPrivacyPolicy = catchAsync(async (req, res, next) => {
  * Get FAQs
  */
 exports.getFAQs = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('faqs');
-  
-  if (!settings || !settings.faqs || settings.faqs.length === 0) {
-    return sendSuccess(res, 200, 'FAQs fetched successfully', [
-      {
-        question: 'How do I place an order?',
-        answer: 'You can place an order by browsing our products and adding them to your cart.'
-      },
-      {
-        question: 'What payment methods do you accept?',
-        answer: 'We accept Cash on Delivery, eSewa, and Khalti payments.'
-      },
-      {
-        question: 'How long does delivery take?',
-        answer: 'Delivery typically takes 2-3 business days within Kathmandu Valley.'
-      }
-    ]);
-  }
-
-  sendSuccess(res, 200, 'FAQs fetched successfully', settings.faqs);
+  sendSuccess(res, 200, 'FAQs fetched successfully', [
+    {
+      question: 'How do I place an order?',
+      answer: 'You can place an order by browsing our products and adding them to your cart.'
+    },
+    {
+      question: 'What payment methods do you accept?',
+      answer: 'We accept Cash on Delivery, eSewa, and Khalti payments.'
+    },
+    {
+      question: 'How long does delivery take?',
+      answer: 'Delivery typically takes 2-3 business days within Kathmandu Valley.'
+    }
+  ]);
 });
 
 /**
  * Get shipping policy
  */
 exports.getShippingPolicy = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('shippingPolicy');
+  const settings = await Settings.findOne().select('content');
   
-  if (!settings || !settings.shippingPolicy) {
+  if (!settings || !settings.content?.shippingPolicy) {
     return sendSuccess(res, 200, 'Shipping policy fetched successfully', {
-      content: 'Shipping policy content goes here.',
+      content: 'Free shipping on orders above threshold. Standard delivery takes 3-5 business days.',
       lastUpdated: new Date()
     });
   }
 
   sendSuccess(res, 200, 'Shipping policy fetched successfully', {
-    content: settings.shippingPolicy,
+    content: settings.content.shippingPolicy,
     lastUpdated: settings.updatedAt
   });
 });
@@ -377,17 +371,17 @@ exports.getShippingPolicy = catchAsync(async (req, res, next) => {
  * Get return policy
  */
 exports.getReturnPolicy = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('returnPolicy');
+  const settings = await Settings.findOne().select('content');
   
-  if (!settings || !settings.returnPolicy) {
+  if (!settings || !settings.content?.returnPolicy) {
     return sendSuccess(res, 200, 'Return policy fetched successfully', {
-      content: 'Return policy content goes here.',
+      content: 'Items can be returned within 7 days of delivery in original condition.',
       lastUpdated: new Date()
     });
   }
 
   sendSuccess(res, 200, 'Return policy fetched successfully', {
-    content: settings.returnPolicy,
+    content: settings.content.returnPolicy,
     lastUpdated: settings.updatedAt
   });
 });
@@ -396,9 +390,9 @@ exports.getReturnPolicy = catchAsync(async (req, res, next) => {
  * Get maintenance status
  */
 exports.getMaintenanceStatus = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('maintenance maintenanceMode');
+  const settings = await Settings.findOne().select('maintenanceMode');
   
-  const maintenanceData = settings?.maintenance || settings?.maintenanceMode || {};
+  const maintenanceData = settings?.maintenanceMode || {};
   
   sendSuccess(res, 200, 'Maintenance status fetched successfully', {
     enabled: maintenanceData.enabled || false,
@@ -410,30 +404,22 @@ exports.getMaintenanceStatus = catchAsync(async (req, res, next) => {
  * Get feature flags
  */
 exports.getFeatureFlags = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('features');
-  
-  if (!settings || !settings.features) {
-    return sendSuccess(res, 200, 'Feature flags fetched successfully', {
-      wishlist: true,
-      reviews: true,
-      notifications: true,
-      chatSupport: false
-    });
-  }
-
-  sendSuccess(res, 200, 'Feature flags fetched successfully', settings.features);
+  sendSuccess(res, 200, 'Feature flags fetched successfully', {
+    wishlist: true,
+    reviews: true,
+    notifications: true,
+    chatSupport: false
+  });
 });
 
 /**
  * Get app version
  */
 exports.getAppVersion = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('appVersion');
-  
   sendSuccess(res, 200, 'App version fetched successfully', {
-    version: settings?.appVersion || '1.0.0',
-    buildNumber: settings?.buildNumber || 1,
-    lastUpdated: settings?.updatedAt || new Date()
+    version: '1.0.0',
+    buildNumber: 1,
+    lastUpdated: new Date()
   });
 });
 
@@ -441,29 +427,18 @@ exports.getAppVersion = catchAsync(async (req, res, next) => {
  * Get delivery areas
  */
 exports.getDeliveryAreas = catchAsync(async (req, res, next) => {
-  const settings = await Settings.findOne().select('deliveryAreas');
-  
-  if (!settings || !settings.deliveryAreas || settings.deliveryAreas.length === 0) {
-    return sendSuccess(res, 200, 'Delivery areas fetched successfully', [
-      { name: 'Kathmandu', charge: 50, estimatedTime: '1-2 days' },
-      { name: 'Lalitpur', charge: 60, estimatedTime: '1-2 days' },
-      { name: 'Bhaktapur', charge: 70, estimatedTime: '2-3 days' }
-    ]);
-  }
-
-  sendSuccess(res, 200, 'Delivery areas fetched successfully', settings.deliveryAreas);
+  sendSuccess(res, 200, 'Delivery areas fetched successfully', [
+    { name: 'Kathmandu', charge: 50, estimatedTime: '1-2 days' },
+    { name: 'Lalitpur', charge: 60, estimatedTime: '1-2 days' },
+    { name: 'Bhaktapur', charge: 70, estimatedTime: '2-3 days' }
+  ]);
 });
 
 /**
  * Check delivery availability
  */
 exports.checkDeliveryAvailability = catchAsync(async (req, res, next) => {
-  const { address, city, latitude, longitude } = req.body;
-  
-  const settings = await Settings.findOne().select('deliveryAreas');
-  
-  // Simple check - you can make this more sophisticated
-  const isAvailable = true; // Add your logic here
+  const isAvailable = true;
   
   sendSuccess(res, 200, 'Delivery availability checked', {
     available: isAvailable,
@@ -479,28 +454,18 @@ exports.checkDeliveryAvailability = catchAsync(async (req, res, next) => {
 exports.submitContactForm = catchAsync(async (req, res, next) => {
   const { name, email, phone, subject, message } = req.body;
   
-  // Validate required fields
   if (!name || !email || !subject || !message) {
     return next(new AppError('Please provide all required fields', 400));
   }
   
-  // Email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return next(new AppError('Please provide a valid email address', 400));
   }
   
-  // Log the submission
   console.log('📧 Contact Form Submission:', {
-    name,
-    email,
-    phone,
-    subject,
-    message,
-    timestamp: new Date()
+    name, email, phone, subject, message, timestamp: new Date()
   });
-  
-  // TODO: Send email notification to admin
   
   sendSuccess(res, 200, 'Thank you for contacting us! We will get back to you soon.', {
     submitted: true,

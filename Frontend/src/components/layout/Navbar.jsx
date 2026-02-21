@@ -63,21 +63,21 @@ export default function Navbar() {
   const wishlistCount = Array.isArray(wishlistItems) ? wishlistItems.length : 0;
 
   // ── Logo resolution ────────────────────────────────────────────────────────
+  // ✅ FIX: Resolve to a stable string first, then depend on that string
+  const logoUrl = settings?.storeLogo || settings?.logo || null;
+
+  // ✅ FIX: Only reset logoError when the actual URL string changes
+  useEffect(() => {
+    setLogoError(false);
+  }, [logoUrl]);
+
   const resolveLogoSrc = () => {
-    if (logoError) return LOCAL_FALLBACK;
-    const logoUrl = settings?.storeLogo || settings?.logo;
-    if (
-      logoUrl &&
-      (logoUrl.startsWith("http://") || logoUrl.startsWith("https://"))
-    ) {
+    if (logoError || !logoUrl) return LOCAL_FALLBACK;
+    if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
       return logoUrl;
     }
     return LOCAL_FALLBACK;
   };
-
-  useEffect(() => {
-    setLogoError(false);
-  }, [settings?.storeLogo, settings?.logo]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const showNotification = (message, type = "success") => {
@@ -240,12 +240,10 @@ export default function Navbar() {
                     alt={settings?.storeName || "JUMLAYA"}
                     className="w-full h-full object-contain rounded-lg"
                     onError={(e) => {
+                      // ✅ FIX: Always stop retrying and immediately fall back
                       e.target.onerror = null;
-                      if (!logoError) {
-                        setLogoError(true);
-                      } else {
-                        e.target.style.display = "none";
-                      }
+                      e.target.src = LOCAL_FALLBACK;
+                      setLogoError(true);
                     }}
                   />
                 )}
